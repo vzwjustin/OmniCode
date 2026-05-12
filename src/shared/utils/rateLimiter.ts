@@ -3,23 +3,33 @@ import Redis from "ioredis";
 // Reuse existing REDIS_URL if set, or local redis via default docker-compose
 // Use REDIS_URL from env (Docker/Production) or fallback to local redis
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
-if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
-  console.warn('[REDIS] REDIS_URL is not set in production. Falling back to default.');
+if (process.env.NODE_ENV === "production" && !process.env.REDIS_URL) {
+  console.warn("[REDIS] REDIS_URL is not set in production. Falling back to default.");
 }
-
 
 let redisClient: Redis | null = null;
 
 export function getRedisClient() {
   if (!redisClient) {
     redisClient = new Redis(REDIS_URL, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: 1,
       enableReadyCheck: false,
+      enableOfflineQueue: false,
+      lazyConnect: true,
+      connectTimeout: 500,
       retryStrategy(times) {
+        // Stop reconnect attempts after 10 tries so an unreachable Redis
+        // doesn't pin open the Node event loop (process won't exit otherwise).
+        if (times > 10) return null;
         return Math.min(times * 50, 2000); // Exponential backoff
+      },
+    });
+    redisClient.on("error", (err) => {
+      // Throttle noisy connection-refused logs in environments without Redis.
+      if (!/ECONNREFUSED|connect ETIMEDOUT/.test(err.message)) {
+        console.error("[REDIS] Error:", err.message);
       }
     });
-    redisClient.on('error', (err) => console.error('[REDIS] Error:', err.message));
   }
   return redisClient;
 }
@@ -88,14 +98,17 @@ export function setRateLimiterTestMode(enabled: boolean) {
  * Checks multi-window rate limits for an API key atomically via Redis.
  */
 export async function checkRateLimit(
-  keyId: string, 
+  keyId: string,
   rules: RateLimitRule[]
 ): Promise<RateLimitResult> {
   if (!rules || rules.length === 0) return { allowed: true };
 
   // ── In-memory mock for unit tests ──
-  const isTestMode = explicitTestMode || process.env.NODE_ENV === "test" || process.env.DISABLE_SQLITE_AUTO_BACKUP === "true";
-  
+  const isTestMode =
+    explicitTestMode ||
+    process.env.NODE_ENV === "test" ||
+    process.env.DISABLE_SQLITE_AUTO_BACKUP === "true";
+
   if (isTestMode) {
     const now = Math.floor(Date.now() / 1000);
     for (const rule of rules) {
@@ -116,27 +129,25 @@ export async function checkRateLimit(
 
   const redis = getRedisClient();
   const args: (string | number)[] = [Math.floor(Date.now() / 1000)];
-  
+
   for (const rule of rules) {
     args.push(rule.limit, rule.window);
   }
 
   try {
-    const result = await redis.eval(
-      RATE_LIMIT_SCRIPT,
-      1, 
-      `rl:api_key:${keyId}`, 
-      ...args
-    ) as [number, number];
+    const result = (await redis.eval(RATE_LIMIT_SCRIPT, 1, `rl:api_key:${keyId}`, ...args)) as [
+      number,
+      number,
+    ];
 
     if (result[0] === 0) {
       return { allowed: false, failedWindow: result[1] };
     }
-    
+
     return { allowed: true };
   } catch (error) {
     // Fail-open strategy if Redis goes down to prevent complete API outage
     console.error("[RATE_LIMITER] Redis eval failed, bypassing rate limit:", error);
-    return { allowed: true }; 
+    return { allowed: true };
   }
 }
