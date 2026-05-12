@@ -1,20 +1,38 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-import { FORMATS } from "../../open-sse/translator/formats.ts";
-import { getModelInfoCore } from "../../open-sse/services/model.ts";
-import { detectFormat, detectFormatFromEndpoint } from "../../open-sse/services/provider.ts";
-import { shouldUseNativeCodexPassthrough } from "../../open-sse/handlers/chatCore.ts";
-import { translateRequest } from "../../open-sse/translator/index.ts";
-import { GithubExecutor } from "../../open-sse/executors/github.ts";
-import { DefaultExecutor } from "../../open-sse/executors/default.ts";
-import { CodexExecutor } from "../../open-sse/executors/codex.ts";
-import { translateNonStreamingResponse } from "../../open-sse/handlers/responseTranslator.ts";
-import { extractUsageFromResponse } from "../../open-sse/handlers/usageExtractor.ts";
-import {
-  parseSSEToOpenAIResponse,
-  parseSSEToResponsesOutput,
-} from "../../open-sse/handlers/sseParser.ts";
+// Isolate from the user's real ~/.omniroute DB so getActiveProviderSet()
+// returns a clean empty set rather than picking up real provider connections.
+// Must be set before any module that loads src/lib/db/core.ts.
+const TEST_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-plan3-"));
+process.env.DATA_DIR = TEST_DATA_DIR;
+
+// Dynamic imports so process.env.DATA_DIR set above takes effect before any
+// of these modules (transitively) load src/lib/db/core.ts.
+const { FORMATS } = await import("../../open-sse/translator/formats.ts");
+const { getModelInfoCore } = await import("../../open-sse/services/model.ts");
+const { detectFormat, detectFormatFromEndpoint } = await import(
+  "../../open-sse/services/provider.ts"
+);
+const { shouldUseNativeCodexPassthrough } = await import(
+  "../../open-sse/handlers/chatCore.ts"
+);
+const { translateRequest } = await import("../../open-sse/translator/index.ts");
+const { GithubExecutor } = await import("../../open-sse/executors/github.ts");
+const { DefaultExecutor } = await import("../../open-sse/executors/default.ts");
+const { CodexExecutor } = await import("../../open-sse/executors/codex.ts");
+const { translateNonStreamingResponse } = await import(
+  "../../open-sse/handlers/responseTranslator.ts"
+);
+const { extractUsageFromResponse } = await import(
+  "../../open-sse/handlers/usageExtractor.ts"
+);
+const { parseSSEToOpenAIResponse, parseSSEToResponsesOutput } = await import(
+  "../../open-sse/handlers/sseParser.ts"
+);
 
 test("getModelInfoCore resolves unique non-openai unprefixed model", async () => {
   const info = await getModelInfoCore("claude-sonnet-4-5-20250929", {});
