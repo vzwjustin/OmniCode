@@ -272,7 +272,11 @@ function getScaledCooldown(
 ) {
   const safeBase = Number.isFinite(baseCooldownMs) && baseCooldownMs > 0 ? baseCooldownMs : 1000;
   const exponent = Math.min(Math.max(0, failureCount - 1), Math.max(0, maxBackoffLevel));
-  return safeBase * Math.pow(2, exponent);
+  const scaled = safeBase * Math.pow(2, exponent);
+  // Add ±15% jitter so a herd of connections that all failed at the same time
+  // don't all wake up at the same instant. Anti-thundering-herd.
+  const jitterFactor = 0.85 + Math.random() * 0.3;
+  return Math.floor(scaled * jitterFactor);
 }
 
 // Auto-cleanup expired lockouts every 15 seconds (lazy init for Cloudflare Workers compatibility)
