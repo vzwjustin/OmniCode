@@ -23,7 +23,17 @@ export async function GET(request: Request) {
     const { password, ...safeSettings } = settings;
 
     const runtimePorts = getRuntimePorts();
-    const cloudUrl = process.env.CLOUD_URL || process.env.NEXT_PUBLIC_CLOUD_URL || null;
+    // Cloud URL resolution order: env vars take precedence (for ops that
+    // hard-code it), then the persisted DB setting so the dashboard can
+    // configure it without an env edit + restart. This is what makes cloud
+    // sync configurable from the UI alone.
+    const envCloudUrl = process.env.CLOUD_URL || process.env.NEXT_PUBLIC_CLOUD_URL || null;
+    const storedCloudUrl =
+      typeof settings.cloudUrl === "string" && settings.cloudUrl.trim().length > 0
+        ? settings.cloudUrl.trim()
+        : null;
+    const cloudUrl = envCloudUrl || storedCloudUrl;
+    const cloudUrlSource = envCloudUrl ? "env" : storedCloudUrl ? "settings" : null;
     const machineId = await getConsistentMachineId();
 
     return NextResponse.json({
@@ -34,6 +44,10 @@ export async function GET(request: Request) {
       dashboardPort: runtimePorts.dashboardPort,
       cloudConfigured: Boolean(cloudUrl),
       cloudUrl,
+      // Tells the UI whether the URL is coming from env (read-only) or from
+      // the DB (editable in-place). Lets us hide the editor when ops has
+      // pinned it at the env layer.
+      cloudUrlSource,
       machineId,
     });
   } catch (error) {
