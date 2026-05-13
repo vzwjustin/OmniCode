@@ -4,7 +4,7 @@
 
 ### Never stop coding. Save 15-95% eligible tokens with RTK+Caveman compression + auto-fallback to **FREE & low-cost AI models**.
 
-_The most complete open-source AI proxy — **one endpoint**, **160+ providers**, **13 routing strategies**, zero downtime. Multi-platform: **Web**, **Desktop (Electron)**, **Mobile (PWA + Termux)**. Fully extensible via **MCP Server (37 tools)**, **A2A Protocol**, and **Memory/Skills** systems. Available in **40+ languages**._
+_The most complete open-source AI proxy — **one endpoint**, **160+ providers**, **14 routing strategies**, zero downtime. Multi-platform: **Web**, **Desktop (Electron)**, **Mobile (PWA + Termux)**. Fully extensible via **MCP Server (30 tools)**, **A2A Protocol**, and **Memory/Skills** systems. Available in **40+ languages**._
 
 **Chat Completions • Responses API • Embeddings • Image Generation • Video • Music • Audio Speech/Transcription • Reranking • Moderations • Web Search • MCP Server • A2A Protocol • 4,600+ Tests • 100% TypeScript**
 
@@ -226,7 +226,7 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
 ✅ **Format translation** — OpenAI ↔ Claude ↔ Gemini ↔ Responses API, any tool works
 ✅ **3-level proxy** — bypass geo-blocks with global, per-provider, and per-key proxies
 ✅ **10 multi-modal APIs** — chat, images, video, music, audio, search in one endpoint
-✅ **MCP + A2A** — 29 MCP tools + agent-to-agent protocol, production-ready
+✅ **MCP + A2A** — 30 MCP tools + agent-to-agent protocol, production-ready
 ✅ **Universal** — works with Claude Code, Codex, Gemini CLI, Cursor, Cline, OpenClaw, any CLI tool
 
 ---
@@ -563,7 +563,7 @@ Compression combos can also assign a named compression pipeline to routing combo
 | 🔒  | Gateway is exposed without protection    | **API Key Management** — scoping, rotation, IP filtering, rate limiting, prompt injection guard |
 | 🛑  | Provider went down, lost coding flow     | **Circuit Breakers** — auto-failover with cooldown, retry, anti-thundering herd                 |
 | 🔧  | Configuring each CLI tool is tedious     | **CLI Tools Dashboard** — one-click setup for Claude Code, Codex, Cursor, OpenClaw, Kilo        |
-| 🔑  | Managing OAuth tokens is hell            | **Auto Token Refresh** — OAuth PKCE for 8 providers, multi-account, LAN/remote fix              |
+| 🔑  | Managing OAuth tokens is hell            | **Auto Token Refresh** — OAuth PKCE for 13 providers, multi-account, LAN/remote fix             |
 | 📊  | Don't know how much I'm spending         | **Cost Analytics** — per-token tracking, budget limits, usage stats per API key                 |
 | 🐛  | Can't diagnose errors in AI calls        | **Unified Logs** — 4-tab dashboard (request, proxy, audit, console) + p50/p95/p99 telemetry     |
 
@@ -578,11 +578,11 @@ Compression combos can also assign a named compression pipeline to routing combo
 | 14  | No way to test/compare models                 | LLM Evals, Translator Playground, Chat Tester, Live Monitor                                        |
 | 15  | Need to scale without losing performance      | Semantic cache, request dedup, rate limit detection, queue & pacing                                |
 | 16  | Want to control model behavior globally       | System prompt injection, thinking budget, wildcard routing                                         |
-| 17  | Need MCP tools as first-class features        | 29 MCP tools, 3 transports (stdio/SSE/HTTP), 10 scopes, audit trail                                |
+| 17  | Need MCP tools as first-class features        | 30 MCP tools, 2 transports (stdio + Streamable HTTP with SSE mode), 16 scopes, audit trail         |
 | 18  | Need A2A orchestration                        | JSON-RPC 2.0 + SSE streaming, task lifecycle, sync + stream paths                                  |
 | 19  | Need real MCP process health                  | Runtime heartbeat, PID tracking, UI status cards                                                   |
 | 20  | Need auditable MCP execution                  | SQLite-backed audit with filters, pagination, stats                                                |
-| 21  | Need scoped MCP permissions                   | 10 granular scopes per integration                                                                 |
+| 21  | Need scoped MCP permissions                   | 16 granular scopes per integration                                                                 |
 | 22  | Need operational controls without redeploying | Combo switches, resilience tuning, breaker resets from dashboard                                   |
 | 23  | Need A2A task lifecycle visibility            | Task listing/filtering, drill-down, cancellation                                                   |
 | 24  | Need active stream metrics                    | Active stream counters, per-state counts, A2A dashboard cards                                      |
@@ -970,7 +970,7 @@ Then in `/dashboard/media` → **Transcription** tab: upload any audio or video 
 | 🧠 **Smart 4-Tier Fallback** — Subscription → API → Cheap → Free                                     | Never stop coding, zero downtime |
 | 🔄 **Format Translation** — OpenAI ↔ Claude ↔ Gemini ↔ Responses API                                 | Works with ANY CLI tool          |
 | 🗜️ **Prompt Compression** — 7 options including Caveman, RTK, and stacked pipelines                  | Save 15-95% eligible tokens      |
-| 🤖 **MCP Server** — 37 tools, 3 transports (stdio/SSE/HTTP), 10 scopes                               | IDE/agent tool integration       |
+| 🤖 **MCP Server** — 30 tools, 2 transports (stdio + Streamable HTTP with SSE mode), 16 scopes        | IDE/agent tool integration       |
 | 🛡️ **Resilience Engine** — circuit breakers, cooldowns, TLS spoofing, anti-thundering herd           | Auto-recovery from any failure   |
 | 🎵 **10 Multi-Modal APIs** — chat, embed, images, video, music, TTS, STT, moderation, rerank, search | One endpoint for everything      |
 | 🌍 **3-Level Proxy** — global, per-provider, per-key + 1proxy free marketplace                       | Access AI from any country       |
@@ -987,7 +987,7 @@ Then in `/dashboard/media` → **Transcription** tab: upload any audio or video 
 
 **Translation & Compatibility**
 
-- Auto token refresh (OAuth PKCE for 8 providers) · Multi-account round-robin
+- Auto token refresh (OAuth PKCE for 13 providers) · Multi-account round-robin
 - Responses API — full `/v1/responses` for Codex · Batch API with Files API
 - OpenAPI 3.0 live spec + Try-It UI
 
@@ -1178,7 +1178,7 @@ curl http://localhost:20128/.well-known/agent.json
 
 - [User Guide](docs/USER_GUIDE.md) — Providers, combos, CLI integration
 - [API Reference](docs/API_REFERENCE.md) — All endpoints with examples
-- [MCP Server](open-sse/mcp-server/README.md) — 37 tools, IDE configs
+- [MCP Server](open-sse/mcp-server/README.md) — 30 tools, IDE configs
 - [A2A Server](src/lib/a2a/README.md) — JSON-RPC, skills, streaming
 - [Environment Config](docs/ENVIRONMENT.md) — Complete `.env` reference
 - [VM Deployment](docs/VM_DEPLOYMENT_GUIDE.md) — VM + nginx + Cloudflare
@@ -1382,7 +1382,7 @@ See the [Proxy Guide](docs/PROXY_GUIDE.md) for setup instructions.
 | ------------------------------------------- | --------------------------------------------------- |
 | [API Reference](docs/API_REFERENCE.md)      | All endpoints with examples                         |
 | [OpenAPI Spec](docs/openapi.yaml)           | OpenAPI 3.0 specification                           |
-| [MCP Server](open-sse/mcp-server/README.md) | 29 MCP tools, IDE configs, Python/TS/Go clients     |
+| [MCP Server](open-sse/mcp-server/README.md) | 30 MCP tools, IDE configs, Python/TS/Go clients     |
 | [MCP Server Guide](docs/MCP-SERVER.md)      | MCP installation, transports, and tool reference    |
 | [A2A Server](src/lib/a2a/README.md)         | JSON-RPC 2.0 protocol, skills, streaming, task mgmt |
 | [A2A Server Guide](docs/A2A-SERVER.md)      | A2A agent card, tasks, skills, and streaming        |

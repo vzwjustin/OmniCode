@@ -32,6 +32,13 @@ export async function POST(request: Request) {
 
     const { name, version, description, schema, handlerCode, apiKeyId } = validation.data;
 
+    if (handlerCode) {
+      console.warn(
+        "[skills/install] handlerCode is currently not executed; only built-in handler names are honored. " +
+          "Submitted code is persisted for reference only."
+      );
+    }
+
     const skill = await skillRegistry.register({
       name,
       version,

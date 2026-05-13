@@ -97,6 +97,7 @@ export async function registerNodejs(): Promise<void> {
     { ensurePersistentManagementPasswordHash },
     { skillExecutor },
     { registerBuiltinSkills },
+    { startUsageAggregationJob },
   ] = await Promise.all([
     import("@/lib/gracefulShutdown"),
     import("@/lib/apiBridgeServer"),
@@ -111,6 +112,7 @@ export async function registerNodejs(): Promise<void> {
     import("@/lib/auth/managementPassword"),
     import("@/lib/skills/executor"),
     import("@/lib/skills/builtins"),
+    import("@/lib/jobs/usageAggregationJob"),
   ]);
 
   initGracefulShutdown();
@@ -126,6 +128,8 @@ export async function registerNodejs(): Promise<void> {
     console.log("[STARTUP] Quota cache background refresh started");
     startProviderLimitsSyncScheduler();
     console.log("[STARTUP] Provider limits sync scheduler started");
+    startUsageAggregationJob();
+    console.log("[STARTUP] Usage aggregation scheduler started");
     const cloudSyncInitialized = await ensureCloudSyncInitialized();
     console.log(
       `[STARTUP] Cloud/model sync background bootstrap ${cloudSyncInitialized ? "initialized" : "skipped"}`

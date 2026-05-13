@@ -37,20 +37,20 @@ For full test matrix, see `CONTRIBUTING.md` → "Running Tests". For deep archit
 
 **OmniRoute** — unified AI proxy/router. One endpoint, 160+ LLM providers, auto-fallback.
 
-| Layer         | Location                | Purpose                                    |
-| ------------- | ----------------------- | ------------------------------------------ |
-| API Routes    | `src/app/api/v1/`       | Next.js App Router — entry points          |
-| Handlers      | `open-sse/handlers/`    | Request processing (chat, embeddings, etc) |
-| Executors     | `open-sse/executors/`   | Provider-specific HTTP dispatch            |
-| Translators   | `open-sse/translator/`  | Format conversion (OpenAI↔Claude↔Gemini)   |
-| Transformer   | `open-sse/transformer/` | Responses API ↔ Chat Completions           |
-| Services      | `open-sse/services/`    | Combo routing, rate limits, caching, etc   |
-| Database      | `src/lib/db/`           | SQLite domain modules (22 files)           |
-| Domain/Policy | `src/domain/`           | Policy engine, cost rules, fallback logic  |
-| MCP Server    | `open-sse/mcp-server/`  | 29 tools, 3 transports, 10 scopes          |
-| A2A Server    | `src/lib/a2a/`          | JSON-RPC 2.0 agent protocol                |
-| Skills        | `src/lib/skills/`       | Extensible skill framework                 |
-| Memory        | `src/lib/memory/`       | Persistent conversational memory           |
+| Layer         | Location                | Purpose                                                                   |
+| ------------- | ----------------------- | ------------------------------------------------------------------------- |
+| API Routes    | `src/app/api/v1/`       | Next.js App Router — entry points                                         |
+| Handlers      | `open-sse/handlers/`    | Request processing (chat, embeddings, etc)                                |
+| Executors     | `open-sse/executors/`   | Provider-specific HTTP dispatch                                           |
+| Translators   | `open-sse/translator/`  | Format conversion (OpenAI↔Claude↔Gemini)                                  |
+| Transformer   | `open-sse/transformer/` | Responses API ↔ Chat Completions                                          |
+| Services      | `open-sse/services/`    | Combo routing, rate limits, caching, etc                                  |
+| Database      | `src/lib/db/`           | SQLite domain modules (22 files)                                          |
+| Domain/Policy | `src/domain/`           | Policy engine, cost rules, fallback logic                                 |
+| MCP Server    | `open-sse/mcp-server/`  | 30 tools, 2 transports (stdio + Streamable HTTP with SSE mode), 16 scopes |
+| A2A Server    | `src/lib/a2a/`          | JSON-RPC 2.0 agent protocol                                               |
+| Skills        | `src/lib/skills/`       | Extensible skill framework                                                |
+| Memory        | `src/lib/memory/`       | Persistent conversational memory                                          |
 
 Monorepo: `src/` (Next.js 16 app), `open-sse/` (streaming engine workspace), `electron/` (desktop app), `tests/`, `bin/` (CLI entry point).
 
@@ -72,7 +72,7 @@ Client → /v1/chat/completions (Next.js route)
 
 API routes follow a consistent pattern: `Route → CORS preflight → Zod body validation → Optional auth (extractApiKey/isValidApiKey) → API key policy enforcement → Handler delegation (open-sse)`. No global Next.js middleware — interception is route-specific.
 
-**Combo routing** (`open-sse/services/combo.ts`): 13 strategies (priority, weighted, fill-first, round-robin, P2C, random, least-used, cost-optimized, strict-random, auto, lkgp, context-optimized, context-relay). Each target calls `handleSingleModel()` which wraps `handleChatCore()` with per-target error handling and circuit breaker checks.
+**Combo routing** (`open-sse/services/combo.ts`): 14 strategies (priority, weighted, fill-first, round-robin, P2C, random, least-used, cost-optimized, reset-aware, strict-random, auto, lkgp, context-optimized, context-relay). Each target calls `handleSingleModel()` which wraps `handleChatCore()` with per-target error handling and circuit breaker checks.
 
 ---
 

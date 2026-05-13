@@ -43,7 +43,7 @@ Request → CORS → API Key Auth → Prompt Injection Guard → Input Sanitizer
 | **OAuth 2.0 + PKCE** | Secure provider auth (Claude, Codex, Gemini, Cursor, etc.) |
 | **Token Refresh**    | Automatic OAuth token refresh before expiry                |
 | **Secure Cookies**   | `AUTH_COOKIE_SECURE=true` for HTTPS environments           |
-| **MCP Scopes**       | 10 granular scopes for MCP tool access control             |
+| **MCP Scopes**       | 16 granular scopes for MCP tool access control             |
 
 ### 🛡️ Encryption at Rest
 
@@ -140,6 +140,50 @@ STORAGE_ENCRYPTION_KEY=$(openssl rand -hex 32)
 ```
 
 The server actively rejects known-weak values like `changeme`, `secret`, or `password`.
+
+---
+
+## Bootstrap API Key
+
+OmniRoute supports a single, environment-supplied **bootstrap API key** read
+from the `OMNIROUTE_API_KEY` variable (legacy alias: `ROUTER_API_KEY`). This
+key is intentionally privileged so that operators always have a way to
+recover the dashboard and call internal endpoints (MCP, A2A, sync jobs) even
+if the SQLite database is wiped or corrupted.
+
+### Trust model
+
+- `OMNIROUTE_API_KEY`, when set, is treated as **authenticated with `manage`
+  scope** for every request that presents it.
+- It is **not stored in the database** and therefore **cannot be revoked,
+  rotated, or audited from the Dashboard UI**. Revocation requires unsetting
+  the env var (or rotating its value) and restarting the process.
+- It is the only credential that can bootstrap a freshly-provisioned instance
+  with no DB-stored keys, so it should be treated like a root password.
+
+### Operational guidance
+
+1. Generate a strong value: `openssl rand -hex 32`.
+2. Inject it only via the process environment (systemd `EnvironmentFile`,
+   Docker `-e`, Kubernetes `Secret`) — **never** check it into git or write
+   it to `.env` files that ship in images.
+3. Prefer DB-stored API keys created from the Dashboard (`Dashboard →
+Settings → API Keys`) for application/agent traffic. They are
+   per-purpose, revocable, and auditable.
+4. Rotate `OMNIROUTE_API_KEY` periodically: update the env var to a new
+   random value and restart the server. Any clients pinned to the old value
+   will get `401` immediately.
+5. If you suspect compromise, rotate the value immediately and review
+   `mcp_audit` / request logs for unexpected calls during the exposure
+   window.
+
+### When to leave it unset
+
+For multi-tenant or production deployments where bootstrap recovery is
+handled out of band (e.g. via direct DB access on a bastion host), it is
+safe — and recommended — to leave `OMNIROUTE_API_KEY` **unset** and rely
+exclusively on DB-stored API keys plus password-authenticated dashboard
+sessions.
 
 ---
 
