@@ -14,25 +14,18 @@ process.env.DATA_DIR = TEST_DATA_DIR;
 // of these modules (transitively) load src/lib/db/core.ts.
 const { FORMATS } = await import("../../open-sse/translator/formats.ts");
 const { getModelInfoCore } = await import("../../open-sse/services/model.ts");
-const { detectFormat, detectFormatFromEndpoint } = await import(
-  "../../open-sse/services/provider.ts"
-);
-const { shouldUseNativeCodexPassthrough } = await import(
-  "../../open-sse/handlers/chatCore.ts"
-);
+const { detectFormat, detectFormatFromEndpoint } =
+  await import("../../open-sse/services/provider.ts");
+const { shouldUseNativeCodexPassthrough } = await import("../../open-sse/handlers/chatCore.ts");
 const { translateRequest } = await import("../../open-sse/translator/index.ts");
 const { GithubExecutor } = await import("../../open-sse/executors/github.ts");
 const { DefaultExecutor } = await import("../../open-sse/executors/default.ts");
 const { CodexExecutor } = await import("../../open-sse/executors/codex.ts");
-const { translateNonStreamingResponse } = await import(
-  "../../open-sse/handlers/responseTranslator.ts"
-);
-const { extractUsageFromResponse } = await import(
-  "../../open-sse/handlers/usageExtractor.ts"
-);
-const { parseSSEToOpenAIResponse, parseSSEToResponsesOutput } = await import(
-  "../../open-sse/handlers/sseParser.ts"
-);
+const { translateNonStreamingResponse } =
+  await import("../../open-sse/handlers/responseTranslator.ts");
+const { extractUsageFromResponse } = await import("../../open-sse/handlers/usageExtractor.ts");
+const { parseSSEToOpenAIResponse, parseSSEToResponsesOutput } =
+  await import("../../open-sse/handlers/sseParser.ts");
 
 test("getModelInfoCore resolves unique non-openai unprefixed model", async () => {
   const info = await getModelInfoCore("claude-sonnet-4-5-20250929", {});
@@ -62,6 +55,24 @@ test("getModelInfoCore keeps explicit gpt-5.5-medium separate from gpt-5.5", asy
   const info = await getModelInfoCore("gpt-5.5-medium", {});
   assert.equal(info.provider, "codex");
   assert.equal(info.model, "gpt-5.5-medium");
+});
+
+test("getModelInfoCore routes unprefixed gpt-5.5-high to codex (not cursor)", async () => {
+  const info = await getModelInfoCore("gpt-5.5-high", {});
+  assert.equal(info.provider, "codex");
+  assert.equal(info.model, "gpt-5.5-high");
+});
+
+test("getModelInfoCore routes unprefixed gpt-5.5-low to codex (not cursor)", async () => {
+  const info = await getModelInfoCore("gpt-5.5-low", {});
+  assert.equal(info.provider, "codex");
+  assert.equal(info.model, "gpt-5.5-low");
+});
+
+test("getModelInfoCore routes unprefixed gpt-5.5-xhigh to codex", async () => {
+  const info = await getModelInfoCore("gpt-5.5-xhigh", {});
+  assert.equal(info.provider, "codex");
+  assert.equal(info.model, "gpt-5.5-xhigh");
 });
 
 test("getModelInfoCore resolves explicit gpt-5.5 Codex model", async () => {
