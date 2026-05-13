@@ -9,6 +9,7 @@ import {
   type ModelCategory,
 } from "@/domain/assessment/types";
 import { validateBody } from "@/shared/validation/helpers";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 
 const assessor = new Assessor(
   process.env.OMNIROUTe_API_KEY ?? process.env.API_KEY ?? "",
@@ -59,6 +60,9 @@ function isModelListItem(value: unknown): value is ModelListItem {
 }
 
 export async function POST(request: NextRequest) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const rawBody = await request.json();
     const validation = validateBody(assessmentPostSchema, rawBody);
@@ -103,6 +107,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
 

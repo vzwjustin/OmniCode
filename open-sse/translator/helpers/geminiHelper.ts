@@ -88,9 +88,24 @@ export const DEFAULT_SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_CIVIC_INTEGRITY", threshold: "OFF" },
 ];
 
+type OpenAIContentItem = {
+  type?: string;
+  text?: string;
+  inline_data?: { mime_type?: string; mimeType?: string; data?: string };
+  inlineData?: { mime_type?: string; mimeType?: string; data?: string };
+  source?: { type?: string; data?: string; media_type?: string };
+  data?: string;
+  file?: { data?: string; url?: string; mime_type?: string };
+  document?: { data?: string; url?: string; mime_type?: string };
+  mime_type?: string;
+  media_type?: string;
+  image_url?: { url?: string };
+  file_url?: { url?: string };
+};
+
 // Convert OpenAI content to Gemini parts
-export function convertOpenAIContentToParts(content: any) {
-  const parts: any[] = [];
+export function convertOpenAIContentToParts(content: string | OpenAIContentItem[]) {
+  const parts: object[] = [];
 
   if (typeof content === "string") {
     parts.push({ text: content });

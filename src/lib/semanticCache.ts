@@ -109,18 +109,33 @@ function getMemoryCache() {
 
 /**
  * Generate deterministic cache signature from request params.
- * @param {string} model
- * @param {Array} messages - Normalized messages array
- * @param {number} temperature
- * @param {number} topP
- * @returns {string} hex signature
+ *
+ * Includes every field that materially affects the response so identical-looking
+ * requests with different system prompts / tools / response formats never share
+ * a cache entry. In particular `system` is keyed separately because Claude's
+ * native /v1/messages format puts it in a top-level field rather than inside
+ * `messages`.
  */
-export function generateSignature(model, conversation, temperature = 0, topP = 1) {
+export function generateSignature(
+  model,
+  conversation,
+  temperature = 0,
+  topP = 1,
+  extras: {
+    system?: unknown;
+    tools?: unknown;
+    responseFormat?: unknown;
+  } = {}
+) {
   const payload = JSON.stringify({
     model,
     messages: normalizeConversation(conversation),
     temperature,
     top_p: topP,
+    system: extras.system !== undefined ? stringifyForSignature(extras.system) : null,
+    tools: extras.tools !== undefined ? stringifyForSignature(extras.tools) : null,
+    response_format:
+      extras.responseFormat !== undefined ? stringifyForSignature(extras.responseFormat) : null,
   });
   return crypto.createHash("sha256").update(payload).digest("hex");
 }

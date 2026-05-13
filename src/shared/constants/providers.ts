@@ -1950,6 +1950,7 @@ export const USAGE_SUPPORTED_PROVIDERS = [
   "glm",
   "glm-cn",
   "glmt",
+  "zai",
   "minimax",
   "minimax-cn",
   "crof",

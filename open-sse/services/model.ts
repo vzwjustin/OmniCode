@@ -75,6 +75,14 @@ for (const [aliasOrId, models] of Object.entries(PROVIDER_MODELS)) {
 const KNOWN_MODEL_IDS = new Set(MODEL_TO_PROVIDERS.keys());
 const CODEX_PREFERRED_UNPREFIXED_MODELS = new Set(["gpt-5.5"]);
 const CODEX_PREFERRED_UNPREFIXED_MODEL_ALIASES = new Map([["gpt-5.5", "gpt-5.5-medium"]]);
+// Codex-canonical gpt-5.5 effort variants. When the user calls these unprefixed,
+// prefer codex over any other provider (e.g., cursor) that also registers them.
+const CODEX_PREFERRED_DIRECT_UNPREFIXED_MODELS = new Set([
+  "gpt-5.5-medium",
+  "gpt-5.5-high",
+  "gpt-5.5-low",
+  "gpt-5.5-xhigh",
+]);
 export const CODEX_NATIVE_UNPREFIXED_MODELS = new Set(["codex-auto-review"]);
 
 interface ProviderConnectionLike {
@@ -387,6 +395,13 @@ async function resolveModelByProviderInference(modelId, extendedContext) {
     const provider = candidatesToUse[0];
     const canonicalModel = resolveInferredProviderModel(provider, modelId);
     return { provider, model: canonicalModel, extendedContext };
+  }
+
+  // gpt-5.5-{medium,high,low,xhigh} are codex-canonical models even when other
+  // providers (e.g., cursor) also register them. Prefer codex before falling
+  // through to the ambiguous-model error.
+  if (candidatesToUse.includes("codex") && CODEX_PREFERRED_DIRECT_UNPREFIXED_MODELS.has(modelId)) {
+    return { provider: "codex", model: modelId, extendedContext };
   }
 
   if (candidatesToUse.length > 1) {

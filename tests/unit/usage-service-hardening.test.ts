@@ -955,6 +955,25 @@ test("usage service covers Qwen, Qoder, GLM, Z.AI and GLMT branches", async () =
     { name: "zread", used: 0 },
   ]);
 
+  globalThis.fetch = async (url, init = {}) => {
+    if (String(url).includes("/api/monitor/usage/quota/limit")) {
+      assert.equal((init as any).headers.Authorization, "Bearer glm-key");
+      return new Response(
+        JSON.stringify({
+          data: {
+            level: "pro",
+            limits: [
+              { type: "TOKENS_LIMIT", unit: 3, percentage: "15" },
+              { type: "TOKENS_LIMIT", unit: 6, percentage: "64" },
+            ],
+          },
+        }),
+        { status: 200 }
+      );
+    }
+    throw new Error(`unexpected fetch: ${url}`);
+  };
+
   const glmt: any = await usageService.getUsageForProvider({
     provider: "glmt",
     apiKey: "glm-key",

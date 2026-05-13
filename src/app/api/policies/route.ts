@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { getLockedIdentifiers, forceUnlock } from "@/domain/lockoutPolicy";
 import { policyActionSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const lockedIdentifiers = getLockedIdentifiers();
     return NextResponse.json({ lockedIdentifiers });
@@ -14,6 +18,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   let rawBody;
   try {
     rawBody = await request.json();

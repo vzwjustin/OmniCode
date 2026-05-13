@@ -67,6 +67,46 @@ describe("Semantic Cache", () => {
       const sig2 = generateSignature("gpt-5", input2, 0, 1);
       assert.equal(sig1, sig2);
     });
+
+    it("differentiates Claude-native system prompt that lives outside messages", () => {
+      const messages = [{ role: "user", content: "hi" }];
+      const sigA = generateSignature("claude-haiku-4-5", messages, 0, 1, {
+        system: "You are a helpful assistant.",
+      });
+      const sigB = generateSignature("claude-haiku-4-5", messages, 0, 1, {
+        system: "You are an evil assistant.",
+      });
+      assert.notEqual(sigA, sigB);
+    });
+
+    it("differentiates requests with different tools", () => {
+      const messages = [{ role: "user", content: "weather?" }];
+      const sigA = generateSignature("gpt-4", messages, 0, 1, {
+        tools: [{ type: "function", function: { name: "get_weather" } }],
+      });
+      const sigB = generateSignature("gpt-4", messages, 0, 1, {
+        tools: [{ type: "function", function: { name: "search_web" } }],
+      });
+      assert.notEqual(sigA, sigB);
+    });
+
+    it("differentiates requests with different response_format", () => {
+      const messages = [{ role: "user", content: "hi" }];
+      const sigA = generateSignature("gpt-4", messages, 0, 1, {
+        responseFormat: { type: "json_object" },
+      });
+      const sigB = generateSignature("gpt-4", messages, 0, 1, {
+        responseFormat: { type: "text" },
+      });
+      assert.notEqual(sigA, sigB);
+    });
+
+    it("matches when extras omitted vs explicit undefined", () => {
+      const messages = [{ role: "user", content: "hi" }];
+      const sigA = generateSignature("gpt-4", messages, 0, 1);
+      const sigB = generateSignature("gpt-4", messages, 0, 1, {});
+      assert.equal(sigA, sigB);
+    });
   });
 
   describe("isCacheable", () => {

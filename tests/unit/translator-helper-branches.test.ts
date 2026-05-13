@@ -329,6 +329,40 @@ test("claudeHelper validates content, ordering and request preparation branches"
   );
   assert.deepEqual(preserved.messages[0].content[0].cache_control, { type: "ephemeral" });
   assert.deepEqual(preserved.tools[0].cache_control, { type: "ephemeral" });
+
+  // role:"system" inside messages must be lifted to body.system so Anthropic
+  // doesn't reject the request (regression: injectSystemPrompt can add one when
+  // the original Claude-native request had no top-level system field).
+  const lifted = claudeHelper.prepareClaudeRequest(
+    {
+      messages: [
+        { role: "system", content: "global instructions" },
+        { role: "user", content: [{ type: "text", text: "hi" }] },
+      ],
+    },
+    "claude",
+    false
+  );
+  assert.ok(Array.isArray(lifted.system), "system field should be created as an array");
+  assert.equal(lifted.system[0].type, "text");
+  assert.equal(lifted.system[0].text, "global instructions");
+  assert.equal(lifted.messages.length, 1, "system message should be removed from messages");
+  assert.equal(lifted.messages[0].role, "user");
+
+  // Prepends to existing system array
+  const merged = claudeHelper.prepareClaudeRequest(
+    {
+      system: [{ type: "text", text: "existing" }],
+      messages: [
+        { role: "system", content: "global" },
+        { role: "user", content: [{ type: "text", text: "hi" }] },
+      ],
+    },
+    "claude",
+    false
+  );
+  assert.equal(merged.system[0].text, "global");
+  assert.equal(merged.system[1].text, "existing");
 });
 
 test("geminiHelper converts content, safely parses JSON and cleans complex schemas", () => {
