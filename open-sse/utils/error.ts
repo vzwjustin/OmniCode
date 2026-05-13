@@ -35,17 +35,30 @@ export function buildErrorBody(statusCode, message) {
 }
 
 /**
- * Create error Response object (for non-streaming)
+ * Create error Response object (for non-streaming).
+ *
+ * Adds a stable `X-Request-Id` header. Operators correlating dashboard logs
+ * with client-side error reports rely on this header — it is logged by the
+ * authz pipeline (AUTHZ_HEADER_REQUEST_ID) and surfaced here so the value is
+ * always visible to clients, not only to internal middleware.
+ *
  * @param {number} statusCode - HTTP status code
  * @param {string} message - Error message
+ * @param {object} [opts] - Optional headers (e.g. { requestId })
  * @returns {Response} HTTP Response object
  */
-export function errorResponse(statusCode, message) {
+export function errorResponse(statusCode, message, opts) {
+  const headers = { "Content-Type": "application/json" };
+  const requestId =
+    opts?.requestId ||
+    (typeof globalThis !== "undefined" && globalThis.__OMNIROUTE_REQUEST_ID__) ||
+    null;
+  if (requestId) {
+    headers["X-Request-Id"] = String(requestId);
+  }
   return new Response(JSON.stringify(buildErrorBody(statusCode, sanitizeErrorMessage(message))), {
     status: statusCode,
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
   });
 }
 

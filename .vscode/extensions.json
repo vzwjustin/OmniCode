@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "editorconfig.editorconfig",
+    "ms-azuretools.vscode-docker",
+    "github.vscode-github-actions",
+    "ms-playwright.playwright",
+    "yzhang.markdown-all-in-one",
+    "redhat.vscode-yaml",
+    "sonarsource.sonarlint-vscode"
+  ]
+}
