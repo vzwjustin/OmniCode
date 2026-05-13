@@ -175,7 +175,59 @@ function stampRouteResponse(
 ): Response {
   response.headers.set(AUTHZ_HEADER_REQUEST_ID, requestId);
   response.headers.set(AUTHZ_HEADER_ROUTE_CLASS, routeClass);
+  applySecurityHeaders(response, routeClass);
   return response;
+}
+
+/**
+ * Apply baseline browser-protection headers. Kept conservative — opt-in via
+ * env so a deployer can disable any header that interferes with their
+ * embedding or framing requirements.
+ *
+ * - `Vary: Origin` is always added on cors-enabled responses so caches do not
+ *   serve cross-origin allow-lists to a different origin.
+ * - `X-Content-Type-Options: nosniff` is uncontroversial; always on.
+ * - `Referrer-Policy: strict-origin-when-cross-origin` matches browser default
+ *   but pins it.
+ * - HSTS / X-Frame-Options / Permissions-Policy are scoped to dashboard
+ *   routes; v1 SDK consumers don't benefit and HSTS could be undesirable in
+ *   loopback-only deployments.
+ */
+function applySecurityHeaders(response: Response, routeClass: RouteClass): void {
+  if (!response.headers.has("Vary")) {
+    response.headers.set("Vary", "Origin");
+  } else {
+    const existing = response.headers.get("Vary") || "";
+    if (!/\borigin\b/i.test(existing)) {
+      response.headers.set("Vary", existing ? `${existing}, Origin` : "Origin");
+    }
+  }
+  if (!response.headers.has("X-Content-Type-Options")) {
+    response.headers.set("X-Content-Type-Options", "nosniff");
+  }
+  if (!response.headers.has("Referrer-Policy")) {
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  }
+  if (routeClass === "MANAGEMENT") {
+    if (!response.headers.has("X-Frame-Options")) {
+      response.headers.set("X-Frame-Options", "DENY");
+    }
+    if (
+      process.env.OMNIROUTE_ENABLE_HSTS === "true" &&
+      !response.headers.has("Strict-Transport-Security")
+    ) {
+      response.headers.set(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      );
+    }
+    if (!response.headers.has("Permissions-Policy")) {
+      response.headers.set(
+        "Permissions-Policy",
+        "geolocation=(), microphone=(), camera=(), payment=()"
+      );
+    }
+  }
 }
 
 async function getBodySizeSettings(): Promise<Record<string, unknown> | undefined> {

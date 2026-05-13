@@ -589,9 +589,17 @@ export function recordProviderFailure(
     if (lastFailure && now - lastFailure < CONNECTION_FAILURE_DEDUP_MS) {
       return;
     }
-    // Prevent memory leak by clearing map if it grows too large
+    // Prevent memory leak. Previously this cleared ALL dedup state at once,
+    // creating a thundering-herd window (every failing connection re-counted)
+    // the moment the cap was hit. Evict half the oldest entries instead so
+    // recent state is preserved.
     if (lastConnectionFailure.size > 10000) {
-      lastConnectionFailure.clear();
+      const entries = Array.from(lastConnectionFailure.entries());
+      entries.sort((a, b) => a[1] - b[1]);
+      const removeCount = Math.floor(entries.length / 2);
+      for (let i = 0; i < removeCount; i++) {
+        lastConnectionFailure.delete(entries[i][0]);
+      }
     }
     lastConnectionFailure.set(dedupKey, now);
   }

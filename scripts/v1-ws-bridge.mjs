@@ -404,6 +404,19 @@ class WebSocketSession {
       return;
     }
 
+    // Bound the activeRequests map so a malicious client cannot flood unique
+    // requestIds and exhaust memory. Default 32; env-overridable.
+    const maxActive = Number.parseInt(process.env.OMNIROUTE_WS_MAX_ACTIVE_REQUESTS || "32", 10);
+    const cap = Number.isFinite(maxActive) && maxActive > 0 ? maxActive : 32;
+    if (this.activeRequests.size >= cap) {
+      this.sendProtocolError(
+        "too_many_requests",
+        `Concurrent request cap reached (${cap}); cancel an existing request or wait for completion`,
+        requestId
+      );
+      return;
+    }
+
     if (!message.payload || typeof message.payload !== "object" || Array.isArray(message.payload)) {
       this.sendProtocolError(
         "invalid_payload",
