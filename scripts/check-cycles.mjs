@@ -4,7 +4,28 @@ import fs from "node:fs";
 import path from "node:path";
 
 const cwd = process.cwd();
-const defaultRoots = ["src/shared/components", "src/lib/db", "open-sse/translator"];
+// Expanded scope to surface cycles across the high-fan-in service & handler layers.
+// New entries (open-sse/services, open-sse/executors, src/sse/services, open-sse/handlers)
+// are best-effort: any cycle detected by this script will surface in CI so it can be
+// tracked, but we deliberately do not fix any pre-existing cycles in this change.
+//
+// Cycles known at the time of expanding this scope (do NOT remove from CI signal — fix in follow-ups):
+//   - SCC (6 files) under open-sse/services:
+//       * open-sse/services/autoCombo/engine.ts
+//       * open-sse/services/autoCombo/modePacks.ts
+//       * open-sse/services/autoCombo/routerStrategy.ts
+//       * open-sse/services/autoCombo/scoring.ts
+//       * open-sse/services/combo.ts
+//       * open-sse/services/manifestAdapter.ts
+const defaultRoots = [
+  "src/shared/components",
+  "src/lib/db",
+  "open-sse/translator",
+  "open-sse/services",
+  "open-sse/executors",
+  "src/sse/services",
+  "open-sse/handlers",
+];
 const roots = process.argv.slice(2).length > 0 ? process.argv.slice(2) : defaultRoots;
 const sourceExtensions = [".ts", ".tsx", ".js", ".mjs", ".jsx", ".mts", ".cts"];
 

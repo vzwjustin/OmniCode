@@ -65,6 +65,8 @@ describe("compression role guards", () => {
       const result = compressAggressive(messages, {
         summarizerEnabled: true,
         maxTokensPerMessage: 1,
+        // Set threshold to 0 so downgrade chain doesn't run lite fallback
+        minSavingsThreshold: 0,
         // Disable tool-strategy compression so we exercise the role guard on summarizer step
         toolStrategies: {
           fileContent: false,
