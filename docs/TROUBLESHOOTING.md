@@ -339,3 +339,81 @@ You can ignore this section if you do not run RAG or agent pipelines behind Omni
 - **API Reference**: See [`docs/API_REFERENCE.md`](API_REFERENCE.md) for all endpoints
 - **Health Dashboard**: Check **Dashboard → Health** for real-time system status
 - **Translator**: Use **Dashboard → Translator** to debug format issues
+
+---
+
+## 3.8+ Specific Issues
+
+These are introduced by the 3.8 audit waves (see [`AUDIT_FIXES.md`](AUDIT_FIXES.md)). If you upgraded recently and something broke, look here first.
+
+### "It won't start" (3.8+)
+
+- **`STORAGE_ENCRYPTION_KEY is not set`** in `NODE_ENV=production`: the server now refuses plaintext storage by default.
+  ```bash
+  echo "STORAGE_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env
+  # Or, for dev/test only:
+  OMNIROUTE_ALLOW_PLAINTEXT_STORAGE=true npm start
+  ```
+- **`FATAL: JWT_SECRET is not set`**: bootstrap normally writes one to `~/.omniroute/server.env`. Set explicitly:
+  ```bash
+  echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
+  ```
+- **`EADDRINUSE 127.0.0.1:20128`**: 3.8 defaults to loopback-only. If you need LAN access, set `OMNIROUTE_BIND_LAN=true` (Docker does this automatically). If you actually have a port conflict, find and stop the old process or use `PORT=20130`.
+
+### Auth changes (3.8+)
+
+- **"Invalid password" on first login after setting `INITIAL_PASSWORD`**: the first successful login returns `{ mustChangePassword: true, tempToken }` without issuing a session cookie. The dashboard prompts; CLI / API callers must POST to `/api/auth/password` with the `tempToken`.
+- **Brute-force lockout fires behind a reverse proxy**: every request appears to be from `127.0.0.1` because XFF is no longer trusted by default. Fix:
+  ```bash
+  TRUST_PROXY_HEADERS=true npm start
+  # Or more conservatively:
+  TRUST_PROXY_FROM=10.0.0.0/8 npm start
+  ```
+- **"Request origin not allowed" on dashboard POST**: 3.8 adds an `Origin` check on state-changing routes. If your dashboard origin differs from the API host, set:
+  ```bash
+  OMNIROUTE_DASHBOARD_ALLOWED_ORIGINS=https://omniroute.example.com
+  ```
+- **"My old cookie still works after logout"**: legacy JWTs without a `jti` claim cannot be revoked individually. Rotate `JWT_SECRET` to invalidate everything.
+
+### Provider / OAuth
+
+- **OAuth `redirect_uri` rejected**: 3.8+ requires `https://…` or `http://localhost`/`http://127.0.0.1`. Switch to HTTPS for non-loopback dashboards.
+- **`kie` provider used to fall back to the default executor**: fixed in 3.8. Upgrade.
+
+### Cloud sync
+
+- **"Cloud not configured"** with no instructions: 3.8+ replaces the silent error with an inline configurator on the Endpoints page. Paste the cloud URL and click Save. See [`CLOUD_SYNC.md`](CLOUD_SYNC.md).
+
+### Streaming
+
+- **Streams cut off mid-response after `FETCH_TIMEOUT_MS`**: legacy bug in some web executors (`grok-web`, `muse-spark-web`, `blackbox-web`, `gitlab`, `cliproxyapi`). Fixed in 3.8.
+- **Client disconnects but upstream keeps running**: `request.signal` is now propagated to upstream fetches. Fixed in 3.8.
+
+### Tests / build
+
+- **`npm run test:unit` hangs / RAM spike**: 3.8 defaults to `--test-concurrency=4`. If you have a `package.json` override or use `test:unit:fast` (=10), reduce it.
+- **`next build` fails with TS errors**: 3.8 makes `ignoreBuildErrors` opt-in via `OMNIROUTE_ALLOW_TS_BUILD_ERRORS=true`. Fix the errors or set the env to unblock urgently.
+
+### How do I correlate a client error with the server log?
+
+Every error response now includes an `X-Request-Id` header. Search the server log for that ID. It's also persisted to `mcp_tool_audit` (MCP) and `audit_events`.
+
+### Run `npm run doctor` first
+
+The doctor script reports Node version, secret presence, port availability, `DATA_DIR` writability, Redis reachability, and any risky configuration combinations. It's the fastest path to "what's wrong with my install?":
+
+```bash
+npm run doctor
+```
+
+Exit code 0 = clean, 1 = blocking error, 2 = warnings.
+
+### Run `npm run preflight` before pushing
+
+Bundles `doctor` + `lint` + `typecheck:core` + a tiny test smoke into a single command. Use it as a sanity gate before committing or pushing.
+
+```bash
+npm run preflight
+# Or to lint everything, not just staged:
+npm run preflight:all
+```
