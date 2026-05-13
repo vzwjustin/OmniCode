@@ -1599,9 +1599,12 @@ export async function handleChatCore({
   }
 
   const memoryOwnerId = resolveMemoryOwnerId(apiKeyInfo as Record<string, unknown> | null);
-  const memorySettings = memoryOwnerId
-    ? await getMemorySettings().catch(() => DEFAULT_MEMORY_SETTINGS)
-    : null;
+  const [memorySettings, cacheControlMode] = await Promise.all([
+    memoryOwnerId
+      ? getMemorySettings().catch(() => DEFAULT_MEMORY_SETTINGS)
+      : Promise.resolve(null),
+    getCacheControlSettings().catch(() => "auto" as const),
+  ]);
 
   if (
     memoryOwnerId &&
@@ -2193,8 +2196,7 @@ export async function handleChatCore({
   }
 
   // Determine if we should preserve client-side cache_control headers
-  // Fetch settings from DB to get user preference
-  const cacheControlMode = await getCacheControlSettings().catch(() => "auto" as const);
+  // cacheControlMode is pre-fetched in parallel with memorySettings (see line ~1584)
   const preserveCacheControl = shouldPreserveCacheControl({
     userAgent,
     isCombo,
