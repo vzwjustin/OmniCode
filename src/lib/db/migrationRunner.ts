@@ -307,11 +307,45 @@ function isSchemaAlreadyApplied(
       return !hasColumn(db, "files", "status");
     case "055":
       return hasColumn(db, "batches", "status");
+    case "056":
+      return (
+        hasColumn(db, "usage_history", "success") &&
+        hasColumn(db, "usage_history", "latency_ms") &&
+        hasColumn(db, "usage_history", "ttft_ms") &&
+        hasColumn(db, "usage_history", "error_code")
+      );
     case "054":
       return hasColumn(db, "usage_history", "service_tier");
     default:
       return false;
   }
+}
+
+function applyUsageHistoryObservabilityMigration(db: Database.Database): void {
+  ensureColumn(
+    db,
+    "usage_history",
+    "success",
+    "ALTER TABLE usage_history ADD COLUMN success INTEGER DEFAULT 1"
+  );
+  ensureColumn(
+    db,
+    "usage_history",
+    "latency_ms",
+    "ALTER TABLE usage_history ADD COLUMN latency_ms INTEGER DEFAULT 0"
+  );
+  ensureColumn(
+    db,
+    "usage_history",
+    "ttft_ms",
+    "ALTER TABLE usage_history ADD COLUMN ttft_ms INTEGER DEFAULT 0"
+  );
+  ensureColumn(
+    db,
+    "usage_history",
+    "error_code",
+    "ALTER TABLE usage_history ADD COLUMN error_code TEXT"
+  );
 }
 
 function applyApiKeyLifecycleMigration(db: Database.Database): void {
@@ -781,6 +815,8 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
         );
       } else if (migration.version === "032") {
         applyApiKeyLifecycleMigration(db);
+      } else if (migration.version === "056") {
+        applyUsageHistoryObservabilityMigration(db);
       } else if (migration.version === "041") {
         applyCompressionReceiptsMigration(db);
       } else if (migration.version === "042") {
