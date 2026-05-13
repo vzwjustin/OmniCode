@@ -62,6 +62,18 @@ export class GithubExecutor extends BaseExecutor {
     return [{ role: "system", content: formatInstruction }, ...messages];
   }
 
+  /**
+   * Only strip reasoning_text / reasoning_content from assistant history when
+   * the target model is known to reject reasoning blocks. Anthropic (Claude)
+   * targets accept reasoning blocks and need them preserved for correct
+   * thinking continuity. Defensive default: strip for non-Anthropic targets.
+   */
+  shouldStripReasoning(model: string): boolean {
+    const m = (model || "").toLowerCase();
+    if (m.includes("claude") || m.includes("anthropic")) return false;
+    return true;
+  }
+
   transformRequest(model: string, body: any, stream: boolean, credentials: any): any {
     void stream;
     void credentials;
@@ -69,7 +81,7 @@ export class GithubExecutor extends BaseExecutor {
     const sourceBody = body && typeof body === "object" ? body : {};
     const modifiedBody = { ...sourceBody };
 
-    if (Array.isArray(sourceBody.messages)) {
+    if (Array.isArray(sourceBody.messages) && this.shouldStripReasoning(model)) {
       modifiedBody.messages = sourceBody.messages.map((msg) => {
         if (!msg || typeof msg !== "object") return msg;
         const role = typeof msg.role === "string" ? msg.role.toLowerCase() : "";

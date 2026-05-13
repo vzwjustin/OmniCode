@@ -10,25 +10,33 @@ export function extractUsageFromResponse(responseBody, provider) {
     providerId === "anthropic" ||
     providerId.startsWith("anthropic-compatible");
 
-  // OpenAI format (has prompt_tokens / completion_tokens)
+  // OpenAI format (has prompt_tokens / completion_tokens). Some pre-translated
+  // responses keep Claude-style cache fields alongside the OpenAI counters —
+  // surface those too so cache hits aren't dropped on the floor.
   if (
     responseBody.usage &&
     typeof responseBody.usage === "object" &&
     responseBody.usage.prompt_tokens !== undefined
   ) {
+    const u = responseBody.usage;
+    const cacheRead = u.cache_read_input_tokens ?? u.prompt_tokens_details?.cache_read_input_tokens;
+    const cacheCreation =
+      u.cache_creation_input_tokens ?? u.prompt_tokens_details?.cache_creation_input_tokens;
     return {
-      prompt_tokens: responseBody.usage.prompt_tokens || 0,
-      completion_tokens: responseBody.usage.completion_tokens || 0,
+      prompt_tokens: u.prompt_tokens || 0,
+      completion_tokens: u.completion_tokens || 0,
       // DeepSeek native API uses flat prompt_cache_hit_tokens (NOT
       // prompt_tokens_details.cached_tokens). Fall back to it so V4 cache
       // gets surfaced into kanban call_logs alongside the OpenAI/Claude paths.
       cached_tokens:
-        responseBody.usage.prompt_tokens_details?.cached_tokens ??
-        responseBody.usage.input_tokens_details?.cached_tokens ??
-        responseBody.usage.prompt_cache_hit_tokens,
+        u.prompt_tokens_details?.cached_tokens ??
+        u.input_tokens_details?.cached_tokens ??
+        u.prompt_cache_hit_tokens ??
+        u.cache_read_input_tokens,
       reasoning_tokens:
-        responseBody.usage.completion_tokens_details?.reasoning_tokens ??
-        responseBody.usage.output_tokens_details?.reasoning_tokens,
+        u.completion_tokens_details?.reasoning_tokens ?? u.output_tokens_details?.reasoning_tokens,
+      ...(cacheRead !== undefined ? { cache_read_input_tokens: cacheRead } : {}),
+      ...(cacheCreation !== undefined ? { cache_creation_input_tokens: cacheCreation } : {}),
     };
   }
 

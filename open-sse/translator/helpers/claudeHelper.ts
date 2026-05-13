@@ -163,6 +163,10 @@ export function prepareClaudeRequest(
             const text = (block as { text?: unknown })?.text;
             if (typeof text === "string" && text.length > 0) systemTexts.push(text);
           }
+        } else if (content && typeof content === "object") {
+          // Object-shaped content like { text: "..." } — treat as a single text block.
+          const text = (content as { text?: unknown }).text;
+          if (typeof text === "string" && text.length > 0) systemTexts.push(text);
         }
       } else {
         nonSystem.push(msg);
