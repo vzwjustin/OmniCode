@@ -78,6 +78,7 @@
     "test:unit:fast": "cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --import tsx/esm --test --test-concurrency=10 tests/unit/*.test.ts",
     "doctor": "node scripts/doctor.mjs",
     "check:env": "node scripts/doctor.mjs",
+    "check:env:coverage": "node scripts/check-env-coverage.mjs",
     "preflight": "node scripts/preflight.mjs",
     "preflight:all": "node scripts/preflight.mjs --all",
     "test:plan3": "cross-env DISABLE_SQLITE_AUTO_BACKUP=true node --import tsx/esm --test tests/unit/plan3-p0.test.ts",
