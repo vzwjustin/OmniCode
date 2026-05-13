@@ -259,7 +259,6 @@ const SCHEMA_SQL = `
     timestamp TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_uh_timestamp ON usage_history(timestamp);
-  CREATE INDEX IF NOT EXISTS idx_uh_provider ON usage_history(provider);
   CREATE INDEX IF NOT EXISTS idx_uh_model ON usage_history(model);
 
   CREATE TABLE IF NOT EXISTS call_logs (
@@ -546,7 +545,6 @@ function ensureUsageHistoryColumns(db: SqliteDatabase) {
       db.exec("ALTER TABLE usage_history ADD COLUMN service_tier TEXT DEFAULT 'standard'");
       console.log("[DB] Added usage_history.service_tier column");
     }
-    db.exec("CREATE INDEX IF NOT EXISTS idx_uh_service_tier ON usage_history(service_tier)");
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn("[DB] Failed to verify usage_history schema:", message);
@@ -633,9 +631,6 @@ function ensureCallLogsColumns(db: SqliteDatabase) {
       "CREATE INDEX IF NOT EXISTS idx_call_logs_requested_model ON call_logs(requested_model)"
     );
     db.exec("CREATE INDEX IF NOT EXISTS idx_call_logs_request_type ON call_logs(request_type)");
-    db.exec(
-      "CREATE INDEX IF NOT EXISTS idx_cl_combo_target ON call_logs(combo_name, combo_execution_key, timestamp)"
-    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn("[DB] Failed to verify call_logs schema:", message);
@@ -1283,6 +1278,9 @@ export function getDbInstance(): SqliteDatabase {
   db.pragma("journal_mode = WAL");
   db.pragma("busy_timeout = 5000");
   db.pragma("synchronous = NORMAL");
+  db.pragma("mmap_size = 268435456");
+  db.pragma("cache_size = -65536");
+  db.pragma("temp_store = MEMORY");
   db.exec(SCHEMA_SQL);
   ensureProviderConnectionsColumns(db);
   ensureUsageHistoryColumns(db);
