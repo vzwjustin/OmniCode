@@ -29,16 +29,22 @@ function CallbackContent() {
 
     let sent = false;
 
-    // Check if this callback is from expected origin/port
-    const expectedOrigins = [
-      window.location.origin, // Same origin (for most providers)
-      "http://localhost:1455", // Codex specific port
-    ];
-
-    // Method 1: postMessage to opener (popup mode)
+    // Method 1: postMessage to opener (popup mode).
+    //
+    // SECURITY: Never use a wildcard ("*") targetOrigin here. The callback URL
+    // contains the OAuth `code` (and on some providers `state` and `id_token`)
+    // — if we broadcast it with "*", any attacker-controlled opener (e.g. a
+    // malicious page that opened our window via `window.open`) can read the
+    // authorization code and exchange it for tokens. By pinning the
+    // targetOrigin to the current document's origin we guarantee the message
+    // is only delivered to a same-origin opener — which can only be our own
+    // dashboard.
     if (window.opener) {
       try {
-        window.opener.postMessage({ type: "oauth_callback", data: callbackData }, "*"); // Allow any origin for local dev
+        window.opener.postMessage(
+          { type: "oauth_callback", data: callbackData },
+          window.location.origin
+        );
         sent = true;
       } catch (e) {
         console.log("postMessage failed:", e);

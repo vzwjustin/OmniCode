@@ -9,6 +9,7 @@
 
 import { generatePKCE, generateState } from "./utils/pkce";
 import { PROVIDERS } from "./providers/index";
+import { recordState } from "./stateStore";
 
 /**
  * Get provider handler
@@ -42,6 +43,13 @@ export function generateAuthData(providerName, redirectUri) {
     authUrl = provider.buildAuthUrl(provider.config, redirectUri, state, codeChallenge);
   } else {
     authUrl = provider.buildAuthUrl(provider.config, redirectUri, state);
+  }
+
+  // Persist the state server-side so we can verify it at exchange time
+  // (CSRF / state-confusion defense per RFC 6749 §10.12). Only useful for
+  // browser-redirect flows; device_code flows don't carry state back.
+  if (provider.flowType !== "device_code") {
+    recordState(state, { providerId: providerName, codeVerifier });
   }
 
   return {

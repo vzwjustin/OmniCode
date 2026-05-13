@@ -5,10 +5,28 @@ import {
   getAntigravityLoadCodeAssistMetadata,
 } from "@omniroute/open-sse/services/antigravityHeaders.ts";
 
+function requireAntigravityClientSecret(config: { clientSecret: string | null }): string {
+  // SECURITY: refuse to start/complete the OAuth flow without an operator-
+  // configured client_secret. Antigravity uses Google's confidential-client
+  // token endpoint, which always requires client_secret. We refuse here so
+  // the operator gets an actionable error instead of a 400 from Google.
+  if (!config.clientSecret) {
+    throw new Error(
+      "Antigravity OAuth requires ANTIGRAVITY_OAUTH_CLIENT_SECRET to be set.\n" +
+        "In Docker: add 'ANTIGRAVITY_OAUTH_CLIENT_SECRET=<your-secret>' to your docker-compose.yml env.\n" +
+        "In npm: add it to ~/.omniroute/.env\n" +
+        "Obtain the client secret from the Google Cloud Console (https://console.cloud.google.com/apis/credentials)\n" +
+        "for the same OAuth 2.0 Client ID configured as ANTIGRAVITY_OAUTH_CLIENT_ID."
+    );
+  }
+  return config.clientSecret;
+}
+
 export const antigravity = {
   config: ANTIGRAVITY_CONFIG,
   flowType: "authorization_code",
   buildAuthUrl: (config, redirectUri, state) => {
+    requireAntigravityClientSecret(config);
     const params = new URLSearchParams({
       client_id: config.clientId,
       response_type: "code",
@@ -21,16 +39,14 @@ export const antigravity = {
     return `${config.authorizeUrl}?${params.toString()}`;
   },
   exchangeToken: async (config, code, redirectUri) => {
+    const clientSecret = requireAntigravityClientSecret(config);
     const bodyParams: Record<string, string> = {
       grant_type: "authorization_code",
       client_id: config.clientId,
       code: code,
       redirect_uri: redirectUri,
+      client_secret: clientSecret,
     };
-
-    if (config.clientSecret) {
-      bodyParams.client_secret = config.clientSecret;
-    }
 
     const response = await fetch(config.tokenUrl, {
       method: "POST",
