@@ -493,7 +493,14 @@ export function getModelLockoutInfo(provider, connectionId, model) {
  */
 export function getAllModelLockouts() {
   const now = Date.now();
-  const active: any[] = [];
+  const active: {
+    provider: string;
+    connectionId: string;
+    model: string;
+    reason: string;
+    remainingMs: number;
+    failureCount: number;
+  }[] = [];
   for (const key of modelLockouts.keys()) {
     cleanupModelLockKey(key, now);
   }
@@ -885,7 +892,7 @@ export function checkFallbackError(
   backoffLevel: number = 0,
   _model: string | null = null,
   provider: string | null = null,
-  headers: any = null,
+  headers: Headers | Record<string, string> | null = null,
   profileOverride: ProviderProfile | null = null
 ): {
   shouldFallback: boolean;
