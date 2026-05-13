@@ -4,6 +4,11 @@
  */
 
 import crypto from "crypto";
+import {
+  SafeOutboundFetchError,
+  safeOutboundFetch,
+  validateOutboundUrl,
+} from "@/shared/network/safeOutboundFetch";
 
 export type WebhookEvent =
   | "request.completed"
@@ -42,18 +47,26 @@ export async function deliverWebhook(
     headers["X-Webhook-Signature"] = signPayload(body, secret);
   }
 
+  // SSRF guard — resolve DNS and reject private/loopback/IMDS targets up front.
+  const urlCheck = await validateOutboundUrl(url, "public-only");
+  if (!urlCheck.ok) {
+    return {
+      success: false,
+      status: 400,
+      error: `blocked_target: ${urlCheck.reason}`,
+    };
+  }
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-      const res = await fetch(url, {
+      const res = await safeOutboundFetch(url, {
         method: "POST",
         headers,
         body,
-        signal: controller.signal,
+        guard: "public-only",
+        timeoutMs: 10000,
+        retry: false,
       });
-      clearTimeout(timeoutId);
 
       if (res.ok || res.status < 500) {
         return { success: res.ok, status: res.status };
@@ -64,6 +77,9 @@ export async function deliverWebhook(
         await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     } catch (error: any) {
+      if (error instanceof SafeOutboundFetchError && error.code === "URL_GUARD_BLOCKED") {
+        return { success: false, status: 400, error: "blocked_target" };
+      }
       if (attempt === maxRetries) {
         return { success: false, status: 0, error: error.message || "Network error" };
       }

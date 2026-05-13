@@ -6,10 +6,18 @@ import {
   ANTHROPIC_COMPATIBLE_PREFIX,
   CLAUDE_CODE_COMPATIBLE_PREFIX,
 } from "@/shared/constants/providers";
+import { validateOutboundUrl } from "@/shared/network/safeOutboundFetch";
 import { generateId } from "@/shared/utils";
 import { isCcCompatibleProviderEnabled } from "@/shared/utils/featureFlags";
 import { createProviderNodeSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+
+const TRUE_ENV = new Set(["1", "true", "yes", "on"]);
+
+function arePrivateBaseUrlsAllowed(): boolean {
+  const value = process.env.OMNIROUTE_ALLOW_PRIVATE_BASEURLS;
+  return !!value && TRUE_ENV.has(value.trim().toLowerCase());
+}
 
 const OPENAI_COMPATIBLE_DEFAULTS = {
   baseUrl: "https://api.openai.com/v1",
@@ -82,12 +90,25 @@ export async function POST(request) {
     const nodeType = type || "openai-compatible";
 
     if (nodeType === "openai-compatible") {
+      const finalBaseUrl = (baseUrl || OPENAI_COMPATIBLE_DEFAULTS.baseUrl).trim();
+
+      // SSRF guard — reject base URLs that resolve to private/loopback/IMDS.
+      if (!arePrivateBaseUrlsAllowed()) {
+        const check = await validateOutboundUrl(finalBaseUrl, "public-only");
+        if (!check.ok) {
+          return NextResponse.json(
+            { error: "blocked_baseurl", reason: check.reason },
+            { status: 400 }
+          );
+        }
+      }
+
       const node = await createProviderNode({
         id: `${OPENAI_COMPATIBLE_PREFIX}${apiType}-${generateId()}`,
         type: "openai-compatible",
         prefix: prefix.trim(),
         apiType,
-        baseUrl: (baseUrl || OPENAI_COMPATIBLE_DEFAULTS.baseUrl).trim(),
+        baseUrl: finalBaseUrl,
         name: name.trim(),
         chatPath: chatPath || null,
         modelsPath: modelsPath || null,
@@ -105,6 +126,17 @@ export async function POST(request) {
         compatMode === "cc"
           ? sanitizeClaudeCodeCompatibleBaseUrl(rawBaseUrl)
           : sanitizeAnthropicBaseUrl(rawBaseUrl);
+
+      // SSRF guard — reject base URLs that resolve to private/loopback/IMDS.
+      if (!arePrivateBaseUrlsAllowed()) {
+        const check = await validateOutboundUrl(sanitizedBaseUrl, "public-only");
+        if (!check.ok) {
+          return NextResponse.json(
+            { error: "blocked_baseurl", reason: check.reason },
+            { status: 400 }
+          );
+        }
+      }
 
       const node = await createProviderNode({
         id:
