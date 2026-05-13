@@ -52,17 +52,23 @@ export interface SidebarSectionDefinition {
   visibility?: "always" | "debug";
 }
 
+// Reordered for less visual overload:
+//   Setup     → home / endpoints / api-manager
+//   Routing   → providers / combos / limits
+//   Insights  → costs / analytics / cache
+//   Advanced  → batch / media (least-used; lives at the bottom of Primary
+//               so users discover Setup/Routing/Insights first)
 const PRIMARY_SIDEBAR_ITEMS: readonly SidebarItemDefinition[] = [
   { id: "home", href: "/dashboard", i18nKey: "home", icon: "home", exact: true },
   { id: "endpoints", href: "/dashboard/endpoint", i18nKey: "endpoints", icon: "api" },
   { id: "api-manager", href: "/dashboard/api-manager", i18nKey: "apiManager", icon: "vpn_key" },
   { id: "providers", href: "/dashboard/providers", i18nKey: "providers", icon: "dns" },
   { id: "combos", href: "/dashboard/combos", i18nKey: "combos", icon: "layers" },
-  { id: "batch", href: "/dashboard/batch", i18nKey: "batch", icon: "view_list" },
+  { id: "limits", href: "/dashboard/limits", i18nKey: "limits", icon: "tune" },
   { id: "costs", href: "/dashboard/costs", i18nKey: "costs", icon: "account_balance_wallet" },
   { id: "analytics", href: "/dashboard/analytics", i18nKey: "analytics", icon: "analytics" },
   { id: "cache", href: "/dashboard/cache", i18nKey: "cache", icon: "cached" },
-  { id: "limits", href: "/dashboard/limits", i18nKey: "limits", icon: "tune" },
+  { id: "batch", href: "/dashboard/batch", i18nKey: "batch", icon: "view_list" },
   { id: "media", href: "/dashboard/cache/media", i18nKey: "media", icon: "perm_media" },
 ];
 
