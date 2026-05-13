@@ -343,35 +343,58 @@ export async function executeChatWithBreaker({
     }
 
     // chatFn never throws on upstream provider 5xx — it resolves with
-    // `{ success: false, status }`. Without this post-check the breaker would
-    // miss those failures and stay CLOSED forever even on a fully unhealthy
-    // provider. We invoke `_onFailure()` directly when the resolved status is
-    // in the provider-failure set (408/500/502/503/504).
-    const recordProviderFailureIfNeeded = (res: any) => {
-      if (
-        res &&
-        typeof res === "object" &&
-        res.success === false &&
-        typeof res.status === "number" &&
-        isProviderFailureCode(res.status)
-      ) {
-        try {
-          breaker._onFailure();
-        } catch {
-          // breaker bookkeeping should never break the request path
-        }
+    // `{ success: false, status }`. If we routed through `breaker.execute()`
+    // the resolved (non-throwing) result would cause `_onSuccess()` to fire and
+    // reset the failure counter; we'd then have to call `_onFailure()`
+    // ourselves, producing CLOSE→reset-to-0→increment-to-1 sequencing on every
+    // request to a fully unhealthy provider. Instead we drive the probe budget
+    // and the outcome calls explicitly so the breaker sees clean signals.
+    const isProviderFailureResult = (res: any) =>
+      res != null &&
+      typeof res === "object" &&
+      res.success === false &&
+      typeof res.status === "number" &&
+      isProviderFailureCode(res.status);
+
+    if (!breaker._acquireProbe()) {
+      const reason =
+        breaker.getStatus?.()?.state === "HALF_OPEN" ? "HALF_OPEN" : "OPEN";
+      throw new CircuitBreakerOpenError(
+        reason === "HALF_OPEN"
+          ? `Circuit breaker "${breaker.name}" is HALF_OPEN, no more probe requests allowed.`
+          : `Circuit breaker "${breaker.name}" is OPEN. Try again later.`,
+        breaker.name,
+        breaker.getRetryAfterMs?.() ?? 0
+      );
+    }
+
+    const recordOutcome = (res: any) => {
+      try {
+        if (isProviderFailureResult(res)) breaker._onFailure();
+        else breaker._onSuccess();
+      } catch {
+        // breaker bookkeeping should never break the request path
       }
     };
 
-    if (!proxyInfo?.proxy && isTlsFingerprintActive()) {
-      const tracked = await breaker.execute(async () => runWithTlsTracking(chatFn));
-      recordProviderFailureIfNeeded(tracked.result);
-      return { result: tracked.result, tlsFingerprintUsed: tracked.tlsFingerprintUsed };
-    }
+    try {
+      if (!proxyInfo?.proxy && isTlsFingerprintActive()) {
+        const tracked = await runWithTlsTracking(chatFn);
+        recordOutcome(tracked.result);
+        return { result: tracked.result, tlsFingerprintUsed: tracked.tlsFingerprintUsed };
+      }
 
-    const result = await breaker.execute(chatFn);
-    recordProviderFailureIfNeeded(result);
-    return { result, tlsFingerprintUsed: false };
+      const result = await chatFn();
+      recordOutcome(result);
+      return { result, tlsFingerprintUsed: false };
+    } catch (err) {
+      try {
+        breaker._onFailure();
+      } catch {
+        // breaker bookkeeping should never break the request path
+      }
+      throw err;
+    }
   } catch (cbErr: any) {
     if (cbErr instanceof CircuitBreakerOpenError) {
       log.warn("CIRCUIT", `${provider} circuit open during retry: ${cbErr.message}`);

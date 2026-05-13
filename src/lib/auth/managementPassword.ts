@@ -2,7 +2,16 @@ import bcrypt from "bcryptjs";
 import { getSettings, updateSettings } from "@/lib/db/settings";
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
-const MANAGEMENT_PASSWORD_SALT_ROUNDS = 12;
+// Bcrypt cost factor; env-overridable. 14 ≈ 1.5s/hash on modern CPUs and is
+// our preferred default. Allow 10..15 to avoid pathologically slow logins or
+// trivially weak hashes from misconfiguration.
+function resolveBcryptCost(): number {
+  const raw = process.env.OMNIROUTE_BCRYPT_COST;
+  const parsed = raw ? Number.parseInt(raw, 10) : 14;
+  if (!Number.isFinite(parsed) || parsed < 10 || parsed > 15) return 14;
+  return parsed;
+}
+const MANAGEMENT_PASSWORD_SALT_ROUNDS = resolveBcryptCost();
 
 type JsonRecord = Record<string, unknown>;
 
