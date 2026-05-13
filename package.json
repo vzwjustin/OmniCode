@@ -88,6 +88,7 @@
     "audit:electron": "npm --prefix electron audit --audit-level=moderate",
     "typecheck:core": "tsc --pretty false -p tsconfig.typecheck-core.json",
     "typecheck:noimplicit:core": "tsc --pretty false -p tsconfig.typecheck-noimplicit-core.json",
+    "typecheck:full": "tsc -p tsconfig.fullcheck.json --noEmit",
     "backfill-aggregation": "node --import tsx/esm src/scripts/backfillAggregation.ts",
     "env:sync": "node scripts/sync-env.mjs",
     "test:integration": "node --import tsx/esm --test tests/integration/*.test.ts",

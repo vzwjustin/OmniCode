@@ -257,7 +257,8 @@ async function sweep() {
 /**
  * Check a single connection and refresh if due.
  */
-export async function checkConnection(conn) {
+ 
+export async function checkConnection(conn: any) {
   if (!conn?.id) return;
 
   const latestConnection = (await getProviderConnectionById(conn.id)) || conn;
@@ -325,13 +326,13 @@ export async function checkConnection(conn) {
     conn.provider,
     credentials,
     {
-      info: (tag, msg) => {
+      info: (tag: string, msg: string) => {
         if (!hideLogs) console.log(`${LOG_PREFIX} [${tag}] ${msg}`);
       },
-      warn: (tag, msg) => {
+      warn: (tag: string, msg: string) => {
         if (!hideLogs) console.warn(`${LOG_PREFIX} [${tag}] ${msg}`);
       },
-      error: (tag, msg, extra) => {
+      error: (tag: string, msg: string, extra?: unknown) => {
         if (!hideLogs) console.error(`${LOG_PREFIX} [${tag}] ${msg}`, extra || "");
       },
     },

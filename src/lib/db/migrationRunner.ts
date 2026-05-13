@@ -177,15 +177,65 @@ function ensureMigrationsTable(db: Database.Database): void {
 }
 
 /**
+ * Assert that migration version numbers form a strictly contiguous sequence
+ * starting at 1 (with optional zero-padding such as 001, 002, ...). Gaps are a
+ * strong indicator of a renumbering accident or a missing file in the source
+ * tree, both of which would silently apply the wrong set of schema changes.
+ *
+ * Default behaviour is "warn" (log + continue). Set
+ * OMNIROUTE_STRICT_MIGRATION_NUMBERING=true to make the assertion fatal instead.
+ */
+function assertMigrationsContiguous(
+  sortedFiles: Array<{ version: string; name: string; path: string }>
+): void {
+  if (sortedFiles.length === 0) return;
+
+  // Only consider files whose version parses as a number — files with non-numeric
+  // prefixes (e.g. legacy archive entries) are intentionally outside the sequence.
+  const numeric = sortedFiles
+    .map((f) => ({ ...f, num: Number.parseInt(f.version, 10) }))
+    .filter((f) => Number.isFinite(f.num));
+
+  if (numeric.length === 0) return;
+
+  // Walk the sorted list and collect every integer that should appear between
+  // 1 and the highest present version, but is absent from the file list.
+  const present = new Set(numeric.map((f) => f.num));
+  const highest = numeric[numeric.length - 1].num;
+  const missing: number[] = [];
+  for (let v = 1; v <= highest; v++) {
+    if (!present.has(v)) missing.push(v);
+  }
+
+  if (missing.length === 0) return;
+
+  const formatted = missing
+    .map((n) => String(n).padStart(3, "0"))
+    .slice(0, 20)
+    .join(", ");
+  const suffix = missing.length > 20 ? ` (and ${missing.length - 20} more)` : "";
+  console.error(
+    `[Migration] ⚠️  Non-contiguous migration numbering detected. Missing version(s): ${formatted}${suffix}. ` +
+      `Renumbering or a missing file can cause migrations to be applied out of order.`
+  );
+
+  if (process.env.OMNIROUTE_STRICT_MIGRATION_NUMBERING === "true") {
+    throw new Error(
+      `[Migration] Aborting due to non-contiguous migration sequence (missing: ${formatted}${suffix}). ` +
+        `Unset OMNIROUTE_STRICT_MIGRATION_NUMBERING to downgrade to a warning.`
+    );
+  }
+}
+
+/**
  * Get all migration files sorted by version number.
  */
 function getMigrationFiles(): Array<{ version: string; name: string; path: string }> {
   if (!fs.existsSync(MIGRATIONS_DIR)) return [];
 
-  return fs
+  const files = fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith(".sql"))
-    .sort()
     .map((filename) => {
       const match = filename.match(/^(\d+)_(.+)\.sql$/);
       if (!match) return null;
@@ -196,6 +246,15 @@ function getMigrationFiles(): Array<{ version: string; name: string; path: strin
       };
     })
     .filter(Boolean) as Array<{ version: string; name: string; path: string }>;
+
+  // Sort numerically by version so the contiguity check sees the true ordering
+  // (lexicographic sort happens to be correct for zero-padded versions, but
+  // explicit numeric sort future-proofs the check if padding ever changes).
+  files.sort((a, b) => Number.parseInt(a.version, 10) - Number.parseInt(b.version, 10));
+
+  assertMigrationsContiguous(files);
+
+  return files;
 }
 
 /**
