@@ -342,12 +342,35 @@ export async function executeChatWithBreaker({
       return { result, tlsFingerprintUsed: false };
     }
 
+    // chatFn never throws on upstream provider 5xx — it resolves with
+    // `{ success: false, status }`. Without this post-check the breaker would
+    // miss those failures and stay CLOSED forever even on a fully unhealthy
+    // provider. We invoke `_onFailure()` directly when the resolved status is
+    // in the provider-failure set (408/500/502/503/504).
+    const recordProviderFailureIfNeeded = (res: any) => {
+      if (
+        res &&
+        typeof res === "object" &&
+        res.success === false &&
+        typeof res.status === "number" &&
+        isProviderFailureCode(res.status)
+      ) {
+        try {
+          breaker._onFailure();
+        } catch {
+          // breaker bookkeeping should never break the request path
+        }
+      }
+    };
+
     if (!proxyInfo?.proxy && isTlsFingerprintActive()) {
       const tracked = await breaker.execute(async () => runWithTlsTracking(chatFn));
+      recordProviderFailureIfNeeded(tracked.result);
       return { result: tracked.result, tlsFingerprintUsed: tracked.tlsFingerprintUsed };
     }
 
     const result = await breaker.execute(chatFn);
+    recordProviderFailureIfNeeded(result);
     return { result, tlsFingerprintUsed: false };
   } catch (cbErr: any) {
     if (cbErr instanceof CircuitBreakerOpenError) {

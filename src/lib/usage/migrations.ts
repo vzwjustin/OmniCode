@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Usage Migrations — extracted from usageDb.js (T-15)
  *
@@ -145,7 +144,12 @@ function addPathToZip(zipFile: ZipFile, sourcePath: string, archivePath: string)
   if (stat.isDirectory()) {
     const entries = fs.readdirSync(sourcePath);
     if (entries.length === 0) {
-      zipFile.addEmptyDirectory(archivePath);
+      // yazl's runtime API exposes addEmptyDirectory() but its TS types do not
+      // declare it (see node_modules/yazl/index.js). Cast through a narrow
+      // structural interface instead of `any`.
+      (zipFile as unknown as { addEmptyDirectory: (p: string) => void }).addEmptyDirectory(
+        archivePath
+      );
       return;
     }
 
@@ -376,9 +380,10 @@ export function migrateUsageJsonToSqlite() {
                   tokens: {
                     in: log.tokens?.in ?? 0,
                     out: log.tokens?.out ?? 0,
-                    cacheRead: null,
-                    cacheWrite: null,
-                    reasoning: null,
+                    cacheRead: 0,
+                    cacheWrite: 0,
+                    reasoning: 0,
+                    compressed: 0,
                   },
                   requestType: log.requestType || null,
                   sourceFormat: log.sourceFormat || null,

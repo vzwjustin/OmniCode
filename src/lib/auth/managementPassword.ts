@@ -30,6 +30,17 @@ export function getStoredManagementPassword(settings: JsonRecord | null | undefi
   return typeof settings?.password === "string" ? settings.password : "";
 }
 
+/**
+ * Whether the persisted password is a bootstrap credential (e.g. migrated
+ * from `INITIAL_PASSWORD`) that the operator MUST rotate before being granted
+ * a real session. See `ensurePersistentManagementPasswordHash`, which sets
+ * this flag whenever the persisted hash was derived from env or any other
+ * non-user-chosen source.
+ */
+export function isPasswordMustRotate(settings: JsonRecord | null | undefined): boolean {
+  return settings?.passwordMustRotate === true;
+}
+
 export function hasManagementPasswordConfigured(settings: JsonRecord | null | undefined) {
   return (
     getStoredManagementPassword(settings).length > 0 ||
@@ -87,6 +98,12 @@ export async function ensurePersistentManagementPasswordHash(
   if (!storedPassword) {
     updates.requireLogin = true;
   }
+  // Mark the hash as a bootstrap credential that must be rotated before a
+  // full session is issued. This prevents `INITIAL_PASSWORD` (or a legacy
+  // plaintext value persisted in settings) from acting as a permanent
+  // backdoor: the operator can still log in once, but must change the
+  // password before being granted normal access.
+  updates.passwordMustRotate = true;
 
   const nextSettings = (await updateSettings(updates)) as JsonRecord;
   if (options.logger) {

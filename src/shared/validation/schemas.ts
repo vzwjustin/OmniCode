@@ -571,6 +571,29 @@ export const v1AudioSpeechSchema = z
   })
   .catchall(z.unknown());
 
+// Validates the multipart/form-data shape for /v1/audio/transcriptions.
+// `file` must be a Blob/File (FormData entry type). Optional fields mirror
+// the OpenAI Whisper API contract.
+export const v1AudioTranscriptionsSchema = z
+  .object({
+    file: z
+      .unknown()
+      .refine(
+        (value) =>
+          value !== null &&
+          value !== undefined &&
+          typeof value === "object" &&
+          typeof (value as Blob).arrayBuffer === "function",
+        "file is required and must be an uploaded file"
+      ),
+    model: modelIdSchema,
+    language: z.string().trim().min(1).optional(),
+    prompt: z.string().optional(),
+    response_format: z.enum(["json", "text", "srt", "verbose_json", "vtt"]).optional(),
+    temperature: z.coerce.number().min(0).max(1).optional(),
+  })
+  .catchall(z.unknown());
+
 export const v1ModerationSchema = z
   .object({
     model: modelIdSchema.optional(),

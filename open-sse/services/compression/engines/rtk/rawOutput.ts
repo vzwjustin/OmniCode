@@ -37,8 +37,10 @@ const SECRET_PATTERNS: Array<[RegExp, string]> = [
     /((?:api[_-]?key|token|secret|password|passwd|pwd)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s]+)/gi,
     "$1[REDACTED]",
   ],
-  [/(authorization\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;]+)/gi, "$1[REDACTED]"],
-  [/(authorization\s*:\s*bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, "$1[REDACTED]"],
+  // Authorization: Bearer ... — run before generic authorization to keep "Bearer " prefix visible
+  [/(authorization\s*:\s*bearer\s+)[^\s,;]+/gi, "$1[REDACTED]"],
+  [/(authorization\s*:\s*)(?!bearer\s)([^\s,;\n]+)/gi, "$1[REDACTED]"],
+  [/(authorization\s*=\s*)("[^"]+"|'[^']+'|[^\s,;\n]+)/gi, "$1[REDACTED]"],
   [/(cookie\s*[:=]\s*)("[^"]+"|'[^']+'|[^\n,;]+)/gi, "$1[REDACTED]"],
   [/(set-cookie\s*:\s*)([^\n]+)/gi, "$1[REDACTED]"],
 ];

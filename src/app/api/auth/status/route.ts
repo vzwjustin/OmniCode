@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
+import { isJtiDenied } from "@/lib/auth/sessionRegistry";
 
 function getJwtSecret(): Uint8Array | null {
   const secret = process.env.JWT_SECRET?.trim();
@@ -17,7 +18,11 @@ export async function GET() {
       return NextResponse.json({ authenticated: false });
     }
 
-    await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, secret);
+    const jti = typeof payload.jti === "string" ? payload.jti : null;
+    if (jti && isJtiDenied(jti)) {
+      return NextResponse.json({ authenticated: false });
+    }
     return NextResponse.json({ authenticated: true });
   } catch {
     return NextResponse.json({ authenticated: false });

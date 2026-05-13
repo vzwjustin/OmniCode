@@ -1470,7 +1470,23 @@ export async function handleChatCore({
       body.messages ?? body.input,
       body.temperature,
       body.top_p,
-      { system: body.system, tools: body.tools, responseFormat: body.response_format }
+      {
+        system: body.system,
+        tools: body.tools,
+        responseFormat: body.response_format,
+        apiKeyId:
+          (apiKeyInfo && (apiKeyInfo as Record<string, unknown>).id) != null
+            ? String((apiKeyInfo as Record<string, unknown>).id)
+            : null,
+        toolChoice: body.tool_choice,
+        seed: body.seed,
+        maxTokens: body.max_tokens,
+        maxOutputTokens: body.max_output_tokens,
+        stop: body.stop,
+        logitBias: body.logit_bias,
+        parallelToolCalls: body.parallel_tool_calls,
+        reasoningEffort: body.reasoning_effort,
+      }
     );
     const cached = getCachedResponse(signature);
     if (cached) {
@@ -3938,7 +3954,23 @@ export async function handleChatCore({
         body.messages ?? body.input,
         body.temperature,
         body.top_p,
-        { system: body.system, tools: body.tools, responseFormat: body.response_format }
+        {
+          system: body.system,
+          tools: body.tools,
+          responseFormat: body.response_format,
+          apiKeyId:
+            (apiKeyInfo && (apiKeyInfo as Record<string, unknown>).id) != null
+              ? String((apiKeyInfo as Record<string, unknown>).id)
+              : null,
+          toolChoice: body.tool_choice,
+          seed: body.seed,
+          maxTokens: body.max_tokens,
+          maxOutputTokens: body.max_output_tokens,
+          stop: body.stop,
+          logitBias: body.logit_bias,
+          parallelToolCalls: body.parallel_tool_calls,
+          reasoningEffort: body.reasoning_effort,
+        }
       );
       const tokensSaved = usage?.prompt_tokens + usage?.completion_tokens || 0;
       setCachedResponse(signature, model, translatedResponse, tokensSaved);
@@ -4177,7 +4209,23 @@ export async function handleChatCore({
           body.messages ?? body.input,
           body.temperature,
           body.top_p,
-          { system: body.system, tools: body.tools, responseFormat: body.response_format }
+          {
+            system: body.system,
+            tools: body.tools,
+            responseFormat: body.response_format,
+            apiKeyId:
+              (apiKeyInfo && (apiKeyInfo as Record<string, unknown>).id) != null
+                ? String((apiKeyInfo as Record<string, unknown>).id)
+                : null,
+            toolChoice: body.tool_choice,
+            seed: body.seed,
+            maxTokens: body.max_tokens,
+            maxOutputTokens: body.max_output_tokens,
+            stop: body.stop,
+            logitBias: body.logit_bias,
+            parallelToolCalls: body.parallel_tool_calls,
+            reasoningEffort: body.reasoning_effort,
+          }
         );
         const u = streamUsage as Record<string, unknown> | null;
         const tokensSaved =

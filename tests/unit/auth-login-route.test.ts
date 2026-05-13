@@ -76,11 +76,20 @@ test("auth login route lazily migrates INITIAL_PASSWORD to a persisted hash befo
     })
   );
   const settings = await settingsDb.getSettings();
+  const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { success: true });
-  assert.equal(setCalls.length, 1);
+  // After migrating from INITIAL_PASSWORD the persisted record is flagged
+  // mustRotate, so the login response returns a temp token rather than a
+  // full session cookie. The hash itself must still be a real bcrypt hash
+  // verifying the bootstrap secret.
+  assert.equal(body.success, true);
+  assert.equal(body.mustChangePassword, true);
+  assert.equal(typeof body.tempToken, "string");
+  assert.ok(body.tempToken.length > 0, "tempToken should be a non-empty JWT");
+  assert.equal(setCalls.length, 0, "no session cookie should be set on mustRotate login");
   assert.equal(managementPassword.isBcryptHash(settings.password), true);
+  assert.equal(settings.passwordMustRotate, true);
   assert.equal(
     await managementPassword.verifyManagementPassword(
       "bootstrap-secret",

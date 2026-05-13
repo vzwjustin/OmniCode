@@ -743,6 +743,12 @@
     "contextRtk": "RTK",
     "contextCombos": "Compression Combos"
   },
+  "changelog": {
+    "title": "Changelog",
+    "summary": "Stay up to date with the latest platform features and announcements.",
+    "news": "News",
+    "changelog": "Changelog"
+  },
   "webhooks": {
     "title": "Webhooks",
     "description": "Configure HTTP callbacks for system events.",
@@ -922,6 +928,8 @@
     "evalsDescription": "Run evaluation suites to test and validate your LLM endpoints. Compare model quality, detect regressions, and benchmark latency.",
     "overview": "Overview",
     "evals": "Evals",
+    "search": "Search",
+    "searchDescription": "Search request analytics — provider breakdown, cache hit rate, and cost tracking.",
     "utilization": "Utilization",
     "utilizationDescription": "Provider quota usage trends and rate limit tracking",
     "modelStatus": "Model Status",
@@ -2355,7 +2363,10 @@
     "networkAccess": "Network Access",
     "networkAccessDesc": "Allow outbound network requests",
     "mode": "Mode",
-    "q": "Q"
+    "q": "Q",
+    "installSuccess": "Skill installed ({id})",
+    "installFailed": "Install failed",
+    "invalidJson": "Invalid JSON"
   },
   "health": {
     "title": "System Health",
