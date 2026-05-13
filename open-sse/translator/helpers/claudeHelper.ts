@@ -146,6 +146,40 @@ export function prepareClaudeRequest(
   provider: string | null = null,
   preserveCacheControl = false
 ): ClaudeRequestBody {
+  // 0. Lift any role:"system" messages out of body.messages into body.system.
+  // Claude's /v1/messages endpoint rejects role:"system" inside messages. This
+  // can happen when injectSystemPrompt() adds a global system prompt to a
+  // Claude-native request that arrived without an existing body.system field.
+  if (body.messages && Array.isArray(body.messages)) {
+    const systemTexts: string[] = [];
+    const nonSystem: ClaudeMessage[] = [];
+    for (const msg of body.messages) {
+      if (msg && (msg as { role?: string }).role === "system") {
+        const content = (msg as { content?: unknown }).content;
+        if (typeof content === "string" && content.length > 0) {
+          systemTexts.push(content);
+        } else if (Array.isArray(content)) {
+          for (const block of content) {
+            const text = (block as { text?: unknown })?.text;
+            if (typeof text === "string" && text.length > 0) systemTexts.push(text);
+          }
+        }
+      } else {
+        nonSystem.push(msg);
+      }
+    }
+    if (systemTexts.length > 0) {
+      const merged = systemTexts.join("\n\n");
+      const existing = body.system;
+      if (Array.isArray(existing)) {
+        body.system = [{ type: "text", text: merged }, ...existing];
+      } else {
+        body.system = [{ type: "text", text: merged }];
+      }
+      body.messages = nonSystem;
+    }
+  }
+
   // 1. System: remove all cache_control, add only to last block with ttl 1h
   // In passthrough mode, preserve existing cache_control markers
   const supportsPromptCaching =
