@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
 import { getSettings } from "@/lib/localDb";
 import { SignJWT } from "jose";
@@ -6,6 +7,7 @@ import { cookies } from "next/headers";
 import {
   ensurePersistentManagementPasswordHash,
   getStoredManagementPassword,
+  isPasswordMustRotate,
   verifyManagementPassword,
 } from "@/lib/auth/managementPassword";
 import { loginSchema } from "@/shared/validation/schemas";
@@ -19,6 +21,15 @@ if (!process.env.JWT_SECRET) {
 
 function getJwtSecret(): Uint8Array {
   return new TextEncoder().encode(process.env.JWT_SECRET || "");
+}
+
+function getSessionTtlDays(): number {
+  const raw = process.env.OMNIROUTE_SESSION_TTL_DAYS;
+  if (raw) {
+    const n = Number.parseInt(raw, 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 7;
 }
 
 // Test seam for cookie store injection without affecting runtime behavior.
@@ -118,9 +129,48 @@ export async function POST(request) {
       const isHttpsRequest = forwardedProto === "https" || request.nextUrl?.protocol === "https:";
       const useSecureCookie = forceSecureCookie || isHttpsRequest;
 
-      const token = await new SignJWT({ authenticated: true })
+      // FIX 5: If the persisted password was migrated from INITIAL_PASSWORD (or
+      // otherwise flagged as a temporary bootstrap credential), do NOT issue a
+      // full session. Instead, return a short-lived token authorized only for
+      // the change-password endpoint so the operator is forced to rotate.
+      const mustRotate = isPasswordMustRotate(passwordState.settings);
+      if (mustRotate) {
+        const tempToken = await new SignJWT({
+          purpose: "change-password",
+          jti: randomUUID(),
+        })
+          .setProtectedHeader({ alg: "HS256" })
+          .setExpirationTime("5m")
+          .sign(getJwtSecret());
+
+        logAuditEvent({
+          action: "auth.login.must_rotate",
+          actor: "admin",
+          target: "dashboard-auth",
+          resourceType: "auth_session",
+          status: "success",
+          ipAddress: auditContext.ipAddress || undefined,
+          requestId: auditContext.requestId,
+          metadata: {
+            reason: "password_must_rotate",
+            passwordMigrated: passwordState.migrated,
+          },
+        });
+
+        clearLoginAttempts(clientIp);
+        return NextResponse.json({
+          success: true,
+          mustChangePassword: true,
+          tempToken,
+        });
+      }
+
+      const ttlDays = getSessionTtlDays();
+      const ttlSeconds = ttlDays * 24 * 60 * 60;
+      const jti = randomUUID();
+      const token = await new SignJWT({ authenticated: true, jti })
         .setProtectedHeader({ alg: "HS256" })
-        .setExpirationTime("30d")
+        .setExpirationTime(`${ttlDays}d`)
         .sign(getJwtSecret());
 
       const cookieStore = await authRouteInternals.getCookieStore();
@@ -129,6 +179,7 @@ export async function POST(request) {
         secure: useSecureCookie,
         sameSite: "lax",
         path: "/",
+        maxAge: ttlSeconds,
       });
 
       logAuditEvent({

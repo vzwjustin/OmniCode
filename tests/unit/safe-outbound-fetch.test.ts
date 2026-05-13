@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { SafeOutboundFetchError, safeOutboundFetch } =
+const { SafeOutboundFetchError, safeOutboundFetch, validateOutboundUrl } =
   await import("../../src/shared/network/safeOutboundFetch.ts");
 
 const originalFetch = globalThis.fetch;
@@ -109,4 +109,48 @@ test("safeOutboundFetch blocks private hosts when public-only guard is enabled",
       return true;
     }
   );
+});
+
+// Table-driven SSRF rejection cases for validateOutboundUrl.
+const ssrfCases: { url: string; expectOk: boolean; label: string }[] = [
+  { url: "http://127.0.0.1", expectOk: false, label: "ipv4 loopback" },
+  { url: "http://169.254.169.254", expectOk: false, label: "aws imds" },
+  { url: "http://10.0.0.1", expectOk: false, label: "rfc1918 10/8" },
+  { url: "http://[::1]", expectOk: false, label: "ipv6 loopback" },
+  { url: "http://example.com", expectOk: true, label: "public host" },
+];
+
+for (const tc of ssrfCases) {
+  test(`validateOutboundUrl public-only ${tc.label} (${tc.url})`, async () => {
+    const result = await validateOutboundUrl(tc.url, "public-only");
+    if (tc.expectOk) {
+      assert.equal(result.ok, true, `expected ${tc.url} to be allowed`);
+    } else {
+      assert.equal(result.ok, false, `expected ${tc.url} to be rejected`);
+      if (!result.ok) {
+        assert.ok(typeof result.reason === "string" && result.reason.length > 0);
+      }
+    }
+  });
+}
+
+test("validateOutboundUrl rejects non-http(s) protocols", async () => {
+  const result = await validateOutboundUrl("file:///etc/passwd", "public-only");
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.reason, "invalid_protocol");
+  }
+});
+
+test("validateOutboundUrl rejects URLs with embedded credentials", async () => {
+  const result = await validateOutboundUrl("http://user:pass@example.com", "public-only");
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.reason, "embedded_credentials");
+  }
+});
+
+test("validateOutboundUrl 'any' mode allows private IPs", async () => {
+  const result = await validateOutboundUrl("http://10.0.0.1", "any");
+  assert.equal(result.ok, true);
 });

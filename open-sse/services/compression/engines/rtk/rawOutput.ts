@@ -15,10 +15,34 @@ export interface RtkRawOutputPointer {
 
 const SECRET_PATTERNS: Array<[RegExp, string]> = [
   [/\b(sk-[A-Za-z0-9_-]{16,})\b/g, "[REDACTED_OPENAI_KEY]"],
+  [/\bghp_[A-Za-z0-9]{30,}\b/g, "[REDACTED_GITHUB_PAT]"],
+  [/\bgho_[A-Za-z0-9]{30,}\b/g, "[REDACTED_GITHUB_OAUTH]"],
+  [/\bghs_[A-Za-z0-9]{30,}\b/g, "[REDACTED_GITHUB_SERVER]"],
+  [/\bsk_live_[A-Za-z0-9]{20,}\b/g, "[REDACTED_STRIPE_LIVE]"],
+  [/\bAIza[0-9A-Za-z\-_]{35}\b/g, "[REDACTED_GOOGLE_API_KEY]"],
+  [/\bxox[abprs]-[A-Za-z0-9-]{10,}\b/g, "[REDACTED_SLACK_TOKEN]"],
   [/\b(xox[baprs]-[A-Za-z0-9-]{16,})\b/g, "[REDACTED_SLACK_TOKEN]"],
   [/\b(AKIA[0-9A-Z]{16})\b/g, "[REDACTED_AWS_KEY]"],
-  [/((?:api[_-]?key|token|secret|password)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s]+)/gi, "$1[REDACTED]"],
-  [/(Authorization:\s*Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, "$1[REDACTED]"],
+  [/\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED_JWT]"],
+  [
+    /-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+PRIVATE KEY-----/g,
+    "[REDACTED_PRIVATE_KEY]",
+  ],
+  [/-----BEGIN [A-Z ]+PRIVATE KEY-----/g, "[REDACTED_PRIVATE_KEY_MARKER]"],
+  [
+    /\b(postgres|postgresql|mysql|mongodb|mongodb\+srv|redis|rediss|amqp|amqps):\/\/[^\s:@/]+:[^\s@/]+@/gi,
+    "$1://[REDACTED]:[REDACTED]@",
+  ],
+  [
+    /((?:api[_-]?key|token|secret|password|passwd|pwd)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s]+)/gi,
+    "$1[REDACTED]",
+  ],
+  // Authorization: Bearer ... — run before generic authorization to keep "Bearer " prefix visible
+  [/(authorization\s*:\s*bearer\s+)[^\s,;]+/gi, "$1[REDACTED]"],
+  [/(authorization\s*:\s*)(?!bearer\s)([^\s,;\n]+)/gi, "$1[REDACTED]"],
+  [/(authorization\s*=\s*)("[^"]+"|'[^']+'|[^\s,;\n]+)/gi, "$1[REDACTED]"],
+  [/(cookie\s*[:=]\s*)("[^"]+"|'[^']+'|[^\n,;]+)/gi, "$1[REDACTED]"],
+  [/(set-cookie\s*:\s*)([^\n]+)/gi, "$1[REDACTED]"],
 ];
 
 function dataDir(): string {
@@ -109,4 +133,55 @@ export function readRtkRawOutput(pointerId: string): string | null {
   const fullPath = path.join(dir, entry);
   if (!fullPath.startsWith(dir)) return null;
   return fs.readFileSync(fullPath, "utf8");
+}
+
+export const DEFAULT_RTK_RAW_OUTPUT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function resolveRtkRawOutputTtlMs(): number {
+  const raw = process.env.OMNIROUTE_RTK_RAW_OUTPUT_TTL_MS;
+  if (raw) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return DEFAULT_RTK_RAW_OUTPUT_TTL_MS;
+}
+
+export interface RtkRawOutputCleanupResult {
+  scanned: number;
+  removed: number;
+  errors: string[];
+}
+
+export function cleanupRawOutputFiles(maxAgeMs?: number): RtkRawOutputCleanupResult {
+  const result: RtkRawOutputCleanupResult = { scanned: 0, removed: 0, errors: [] };
+  const ttl = typeof maxAgeMs === "number" && maxAgeMs > 0 ? maxAgeMs : resolveRtkRawOutputTtlMs();
+  const dir = path.join(dataDir(), "rtk", "raw-output");
+  if (!fs.existsSync(dir)) return result;
+
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(dir);
+  } catch (err) {
+    result.errors.push(err instanceof Error ? err.message : String(err));
+    return result;
+  }
+
+  const cutoff = Date.now() - ttl;
+  for (const entry of entries) {
+    if (!entry.endsWith(".log")) continue;
+    const fullPath = path.join(dir, entry);
+    if (!fullPath.startsWith(dir)) continue;
+    result.scanned++;
+    try {
+      const stat = fs.statSync(fullPath);
+      if (stat.mtimeMs < cutoff) {
+        fs.unlinkSync(fullPath);
+        result.removed++;
+      }
+    } catch (err) {
+      result.errors.push(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  return result;
 }

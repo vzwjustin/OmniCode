@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import initializeCloudSync from "@/shared/services/initializeCloudSync";
 import { startModelSyncScheduler } from "@/shared/services/modelSyncScheduler";
 import { resolveOmniRouteBaseUrl } from "@/shared/utils/resolveOmniRouteBaseUrl";
@@ -8,6 +9,9 @@ let modelSyncInitialized = false;
 
 // POST /api/sync/initialize - Initialize cloud sync scheduler
 export async function POST(request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     if (syncInitialized) {
       return NextResponse.json({
@@ -43,6 +47,9 @@ export async function POST(request) {
 
 // GET /api/sync/status - Check sync initialization status
 export async function GET(request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   return NextResponse.json({
     initialized: syncInitialized,
     modelSyncInitialized,

@@ -167,20 +167,27 @@ export default function SkillsPage() {
         body: JSON.stringify(manifest),
       });
       const data = await res.json();
+      const tHas = (key: string) => typeof t.has === "function" && t.has(key);
+      const installSuccessMessage = tHas("installSuccess")
+        ? t("installSuccess", { id: data.id })
+        : `Skill installed (${data.id})`;
+      const installFailedMessage = tHas("installFailed") ? t("installFailed") : "Install failed";
       if (res.ok && data.success) {
-        setInstallStatus({ type: "success", message: `Skill installed (${data.id})` });
+        setInstallStatus({ type: "success", message: installSuccessMessage });
         setInstallJson("");
         await refreshSkills();
       } else {
         setInstallStatus({
           type: "error",
-          message: data.error || data.message || "Install failed",
+          message: data.error || data.message || installFailedMessage,
         });
       }
     } catch (err) {
+      const tHasInvalid = typeof t.has === "function" && t.has("invalidJson");
+      const invalidJsonMessage = tHasInvalid ? t("invalidJson") : "Invalid JSON";
       setInstallStatus({
         type: "error",
-        message: err instanceof Error ? err.message : "Invalid JSON",
+        message: err instanceof Error ? err.message : invalidJsonMessage,
       });
     } finally {
       setInstalling(false);

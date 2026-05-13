@@ -9,22 +9,28 @@ import NewsViewer from "./components/NewsViewer";
 export default function ChangelogPage() {
   const [activeTab, setActiveTab] = useState<"news" | "changelog">("news");
   const t = useTranslations("sidebar");
-  const title = typeof t.has === "function" && t.has("changelog") ? t("changelog") : "Changelog";
+  const tc = useTranslations("changelog");
+  const hasSidebar = (key: string) => typeof t.has === "function" && t.has(key);
+  const hasChangelog = (key: string) => typeof tc.has === "function" && tc.has(key);
+  const title = hasSidebar("changelog") ? t("changelog") : "Changelog";
+  const summary = hasChangelog("summary")
+    ? tc("summary")
+    : "Stay up to date with the latest platform features and announcements.";
+  const newsLabel = hasChangelog("news") ? tc("news") : "News";
+  const changelogLabel = hasChangelog("changelog") ? tc("changelog") : "Changelog";
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-text-main">{title}</h1>
-          <p className="text-sm text-text-muted mt-1">
-            Stay up to date with the latest platform features and announcements.
-          </p>
+          <p className="text-sm text-text-muted mt-1">{summary}</p>
         </div>
         <div className="shrink-0 w-full sm:w-[240px]">
           <SegmentedControl
             options={[
-              { label: "News", value: "news" },
-              { label: "Changelog", value: "changelog" },
+              { label: newsLabel, value: "news" },
+              { label: changelogLabel, value: "changelog" },
             ]}
             value={activeTab}
             onChange={(val) => setActiveTab(val as "news" | "changelog")}

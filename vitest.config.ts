@@ -21,7 +21,9 @@ export default defineConfig({
     exclude: [
       "**/node_modules/**",
       "**/.git/**",
-      "open-sse/services/autoCombo/__tests__/providerDiversity.test.ts",
+      // providerDiversity.test.ts is now included by default; if it surfaces flakes,
+      // mark individual cases with `it.skip` / `it.todo` inside the test file rather
+      // than re-adding the exclusion here.
     ],
     coverage: {
       reportsDirectory: "coverage",

@@ -15,7 +15,7 @@ import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import * as log from "@/sse/utils/logger";
 import { toJsonErrorPayload } from "@/shared/utils/upstreamError";
 import { enforceApiKeyPolicy } from "@/shared/utils/apiKeyPolicy";
-import { v1ImageGenerationSchema } from "@/shared/validation/schemas";
+import { v1MusicGenerationSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
 /**
@@ -25,7 +25,7 @@ export async function OPTIONS() {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*",
+      "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, User-Agent, X-Requested-With, X-API-Key, X-OmniRoute-API-Key, X-Stainless-Retry-Count, anthropic-version, anthropic-beta, openai-organization, openai-project, openai-beta",
     },
   });
 }
@@ -64,15 +64,13 @@ export async function POST(request) {
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
   }
 
-  const validation = validateBody(v1ImageGenerationSchema, rawBody);
+  const validation = validateBody(v1MusicGenerationSchema, rawBody);
   if (isValidationFailure(validation)) {
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, validation.error.message);
+    const first = validation.error.details[0];
+    const message = first ? `${first.field || "body"}: ${first.message}` : validation.error.message;
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, message);
   }
   const body = validation.data;
-
-  if (typeof body.prompt !== "string" || body.prompt.trim().length === 0) {
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Prompt is required");
-  }
 
   // Enforce API key policies (model restrictions + budget limits)
   const policy = await enforceApiKeyPolicy(request, body.model);

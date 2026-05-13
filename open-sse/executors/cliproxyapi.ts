@@ -121,19 +121,31 @@ export class CliproxyapiExecutor extends BaseExecutor {
     );
     mergeUpstreamExtraHeaders(headers, input.upstreamExtraHeaders);
 
-    const timeoutSignal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
+    // Apply fetch-start timeout only — clear it as soon as headers arrive so
+    // long SSE bodies aren't cut off by total elapsed time.
+    const timeoutController = new AbortController();
+    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      const timeoutError = new Error(`CLIProxyAPI fetch start timeout after ${FETCH_TIMEOUT_MS}ms`);
+      timeoutError.name = "TimeoutError";
+      timeoutController.abort(timeoutError);
+    }, FETCH_TIMEOUT_MS);
     const combinedSignal = input.signal
-      ? mergeAbortSignals(input.signal, timeoutSignal)
-      : timeoutSignal;
+      ? mergeAbortSignals(input.signal, timeoutController.signal)
+      : timeoutController.signal;
 
     input.log?.info?.("CPA", `CLIProxyAPI → ${url} (model: ${input.model})`);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(transformedBody),
-      signal: combinedSignal,
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(transformedBody),
+        signal: combinedSignal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (response.status === HTTP_STATUS.RATE_LIMITED) {
       input.log?.warn?.("CPA", `CLIProxyAPI rate limited: ${response.status}`);

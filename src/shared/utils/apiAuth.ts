@@ -11,6 +11,7 @@ import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { getSettings } from "@/lib/localDb";
 import { isPublicApiRoute } from "@/shared/constants/publicApiRoutes";
+import { isJtiDenied } from "@/lib/auth/sessionRegistry";
 
 type RequestLike = {
   cookies?: {
@@ -196,7 +197,9 @@ export async function isDashboardSessionAuthenticated(
 
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, secret);
+    const jti = typeof payload.jti === "string" ? payload.jti : null;
+    if (jti && isJtiDenied(jti)) return false;
     return true;
   } catch {
     return false;

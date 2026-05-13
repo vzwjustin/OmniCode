@@ -1,13 +1,10 @@
 import { CORS_HEADERS, handleCorsOptions } from "@/shared/utils/cors";
-import { callCloudWithMachineId } from "@/shared/utils/cloud";
 import { handleChat } from "@/sse/handlers/chat";
 import { initTranslators } from "@omniroute/open-sse/translator/index.ts";
-import { createInjectionGuard } from "@/middleware/promptInjectionGuard";
+import { v1ChatCompletionsSchema } from "@/shared/validation/schemas";
+import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
 let initPromise = null;
-
-// Singleton injection guard instance
-const injectionGuard = createInjectionGuard();
 
 /**
  * Initialize translators once (Promise-based singleton — no race condition)
@@ -19,6 +16,24 @@ function ensureInitialized() {
     });
   }
   return initPromise;
+}
+
+function openAiValidationErrorResponse(
+  message: string,
+  param: string | null,
+  status: number = 400
+) {
+  return new Response(
+    JSON.stringify({
+      error: {
+        message,
+        type: "invalid_request_error",
+        param,
+        code: "invalid_param",
+      },
+    }),
+    { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+  );
 }
 
 /**
@@ -42,28 +57,27 @@ export async function POST(request) {
     }
   }
 
-  // Prompt injection guard — inspect body before forwarding
+  // Zod validation of OpenAI chat-completions body shape (also accepts
+  // Anthropic-shape `system` and Responses-API-shape `input`). We clone the
+  // request so handleChat can still read the body downstream. Prompt
+  // injection protection lives inside handleChat so all routes that delegate
+  // there share the same guard.
   try {
     const cloned = request.clone();
     const body = await cloned.json().catch(() => null);
-    if (body) {
-      const { blocked, result } = injectionGuard(body);
-      if (blocked) {
-        return new Response(
-          JSON.stringify({
-            error: {
-              message: "Request blocked: potential prompt injection detected",
-              type: "injection_detected",
-              code: "SECURITY_001",
-              detections: result.detections.length,
-            },
-          }),
-          { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-        );
-      }
+    if (body === null || typeof body !== "object") {
+      return openAiValidationErrorResponse("Invalid JSON body", null);
+    }
+    const validation = validateBody(v1ChatCompletionsSchema, body);
+    if (isValidationFailure(validation)) {
+      const first = validation.error.details[0];
+      const message = first
+        ? `${first.field || "body"}: ${first.message}`
+        : validation.error.message;
+      return openAiValidationErrorResponse(message, first?.field || null);
     }
   } catch (error) {
-    console.error("[SECURITY] Prompt injection guard failed:", error);
+    console.error("[VALIDATION] chat/completions body validation failed:", error);
   }
 
   return await handleChat(request);

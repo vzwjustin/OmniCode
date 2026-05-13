@@ -24,7 +24,7 @@ test("resolveCallerScopeContext prioritizes authInfo scopes", () => {
   assert.deepEqual(context.scopes, ["read:health", "read:combos"]);
 });
 
-test("resolveCallerScopeContext falls back to _meta scopes", () => {
+test("resolveCallerScopeContext IGNORES caller-supplied _meta scopes (no privilege escalation)", () => {
   const context = resolveCallerScopeContext(
     {
       _meta: {
@@ -35,9 +35,25 @@ test("resolveCallerScopeContext falls back to _meta scopes", () => {
     ["read:usage"]
   );
 
+  // Caller-supplied _meta scopes must NEVER be honored; we fall through to the env fallback.
   assert.equal(context.callerId, "session-meta");
-  assert.equal(context.source, "meta");
-  assert.deepEqual(context.scopes, ["read:quota", "read:models"]);
+  assert.equal(context.source, "env");
+  assert.deepEqual(context.scopes, ["read:usage"]);
+});
+
+test("resolveCallerScopeContext IGNORES _meta scopes even when no env fallback is set", () => {
+  const context = resolveCallerScopeContext(
+    {
+      _meta: {
+        scopes: ["write:everything"],
+      },
+      sessionId: "session-escalation",
+    },
+    []
+  );
+
+  assert.equal(context.source, "none");
+  assert.deepEqual(context.scopes, []);
 });
 
 test("resolveCallerScopeContext uses env fallback when caller has no scopes", () => {

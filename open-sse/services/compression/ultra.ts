@@ -40,6 +40,22 @@ export function ultraCompress(
 
   const compressed = messages.map((msg) => {
     if (effectiveConfig.preserveSystemPrompt !== false && msg.role === "system") return msg;
+    // Role guard: never compress tool/function role messages — they often carry structured JSON
+    if (msg.role === "tool" || msg.role === "function") return msg;
+    // Skip when content is non-string structured content containing tool_use/tool_result blocks
+    if (Array.isArray(msg.content)) {
+      const hasToolBlock = msg.content.some(
+        (part) =>
+          part !== null &&
+          typeof part === "object" &&
+          ((part as Record<string, unknown>).type === "tool_use" ||
+            (part as Record<string, unknown>).type === "tool_result" ||
+            (part as Record<string, unknown>).type === "input_tool_result" ||
+            (part as Record<string, unknown>).type === "function_call" ||
+            (part as Record<string, unknown>).type === "function_call_output")
+      );
+      if (hasToolBlock) return msg;
+    }
     const text = extractTextContent(msg.content);
     if (!text) return msg;
     if (text.startsWith(COMPRESSED_PREFIX)) return msg;
@@ -53,6 +69,11 @@ export function ultraCompress(
       if (!textPart || textPart.startsWith(COMPRESSED_PREFIX)) return textPart;
       messageOriginalChars += textPart.length;
       const pruned = pruneByScore(textPart, compressionRate, minScoreThreshold);
+      // Safety: if compression made it longer, keep the original
+      if (pruned.length > textPart.length) {
+        messageCompressedChars += textPart.length;
+        return textPart;
+      }
       messageCompressedChars += pruned.length;
       return pruned;
     }) as Message;

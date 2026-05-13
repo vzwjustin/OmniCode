@@ -73,9 +73,21 @@ export async function runScheduledCompression(): Promise<void> {
   }
 }
 
+let _compressionSchedulerTimer: NodeJS.Timeout | null = null;
+let _shutdownHooksRegistered = false;
+
+function registerCompressionSchedulerShutdownHooks(): void {
+  if (_shutdownHooksRegistered) return;
+  _shutdownHooksRegistered = true;
+  const stop = () => stopCompressionScheduler();
+  process.on("SIGTERM", stop);
+  process.on("SIGINT", stop);
+}
+
 /**
  * Initialize compression scheduler on startup.
- * Call this once when the application starts.
+ * Call this once when the application starts. Safe to call more than once;
+ * subsequent calls are no-ops once the periodic timer is running.
  */
 export async function initCompressionScheduler(): Promise<void> {
   console.log("[CompressionScheduler] Initializing compression scheduler...");
@@ -86,8 +98,10 @@ export async function initCompressionScheduler(): Promise<void> {
     console.error("[CompressionScheduler] Failed to run initial compression:", err);
   }
 
+  if (_compressionSchedulerTimer) return;
+
   // Set up periodic check (every hour)
-  setInterval(
+  _compressionSchedulerTimer = setInterval(
     async () => {
       try {
         await runScheduledCompression();
@@ -97,4 +111,20 @@ export async function initCompressionScheduler(): Promise<void> {
     },
     60 * 60 * 1000
   ); // 1 hour
+  if (typeof _compressionSchedulerTimer.unref === "function") {
+    _compressionSchedulerTimer.unref();
+  }
+
+  registerCompressionSchedulerShutdownHooks();
+}
+
+/**
+ * Stop the periodic compression scheduler timer (idempotent).
+ * Called from graceful shutdown / SIGTERM / SIGINT handlers and from tests.
+ */
+export function stopCompressionScheduler(): void {
+  if (_compressionSchedulerTimer) {
+    clearInterval(_compressionSchedulerTimer);
+    _compressionSchedulerTimer = null;
+  }
 }

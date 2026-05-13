@@ -1,5 +1,8 @@
+import { CORS_HEADERS } from "@/shared/utils/cors";
 import { handleChat } from "@/sse/handlers/chat";
 import { initTranslators } from "@omniroute/open-sse/translator/index.ts";
+import { v1ChatCompletionsSchema } from "@/shared/validation/schemas";
+import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
 let initialized = false;
 
@@ -11,11 +14,29 @@ async function ensureInitialized() {
   }
 }
 
+function openAiValidationErrorResponse(
+  message: string,
+  param: string | null,
+  status: number = 400
+) {
+  return new Response(
+    JSON.stringify({
+      error: {
+        message,
+        type: "invalid_request_error",
+        param,
+        code: "invalid_param",
+      },
+    }),
+    { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+  );
+}
+
 export async function OPTIONS() {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*",
+      "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, User-Agent, X-Requested-With, X-API-Key, X-OmniRoute-API-Key, X-Stainless-Retry-Count, anthropic-version, anthropic-beta, openai-organization, openai-project, openai-beta",
     },
   });
 }
@@ -27,5 +48,24 @@ export async function OPTIONS() {
  */
 export async function POST(request) {
   await ensureInitialized();
+
+  try {
+    const cloned = request.clone();
+    const body = await cloned.json().catch(() => null);
+    if (body === null || typeof body !== "object") {
+      return openAiValidationErrorResponse("Invalid JSON body", null);
+    }
+    const validation = validateBody(v1ChatCompletionsSchema, body);
+    if (isValidationFailure(validation)) {
+      const first = validation.error.details[0];
+      const message = first
+        ? `${first.field || "body"}: ${first.message}`
+        : validation.error.message;
+      return openAiValidationErrorResponse(message, first?.field || null);
+    }
+  } catch (error) {
+    console.error("[VALIDATION] /v1/responses/* body validation failed:", error);
+  }
+
   return await handleChat(request);
 }

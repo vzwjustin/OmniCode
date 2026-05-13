@@ -119,7 +119,9 @@ export async function cleanupCompressionAnalytics(): Promise<CleanupResult> {
   const result: CleanupResult = { deleted: 0, errors: 0 };
 
   try {
-    const stmt = db.prepare("DELETE FROM compression_analytics WHERE created_at < ?");
+    // NOTE: compression_analytics uses `timestamp` (per migration 038), not `created_at`.
+    // TODO(future): add a fallback index migration that adds `created_at` for consistency.
+    const stmt = db.prepare("DELETE FROM compression_analytics WHERE timestamp < ?");
     const runResult = stmt.run(cutoffISO);
     result.deleted = runResult.changes;
 
@@ -135,7 +137,7 @@ export async function cleanupCompressionAnalytics(): Promise<CleanupResult> {
 }
 
 /**
- * Clean up old mcp_audit_log based on retention settings.
+ * Clean up old mcp_tool_audit based on retention settings.
  */
 export async function cleanupMcpAudit(): Promise<CleanupResult> {
   const db = getDbInstance();
@@ -149,15 +151,16 @@ export async function cleanupMcpAudit(): Promise<CleanupResult> {
   const result: CleanupResult = { deleted: 0, errors: 0 };
 
   try {
-    const stmt = db.prepare("DELETE FROM mcp_audit_log WHERE timestamp < ?");
+    // Real table name is mcp_tool_audit with column `created_at` (per migration 002).
+    const stmt = db.prepare("DELETE FROM mcp_tool_audit WHERE created_at < ?");
     const runResult = stmt.run(cutoffISO);
     result.deleted = runResult.changes;
 
     console.log(
-      `[Cleanup] Deleted ${result.deleted} mcp_audit_log older than ${retentionDays} days`
+      `[Cleanup] Deleted ${result.deleted} mcp_tool_audit older than ${retentionDays} days`
     );
   } catch (err: unknown) {
-    console.error("[Cleanup] Error cleaning mcp_audit_log:", err);
+    console.error("[Cleanup] Error cleaning mcp_tool_audit:", err);
     result.errors++;
   }
 
@@ -165,7 +168,7 @@ export async function cleanupMcpAudit(): Promise<CleanupResult> {
 }
 
 /**
- * Clean up old a2a_events based on retention settings.
+ * Clean up old a2a_task_events based on retention settings.
  */
 export async function cleanupA2aEvents(): Promise<CleanupResult> {
   const db = getDbInstance();
@@ -179,13 +182,16 @@ export async function cleanupA2aEvents(): Promise<CleanupResult> {
   const result: CleanupResult = { deleted: 0, errors: 0 };
 
   try {
-    const stmt = db.prepare("DELETE FROM a2a_events WHERE timestamp < ?");
+    // Real table name is a2a_task_events with column `created_at` (per migration 002).
+    const stmt = db.prepare("DELETE FROM a2a_task_events WHERE created_at < ?");
     const runResult = stmt.run(cutoffISO);
     result.deleted = runResult.changes;
 
-    console.log(`[Cleanup] Deleted ${result.deleted} a2a_events older than ${retentionDays} days`);
+    console.log(
+      `[Cleanup] Deleted ${result.deleted} a2a_task_events older than ${retentionDays} days`
+    );
   } catch (err: unknown) {
-    console.error("[Cleanup] Error cleaning a2a_events:", err);
+    console.error("[Cleanup] Error cleaning a2a_task_events:", err);
     result.errors++;
   }
 
@@ -193,7 +199,7 @@ export async function cleanupA2aEvents(): Promise<CleanupResult> {
 }
 
 /**
- * Clean up old memory_entries based on retention settings.
+ * Clean up old memories based on retention settings.
  */
 export async function cleanupMemoryEntries(): Promise<CleanupResult> {
   const db = getDbInstance();
@@ -207,15 +213,14 @@ export async function cleanupMemoryEntries(): Promise<CleanupResult> {
   const result: CleanupResult = { deleted: 0, errors: 0 };
 
   try {
-    const stmt = db.prepare("DELETE FROM memory_entries WHERE created_at < ?");
+    // Real table name is `memories` with column `created_at` (per migration 015).
+    const stmt = db.prepare("DELETE FROM memories WHERE created_at < ?");
     const runResult = stmt.run(cutoffISO);
     result.deleted = runResult.changes;
 
-    console.log(
-      `[Cleanup] Deleted ${result.deleted} memory_entries older than ${retentionDays} days`
-    );
+    console.log(`[Cleanup] Deleted ${result.deleted} memories older than ${retentionDays} days`);
   } catch (err: unknown) {
-    console.error("[Cleanup] Error cleaning memory_entries:", err);
+    console.error("[Cleanup] Error cleaning memories:", err);
     result.errors++;
   }
 

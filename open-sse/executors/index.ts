@@ -22,6 +22,7 @@ import { AzureOpenAIExecutor } from "./azure-openai.ts";
 import { GitlabExecutor } from "./gitlab.ts";
 import { NlpCloudExecutor } from "./nlpcloud.ts";
 import { PetalsExecutor } from "./petals.ts";
+import { kieExecutor } from "./kie.ts";
 
 const executors = {
   antigravity: new AntigravityExecutor(),
@@ -62,6 +63,7 @@ const executors = {
   "bb-web": new BlackboxWebExecutor(), // Alias
   "muse-spark-web": new MuseSparkWebExecutor(),
   "ms-web": new MuseSparkWebExecutor(), // Alias
+  kie: kieExecutor,
 };
 
 const defaultCache = new Map();

@@ -107,6 +107,9 @@ function getMemoryCache() {
 
 // ─── Signature Generation ─────────────────
 
+/** Sentinel used when a caller can't be tied to an API key (e.g. internal). */
+export const ANONYMOUS_API_KEY_ID = "__anonymous__";
+
 /**
  * Generate deterministic cache signature from request params.
  *
@@ -115,6 +118,20 @@ function getMemoryCache() {
  * a cache entry. In particular `system` is keyed separately because Claude's
  * native /v1/messages format puts it in a top-level field rather than inside
  * `messages`.
+ *
+ * Fields that are now part of the signature:
+ *   - apiKeyId           (per-caller scoping; prevents cross-tenant cache hits)
+ *   - model
+ *   - normalized messages
+ *   - temperature, top_p
+ *   - system, tools, response_format
+ *   - tool_choice        (forces specific tools — different responses)
+ *   - seed               (deterministic sampling input)
+ *   - max_tokens / max_output_tokens (truncation differs by budget)
+ *   - stop sequences     (different terminators → different completion)
+ *   - logit_bias         (changes output distribution)
+ *   - parallel_tool_calls (controls multi-tool dispatch shape)
+ *   - reasoning_effort   (o-series / responses-API thinking budget)
  */
 export function generateSignature(
   model,
@@ -125,17 +142,39 @@ export function generateSignature(
     system?: unknown;
     tools?: unknown;
     responseFormat?: unknown;
+    apiKeyId?: string | null;
+    toolChoice?: unknown;
+    seed?: unknown;
+    maxTokens?: unknown;
+    maxOutputTokens?: unknown;
+    stop?: unknown;
+    logitBias?: unknown;
+    parallelToolCalls?: unknown;
+    reasoningEffort?: unknown;
   } = {}
 ) {
+  const stringifyOrNull = (value: unknown) =>
+    value !== undefined && value !== null ? stringifyForSignature(value) : null;
   const payload = JSON.stringify({
+    apiKeyId:
+      typeof extras.apiKeyId === "string" && extras.apiKeyId.length > 0
+        ? extras.apiKeyId
+        : ANONYMOUS_API_KEY_ID,
     model,
     messages: normalizeConversation(conversation),
     temperature,
     top_p: topP,
-    system: extras.system !== undefined ? stringifyForSignature(extras.system) : null,
-    tools: extras.tools !== undefined ? stringifyForSignature(extras.tools) : null,
-    response_format:
-      extras.responseFormat !== undefined ? stringifyForSignature(extras.responseFormat) : null,
+    system: stringifyOrNull(extras.system),
+    tools: stringifyOrNull(extras.tools),
+    response_format: stringifyOrNull(extras.responseFormat),
+    tool_choice: stringifyOrNull(extras.toolChoice),
+    seed: stringifyOrNull(extras.seed),
+    max_tokens: stringifyOrNull(extras.maxTokens),
+    max_output_tokens: stringifyOrNull(extras.maxOutputTokens),
+    stop: stringifyOrNull(extras.stop),
+    logit_bias: stringifyOrNull(extras.logitBias),
+    parallel_tool_calls: stringifyOrNull(extras.parallelToolCalls),
+    reasoning_effort: stringifyOrNull(extras.reasoningEffort),
   });
   return crypto.createHash("sha256").update(payload).digest("hex");
 }

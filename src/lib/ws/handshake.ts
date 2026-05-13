@@ -1,6 +1,7 @@
 import { jwtVerify } from "jose";
 import { getSettings } from "@/lib/localDb";
 import { validateApiKey } from "@/lib/db/apiKeys";
+import { isJtiDenied } from "@/lib/auth/sessionRegistry";
 
 export const DEFAULT_WS_PATH = "/v1/ws";
 const WS_QUERY_TOKEN_KEYS = ["api_key", "token", "access_token"];
@@ -45,7 +46,9 @@ async function hasValidSessionCookie(request: Request): Promise<boolean> {
   if (!token) return false;
 
   try {
-    await jwtVerify(token, new TextEncoder().encode(secretValue));
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secretValue));
+    const jti = typeof payload.jti === "string" ? payload.jti : null;
+    if (jti && isJtiDenied(jti)) return false;
     return true;
   } catch {
     return false;

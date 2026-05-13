@@ -1233,9 +1233,48 @@ export async function getProviderCredentials(
         return new Date(a.lastUsedAt).getTime() - new Date(b.lastUsedAt).getTime();
       });
       connection = sorted[0];
+    } else if (strategy === "weighted") {
+      // Weighted random selection: pick a connection with probability proportional
+      // to its weight. The DB schema does not carry an explicit `weight` field per
+      // connection, so we derive a weight from `priority` (lower priority = higher
+      // weight). Concretely: weight = max(1, MAX_PRIORITY_CEILING - priority).
+      //
+      // Falls back to fill-first if every connection ends up with weight 0 (e.g.
+      // future schemas where `priority` is missing/zero across the board).
+      const PRIORITY_CEILING = 1000;
+      const weighted = orderedConnections.map((conn) => {
+        const p = typeof conn.priority === "number" && conn.priority > 0 ? conn.priority : 0;
+        const w = p > 0 ? Math.max(1, PRIORITY_CEILING - p) : 0;
+        return { conn, weight: w };
+      });
+      const totalWeight = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+      if (totalWeight > 0) {
+        // Cumulative-distribution sampling using crypto-strong randomness.
+        const r =
+          (parseInt(randomUUID().replace(/-/g, "").substring(0, 8), 16) / 0xffffffff) * totalWeight;
+        let cumulative = 0;
+        let picked = weighted[0].conn;
+        for (const entry of weighted) {
+          cumulative += entry.weight;
+          if (r <= cumulative) {
+            picked = entry.conn;
+            break;
+          }
+        }
+        connection = picked;
+      } else {
+        // All weights are zero/absent — fall back to fill-first (priority order).
+        connection = orderedConnections[0];
+      }
     } else if (strategy === "cost-optimized") {
-      // Cost Optimized: sort by priority ascending (lower = cheaper/preferred)
-      // Future: can be enhanced with actual cost data per provider
+      // TODO(cost-optimized): real cost-based ranking requires an async lookup via
+      // `getPricingForModel` (see `src/lib/usage/costCalculator.ts`), which would
+      // turn this hot selection path into an awaited operation per candidate.
+      // Until that is acceptable on the request path, we approximate cost preference
+      // with `priority` (lower priority = preferred / assumed cheaper tier). The
+      // UI label for this strategy should reflect that it is *priority-based*, not
+      // a true cost optimization (kept under the same key to avoid migrating user
+      // settings). Tie-break by priority is implicit since priority IS the sort key.
       const sorted = [...orderedConnections].sort(
         (a, b) => (a.priority || 999) - (b.priority || 999)
       );
@@ -1326,21 +1365,31 @@ export async function getProviderCredentialsWithQuotaPreflight(
       return credentials;
     }
 
-    const preflight = await preflightQuota(provider, credentials.connectionId, credentials);
+    // Narrow `connectionId` once — quota preflight, blocklisting, and logging all need
+    // it. If it's missing we can't track this credential set; skip preflight and return
+    // the credentials so the caller can decide (refusing to route would be worse than
+    // serving without quota gating).
+    const { connectionId: credentialConnectionId } = credentials;
+    if (credentialConnectionId == null || typeof credentialConnectionId !== "string") {
+      log.warn("AUTH", `${provider} | preflight skipped: credentials missing connectionId`);
+      return credentials;
+    }
+
+    const preflight = await preflightQuota(provider, credentialConnectionId, credentials);
     if (preflight.proceed) {
       return credentials;
     }
 
     blockedByPreflight.push({
-      id: credentials.connectionId,
+      id: credentialConnectionId,
       quotaPercent: preflight.quotaPercent,
       resetAt: preflight.resetAt ?? null,
     });
-    excludedConnectionIds.add(credentials.connectionId);
+    excludedConnectionIds.add(credentialConnectionId);
 
     log.info(
       "AUTH",
-      `${provider} | preflight blocked ${credentials.connectionId.slice(0, 8)}${
+      `${provider} | preflight blocked ${credentialConnectionId.slice(0, 8)}${
         Number.isFinite(preflight.quotaPercent)
           ? ` at ${Math.round((preflight.quotaPercent as number) * 100)}%`
           : ""
@@ -1368,12 +1417,10 @@ export async function markAccountUnavailable(
 ) {
   const currentMutex = markMutexes.get(connectionId) || Promise.resolve();
   let resolveMutex: (() => void) | undefined;
-  markMutexes.set(
-    connectionId,
-    new Promise((resolve) => {
-      resolveMutex = resolve;
-    })
-  );
+  const ownMutex = new Promise<void>((resolve) => {
+    resolveMutex = resolve;
+  });
+  markMutexes.set(connectionId, ownMutex);
 
   try {
     await currentMutex;
@@ -1632,8 +1679,12 @@ export async function markAccountUnavailable(
     return { shouldFallback: true, cooldownMs };
   } finally {
     if (resolveMutex) resolveMutex();
-    // Cleanup stale mutex entries (avoid memory leak)
-    markMutexes.delete(connectionId);
+    // Cleanup stale mutex entries (avoid memory leak). Use compare-and-swap so we
+    // don't accidentally drop a successor's mutex registered between when we
+    // installed `ownMutex` and now.
+    if (markMutexes.get(connectionId) === ownMutex) {
+      markMutexes.delete(connectionId);
+    }
   }
 }
 

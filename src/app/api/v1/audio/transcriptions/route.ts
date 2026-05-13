@@ -12,6 +12,8 @@ import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import { enforceApiKeyPolicy } from "@/shared/utils/apiKeyPolicy";
 import { getProviderNodes } from "@/lib/localDb";
+import { v1AudioTranscriptionsSchema } from "@/shared/validation/schemas";
+import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
 /**
  * Handle CORS preflight
@@ -20,7 +22,7 @@ export async function OPTIONS() {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*",
+      "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, User-Agent, X-Requested-With, X-API-Key, X-OmniRoute-API-Key, X-Stainless-Retry-Count, anthropic-version, anthropic-beta, openai-organization, openai-project, openai-beta",
     },
   });
 }
@@ -37,10 +39,21 @@ export async function POST(request) {
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid multipart form data");
   }
 
-  const model = formData.get("model");
-  if (!model) {
-    return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing model");
+  // Build a plain object snapshot of the multipart form for Zod validation.
+  // FormData entries can include uploaded File/Blob values, so we keep them
+  // as-is and let the schema check for the Blob-like shape on `file`.
+  const formObject: Record<string, unknown> = {};
+  for (const [key, value] of (formData as FormData).entries()) {
+    formObject[key] = value;
   }
+
+  const validation = validateBody(v1AudioTranscriptionsSchema, formObject);
+  if (isValidationFailure(validation)) {
+    const first = validation.error.details[0];
+    const message = first ? `${first.field || "body"}: ${first.message}` : validation.error.message;
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, message);
+  }
+  const model = validation.data.model;
 
   // Enforce API key policies (model restrictions + budget limits)
   const policy = await enforceApiKeyPolicy(request, model as string);

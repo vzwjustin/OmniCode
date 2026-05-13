@@ -1,7 +1,9 @@
 import { jwtVerify, SignJWT } from "jose";
+import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getCachedSettings } from "../../lib/db/readCache";
 import { isDraining } from "../../lib/gracefulShutdown";
+import { isJtiDenied } from "../../lib/auth/sessionRegistry";
 import { checkBodySize, getBodySizeLimit } from "../../shared/middleware/bodySizeGuard";
 import { generateRequestId } from "../../shared/utils/requestId";
 import { applyCorsHeaders } from "../cors/origins";
@@ -113,16 +115,22 @@ async function refreshDashboardSessionIfNeeded(
 
   try {
     const { payload } = await jwtVerify(token, secret);
+    const jti = typeof payload.jti === "string" ? payload.jti : null;
+    if (jti && isJtiDenied(jti)) return;
     const exp = typeof payload.exp === "number" ? payload.exp : null;
     if (!exp) return;
 
+    const ttlDaysRaw = Number.parseInt(process.env.OMNIROUTE_SESSION_TTL_DAYS || "", 10);
+    const ttlDays = Number.isFinite(ttlDaysRaw) && ttlDaysRaw > 0 ? ttlDaysRaw : 7;
+    const ttlSeconds = ttlDays * 24 * 60 * 60;
     const now = Math.floor(Date.now() / 1000);
-    const refreshWindowSeconds = 7 * 24 * 60 * 60;
+    // Refresh when fewer than half the TTL window remains (capped at 7d).
+    const refreshWindowSeconds = Math.min(Math.floor(ttlSeconds / 2), 7 * 24 * 60 * 60);
     if (exp - now >= refreshWindowSeconds) return;
 
-    const freshToken = await new SignJWT({ authenticated: true })
+    const freshToken = await new SignJWT({ authenticated: true, jti: randomUUID() })
       .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("30d")
+      .setExpirationTime(`${ttlDays}d`)
       .sign(secret);
 
     response.cookies.set("auth_token", freshToken, {
@@ -130,6 +138,7 @@ async function refreshDashboardSessionIfNeeded(
       secure: shouldUseSecureCookie(request),
       sameSite: "lax",
       path: "/",
+      maxAge: ttlSeconds,
     });
   } catch (error) {
     console.error("[Authz] JWT auto-refresh failed:", error);

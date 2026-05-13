@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import {
   detectFormat,
   getTargetFormat,
@@ -44,6 +45,9 @@ async function getActiveProviderSpecificData(provider?: string | null): Promise<
 }
 
 export async function POST(request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   let rawBody;
   try {
     rawBody = await request.json();

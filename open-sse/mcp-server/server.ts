@@ -85,7 +85,8 @@ import { resolveOmniRouteBaseUrl } from "../../src/shared/utils/resolveOmniRoute
 
 const OMNIROUTE_BASE_URL = resolveOmniRouteBaseUrl();
 const OMNIROUTE_API_KEY = process.env.OMNIROUTE_API_KEY || "";
-const MCP_ENFORCE_SCOPES = process.env.OMNIROUTE_MCP_ENFORCE_SCOPES === "true";
+// Default-on scope enforcement. Set OMNIROUTE_MCP_ENFORCE_SCOPES=false to opt out (dev only).
+const MCP_ENFORCE_SCOPES = process.env.OMNIROUTE_MCP_ENFORCE_SCOPES !== "false";
 const MCP_ALLOWED_SCOPES = new Set(
   (process.env.OMNIROUTE_MCP_SCOPES || "")
     .split(",")
@@ -926,11 +927,11 @@ export function createMcpServer(): McpServer {
         // @ts-ignore: dynamic zod access
         inputSchema: toolDef.inputSchema,
       },
-      withScopeEnforcement(toolDef.name, async (args) => {
+      withScopeEnforcement(toolDef.name, async (args, extra) => {
         try {
           const parsedArgs = toolDef.inputSchema.parse(args ?? {});
           // @ts-ignore: handler expected specific object
-          const result = await toolDef.handler(parsedArgs);
+          const result = await toolDef.handler(parsedArgs, extra);
           return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -949,11 +950,11 @@ export function createMcpServer(): McpServer {
         // @ts-ignore: dynamic zod access
         inputSchema: toolDef.inputSchema,
       },
-      withScopeEnforcement(toolDef.name, async (args) => {
+      withScopeEnforcement(toolDef.name, async (args, extra) => {
         try {
           const parsedArgs = toolDef.inputSchema.parse(args ?? {});
           // @ts-ignore: handler expected specific object
-          const result = await toolDef.handler(parsedArgs);
+          const result = await toolDef.handler(parsedArgs, extra);
           return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);

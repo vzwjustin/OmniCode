@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/db/settings";
+import { validateOutboundUrl } from "@/shared/network/safeOutboundFetch";
 
 export const dynamic = "force-dynamic";
 
@@ -14,33 +15,6 @@ const ALLOWED_IMAGE_TYPES = [
 const MAX_FAVICON_SIZE = 50 * 1024; // 50KB
 const FETCH_TIMEOUT = 5000; // 5 seconds
 const CACHE_DURATION = 300; // 5 minutes
-
-function isAllowedUrl(url: string): boolean {
-  try {
-    const parsedUrl = new URL(url);
-    // Only allow https (or http for local development)
-    if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
-      return false;
-    }
-    // Block private/internal IPs
-    const hostname = parsedUrl.hostname;
-    if (
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname === "0.0.0.0" ||
-      hostname.startsWith("192.168.") ||
-      hostname.startsWith("10.") ||
-      hostname.startsWith("172.") ||
-      hostname.endsWith(".local") ||
-      hostname === "localhost"
-    ) {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function validateImageData(base64Data: string, contentType: string): boolean {
   if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
@@ -76,42 +50,48 @@ export async function GET() {
         faviconData = customFaviconBase64;
       }
     } else if (customFaviconUrl) {
-      // Validate URL before fetching (SSRF protection)
-      if (!isAllowedUrl(customFaviconUrl)) {
-        console.error("Blocked invalid favicon URL:", customFaviconUrl);
-      } else {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+      // SSRF protection: resolve DNS and reject private/loopback/IMDS targets.
+      const urlCheck = await validateOutboundUrl(customFaviconUrl, "public-only");
+      if (!urlCheck.ok) {
+        console.error("Blocked invalid favicon URL:", customFaviconUrl, "reason:", urlCheck.reason);
+        return NextResponse.json(
+          { error: "blocked_favicon_url", reason: urlCheck.reason },
+          { status: 400 }
+        );
+      }
 
-          const response = await fetch(customFaviconUrl, {
-            signal: controller.signal,
-            headers: {
-              "User-Agent": "OmniRoute/2.0",
-            },
-          });
-          clearTimeout(timeoutId);
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
-          if (response.ok) {
-            const contentType = response.headers.get("content-type") || "";
-            const arrayBuffer = await response.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
+        const response = await fetch(customFaviconUrl, {
+          signal: controller.signal,
+          headers: {
+            "User-Agent": "OmniRoute/2.0",
+          },
+        });
+        clearTimeout(timeoutId);
 
-            // Validate size before processing
-            if (uint8Array.length > MAX_FAVICON_SIZE) {
-              console.error("Favicon exceeds max size:", uint8Array.length);
-            } else {
-              const base64 = Buffer.from(uint8Array).toString("base64");
-              const fullData = `data:${contentType};base64,${base64}`;
+        if (response.ok) {
+          const contentType = response.headers.get("content-type") || "";
+          const arrayBuffer = await response.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
 
-              if (validateImageData(fullData, contentType)) {
-                faviconData = fullData;
-              }
+          // Validate size before processing
+          if (uint8Array.length > MAX_FAVICON_SIZE) {
+            console.error("Favicon exceeds max size:", uint8Array.length);
+          } else {
+            const base64 = Buffer.from(uint8Array).toString("base64");
+            const fullData = `data:${contentType};base64,${base64}`;
+
+            if (validateImageData(fullData, contentType)) {
+              faviconData = fullData;
             }
           }
-        } catch (error) {
-          console.error("Failed to fetch custom favicon:", error);
         }
+      } catch (error) {
+        console.error("Failed to fetch custom favicon:", error);
+        return NextResponse.json({ error: "favicon_fetch_failed" }, { status: 400 });
       }
     }
 

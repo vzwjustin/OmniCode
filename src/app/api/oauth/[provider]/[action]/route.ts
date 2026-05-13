@@ -25,6 +25,31 @@ import {
 } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { isAuthRequired, isAuthenticated } from "@/shared/utils/apiAuth";
+import { consumeState } from "@/lib/oauth/stateStore";
+
+/**
+ * Validate the `redirect_uri` query parameter. Allowed:
+ *   - https:// anywhere (production-grade)
+ *   - http://localhost:<port>/... and http://127.0.0.1:<port>/... (dev / loopback)
+ *
+ * Anything else (http:// to a remote host, file://, custom schemes, etc.) is
+ * rejected to prevent open-redirect / auth-code exfiltration to attacker
+ * infrastructure (RFC 8252 §7.3).
+ */
+function isAllowedRedirectUri(uri: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(uri);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol === "https:") return true;
+  if (parsed.protocol === "http:") {
+    const host = parsed.hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+  }
+  return false;
+}
 
 // Use globalThis to persist callback server state across Next.js HMR reloads
 if (!globalThis.__codexCallbackState) {
@@ -69,6 +94,23 @@ export async function GET(
 
     if (action === "authorize") {
       const redirectUri = searchParams.get("redirect_uri") || "http://localhost:8080/callback";
+      if (!isAllowedRedirectUri(redirectUri)) {
+        return NextResponse.json(
+          {
+            error: {
+              message: "Invalid redirect_uri",
+              details: [
+                {
+                  field: "redirect_uri",
+                  message:
+                    "redirect_uri must be https:// or http://localhost / http://127.0.0.1 loopback",
+                },
+              ],
+            },
+          },
+          { status: 400 }
+        );
+      }
       const authData = generateAuthData(provider, redirectUri);
       if (provider === "qoder" && !authData.authUrl) {
         return NextResponse.json({
@@ -287,6 +329,24 @@ export async function POST(
         );
       }
 
+      // Server-side state validation (CSRF / cross-provider replay defense).
+      // Skip for device_code flows that never round-trip state through a
+      // browser. Otherwise: require a state value, look it up, ensure it
+      // matches this provider, and consume it (single-use).
+      if (providerData.flowType !== "device_code") {
+        if (!normalizedState) {
+          return NextResponse.json({ error: "invalid oauth state" }, { status: 400 });
+        }
+        const entry = consumeState(normalizedState, provider);
+        if (!entry) {
+          return NextResponse.json({ error: "invalid oauth state" }, { status: 400 });
+        }
+      }
+
+      if (redirectUri && !isAllowedRedirectUri(redirectUri)) {
+        return NextResponse.json({ error: "invalid redirect_uri" }, { status: 400 });
+      }
+
       // Resolve proxy for this provider (provider-level → global → direct)
       const proxy = await resolveProxyForProvider(provider);
 
@@ -499,6 +559,25 @@ export async function POST(
           success: false,
           error: "no_code",
           errorDescription: "No authorization code received",
+        });
+      }
+
+      // Validate and consume the state the callback delivered. Without this,
+      // an attacker that controls the network or the user agent could feed a
+      // fabricated `code` into our local callback server.
+      if (typeof params.state !== "string" || !params.state) {
+        return NextResponse.json({
+          success: false,
+          error: "invalid oauth state",
+          errorDescription: "Missing state in callback",
+        });
+      }
+      const stateEntry = consumeState(params.state, provider);
+      if (!stateEntry) {
+        return NextResponse.json({
+          success: false,
+          error: "invalid oauth state",
+          errorDescription: "OAuth state missing, expired, or provider-mismatch",
         });
       }
 

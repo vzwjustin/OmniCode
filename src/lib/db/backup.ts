@@ -15,6 +15,7 @@ import {
   DATA_DIR,
 } from "./core";
 import { resetAllDbModuleState } from "./stateReset";
+import { runMigrations } from "./migrationRunner";
 
 type CountRow = { cnt?: number };
 
@@ -350,6 +351,7 @@ export async function restoreDbBackup(backupId: string) {
   }
 
   // Force pre-restore backup (bypass throttle) and await so the DB is not closed while backup runs
+  let preBackupPath: string | null = null;
   if (!isSqliteAutoBackupDisabled()) {
     _lastBackupAt = 0;
     const backupDirForPre = getBackupDir();
@@ -357,7 +359,7 @@ export async function restoreDbBackup(backupId: string) {
       const stat = fs.statSync(SQLITE_FILE);
       if (stat.size >= 4096) {
         if (!fs.existsSync(backupDirForPre)) fs.mkdirSync(backupDirForPre, { recursive: true });
-        const preBackupPath = path.join(
+        preBackupPath = path.join(
           backupDirForPre,
           `db_${new Date().toISOString().replace(/[:.]/g, "-")}_pre-restore.sqlite`
         );
@@ -399,7 +401,49 @@ export async function restoreDbBackup(backupId: string) {
   fs.copyFileSync(backupPath, sqliteFile);
 
   // Reopen
-  const db = getDbInstance();
+  let db = getDbInstance();
+
+  // Run migrations to bring older backups up to current schema before any consumer
+  // reads from the database. On migration failure, attempt to restore the
+  // pre-restore safety backup so the operator is not left without a working DB.
+  try {
+    runMigrations(db);
+  } catch (migrationErr: unknown) {
+    const migrationMessage =
+      migrationErr instanceof Error ? migrationErr.message : String(migrationErr);
+    console.error(
+      `[DB] Post-restore migration failed: ${migrationMessage}. Rolling back to pre-restore snapshot.`
+    );
+
+    try {
+      resetDbInstance();
+      resetAllDbModuleState();
+      await sleep(500);
+
+      for (const filePath of sqliteFilesToReplace) {
+        if (!filePath) continue;
+        await unlinkFileWithRetry(filePath);
+      }
+
+      if (preBackupPath && fs.existsSync(preBackupPath)) {
+        fs.copyFileSync(preBackupPath, sqliteFile);
+        // Reopen so subsequent callers see a working DB
+        db = getDbInstance();
+        console.log(`[DB] Rolled back to pre-restore snapshot: ${path.basename(preBackupPath)}`);
+      } else {
+        console.error(
+          "[DB] No pre-restore snapshot available; database may be in an inconsistent state."
+        );
+      }
+    } catch (rollbackErr: unknown) {
+      const rollbackMessage =
+        rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr);
+      console.error(`[DB] Rollback after migration failure also failed: ${rollbackMessage}`);
+    }
+
+    throw new Error(`Restore failed: post-restore migration error: ${migrationMessage}`);
+  }
+
   const connCount =
     (db.prepare("SELECT COUNT(*) as cnt FROM provider_connections").get() as CountRow | undefined)
       ?.cnt || 0;

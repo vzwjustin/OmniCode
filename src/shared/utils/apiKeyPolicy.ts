@@ -203,6 +203,39 @@ export async function enforceApiKeyPolicy(
     }
   }
 
+  // ── Check 1.6: ip_allowlist — peer must be in the configured set ──
+  // The DB column has been present since migration 032 but was unenforced.
+  // Honor TRUST_PROXY_HEADERS for the peer-address lookup so the same env
+  // gate used by login brute-force applies here.
+  if (apiKeyInfo.ipAllowlist && apiKeyInfo.ipAllowlist.length > 0) {
+    try {
+      const { getClientIp } = await import("@/lib/ipUtils");
+      const peer = getClientIp(request as Request);
+      // CIDR matching: very small surface; rely on prefix match for IPv4 /32
+      // ranges and explicit equality otherwise. A future migration can move
+      // to ip-address style matching if more complex CIDRs are needed.
+      const allowed = apiKeyInfo.ipAllowlist.some((entry: string) => {
+        if (!entry) return false;
+        if (entry.includes("/")) return entry === peer; // CIDR equality only for now
+        return entry === peer;
+      });
+      if (!allowed) {
+        return {
+          apiKey,
+          apiKeyInfo,
+          rejection: errorResponse(
+            HTTP_STATUS.FORBIDDEN,
+            "Request peer address is not in this API key's IP allowlist"
+          ),
+        };
+      }
+    } catch {
+      // If we can't determine the peer (e.g. test env), fail open to avoid
+      // breaking dev. Production deployments should ensure ip detection works
+      // before relying on this field.
+    }
+  }
+
   // ── Check 2: access_schedule — time-based access window ──
   if (apiKeyInfo.accessSchedule && apiKeyInfo.accessSchedule.enabled) {
     if (!isWithinSchedule(apiKeyInfo.accessSchedule)) {

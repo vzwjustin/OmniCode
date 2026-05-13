@@ -115,7 +115,38 @@ export class CircuitBreaker {
   }
 
   /**
+   * Acquire a probe slot before invoking a guarded function via a direct
+   * `_onSuccess` / `_onFailure` call path (e.g. when the caller manages the
+   * fetch itself but still wants the breaker to record the outcome).
+   *
+   * Invariant: callers that bypass {@link execute} and decide outcomes via
+   * `_onSuccess` / `_onFailure` MUST call this first when the breaker is
+   * (or has just become) HALF_OPEN, so probe budget is respected. The
+   * {@link execute} method calls it internally — do not call twice for one
+   * request.
+   *
+   * @returns {boolean} `true` if the request may proceed; `false` if the
+   *   breaker is OPEN, or HALF_OPEN with no probe budget remaining. When
+   *   returning `false`, callers must NOT invoke `_onSuccess` / `_onFailure`.
+   */
+  _acquireProbe(): boolean {
+    this._refreshOpenState();
+
+    if (this.state === STATE.OPEN) return false;
+    if (this.state === STATE.HALF_OPEN) {
+      if (this.halfOpenAllowed <= 0) return false;
+      this.halfOpenAllowed--;
+    }
+    return true;
+  }
+
+  /**
    * Execute a function through the circuit breaker.
+   *
+   * Invariant: `_acquireProbe()` is called exactly once before `fn()`. If the
+   * breaker is OPEN or out of probe budget, throws {@link CircuitBreakerOpenError}.
+   * The probe budget is consumed here so direct callers must use
+   * `_acquireProbe()` themselves to keep the budget honest.
    *
    * @template T
    * @param {() => Promise<T>} fn - Function to execute
@@ -123,26 +154,15 @@ export class CircuitBreaker {
    * @throws {Error} If circuit is OPEN
    */
   async execute(fn) {
-    this._refreshOpenState();
-
-    if (this.state === STATE.OPEN) {
+    if (!this._acquireProbe()) {
+      const reason = this.state === STATE.HALF_OPEN ? "HALF_OPEN" : "OPEN";
       throw new CircuitBreakerOpenError(
-        `Circuit breaker "${this.name}" is OPEN. Try again later.`,
+        reason === "HALF_OPEN"
+          ? `Circuit breaker "${this.name}" is HALF_OPEN, no more probe requests allowed.`
+          : `Circuit breaker "${this.name}" is OPEN. Try again later.`,
         this.name,
         this._timeUntilReset()
       );
-    }
-
-    if (this.state === STATE.HALF_OPEN && this.halfOpenAllowed <= 0) {
-      throw new CircuitBreakerOpenError(
-        `Circuit breaker "${this.name}" is HALF_OPEN, no more probe requests allowed.`,
-        this.name,
-        this._timeUntilReset()
-      );
-    }
-
-    if (this.state === STATE.HALF_OPEN) {
-      this.halfOpenAllowed--;
     }
 
     try {

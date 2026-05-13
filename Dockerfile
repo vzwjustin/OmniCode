@@ -31,14 +31,21 @@ LABEL org.opencontainers.image.title="omniroute" \
 ENV NODE_ENV=production
 ENV PORT=20128
 ENV HOSTNAME=0.0.0.0
+# Containerized deployments are expected to bind on all interfaces (Docker networking
+# routes external traffic in via the published port); explicitly opt-in to the LAN
+# bind so run-next.mjs/run-standalone.mjs do not silently revert to 127.0.0.1.
+ENV OMNIROUTE_BIND_LAN=true
 ENV NODE_OPTIONS="--max-old-space-size=256"
 
 # Data directory inside Docker — must match the volume mount in docker-compose.yml
 ENV DATA_DIR=/app/data
+# HOME=/app so that any code resolving "~/.omniroute" lands inside the image
+# (and inside the chown'd /app tree below) instead of a non-writable default.
+ENV HOME=/app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libsecret-1-0 ca-certificates \
   && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data /app/.omniroute
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/static ./.next/static
@@ -65,6 +72,13 @@ COPY --from=builder /app/scripts/runtime-env.mjs ./runtime-env.mjs
 COPY --from=builder /app/scripts/bootstrap-env.mjs ./bootstrap-env.mjs
 COPY --from=builder /app/scripts/healthcheck.mjs ./healthcheck.mjs
 
+# Run the service as a dedicated non-root user. Done after all COPYs so the
+# chown picks up every file placed in /app. /app/data is the runtime DATA_DIR
+# and /app/.omniroute resolves "~/.omniroute" for anything still using HOME.
+RUN groupadd -r omniroute && useradd -r -g omniroute omniroute \
+  && chown -R omniroute:omniroute /app
+USER omniroute
+
 EXPOSE 20128
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
@@ -73,6 +87,14 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 CMD ["node", "run-standalone.mjs"]
 
 FROM runner-base AS runner-cli
+
+# runner-base switches to USER omniroute, but the CLI stage needs root to install
+# system packages (apt-get) and global npm packages. We also intentionally KEEP
+# the runner-cli container running as root at runtime so docker-in-docker
+# (docker.io / docker-compose installed below) works inside the container —
+# the docker CLI normally requires either root or membership in the host's
+# docker group, and we cannot reliably enumerate that GID at image build time.
+USER root
 
 # Install system dependencies required by openclaw (git+ssh references).
 RUN apt-get update \

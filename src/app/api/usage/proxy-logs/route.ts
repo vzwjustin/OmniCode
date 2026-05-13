@@ -1,3 +1,4 @@
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getProxyLogs, clearProxyLogs, getProxyLogStats } from "@/lib/proxyLogger";
 
 /**
@@ -5,6 +6,9 @@ import { getProxyLogs, clearProxyLogs, getProxyLogStats } from "@/lib/proxyLogge
  * Query params: ?status=ok|error|timeout&type=http|socks5&provider=xxx&level=global|provider|combo|key&search=xxx&limit=300
  */
 export async function GET(request: Request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -29,7 +33,10 @@ export async function GET(request: Request) {
 /**
  * DELETE /api/usage/proxy-logs — clear all proxy logs
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     clearProxyLogs();
     return Response.json({ cleared: true });

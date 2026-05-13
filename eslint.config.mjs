@@ -35,6 +35,51 @@ const eslintConfig = [
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  // Relaxed ESM/Node config for scripts and CLI entrypoints. These are not React
+  // and run in Node directly (or are spawned by npm scripts), so we disable the
+  // React-specific rules but keep the global security rules from above.
+  {
+    files: ["scripts/**/*.{js,mjs,cjs,ts}", "bin/**/*.{js,mjs,cjs,ts}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+      },
+    },
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+      "@next/next/no-assign-module-variable": "off",
+      "@next/next/no-html-link-for-pages": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  // Electron main/renderer code: Node + browser globals, no Next.js routing rules.
+  {
+    files: ["electron/**/*.js", "electron/**/*.cjs", "electron/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        window: "readonly",
+        document: "readonly",
+      },
+    },
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+      "@next/next/no-assign-module-variable": "off",
+      "@next/next/no-html-link-for-pages": "off",
+    },
+  },
   // Global ignores — keep ESLint scoped to source files only
   {
     ignores: [
@@ -45,17 +90,18 @@ const eslintConfig = [
       "build/**",
       "coverage/**",
       "next-env.d.ts",
-      // Scripts and binaries
-      "scripts/**",
-      "bin/**",
+      // Scripts and binaries are now linted (see relaxed config above) — only ignore
+      // generated artifacts.
       // Dependencies
       "node_modules/**",
+      "electron/node_modules/**",
       // VS Code extension and its large test fixtures
       "vscode-extension/**",
       "_references/**",
       "_mono_repo/**",
-      // Electron app
-      "electron/**",
+      // Electron build output
+      "electron/dist/**",
+      "electron/out/**",
       // Docs
       "docs/**",
       // Open-SSE compiled/bundled output

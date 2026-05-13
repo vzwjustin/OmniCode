@@ -1,0 +1,27 @@
+{
+  "//": "Aspirational full-project typecheck. Extends tsconfig.json but DOES include open-sse.",
+  "//1": "Currently expected to fail — exposes the backlog of `any`/loose types in open-sse.",
+  "//2": "Run with: npm run typecheck:full. Failures should be triaged and fixed incrementally; this file gives the project a single command to track progress.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", ".next/types/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "antigravity-manager-analysis",
+    "app.__qa_backup",
+    "vscode-extension",
+    "vs_ideia",
+    "_tasks",
+    "_mono_repo",
+    "_references",
+    "omnirouteCloud",
+    "omnirouteSite",
+    ".next",
+    "coverage",
+    "playwright-report",
+    "test-results"
+  ]
+}

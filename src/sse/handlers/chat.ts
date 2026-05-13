@@ -79,6 +79,13 @@ import {
   resolveCooldownAwareRetrySettings,
   waitForCooldownAwareRetry,
 } from "../services/cooldownAwareRetry";
+import { createInjectionGuard } from "@/middleware/promptInjectionGuard";
+
+// Singleton injection guard shared across all routes that delegate here
+// (/v1/chat/completions, /v1/responses, /v1/messages, /v1/completions).
+// Moved into the shared handler so all entry points get the same protection
+// without route-level duplication.
+const injectionGuard = createInjectionGuard();
 
 registerCodexQuotaFetcher();
 
@@ -149,6 +156,32 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
   } catch {
     log.warn("CHAT", "Invalid JSON body");
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid JSON body");
+  }
+
+  // Prompt injection guard — runs for every entry point that delegates to
+  // handleChat (/v1/chat/completions, /v1/responses, /v1/messages,
+  // /v1/completions). Failures inside the guard are logged and fail-open so a
+  // bug in the detector never blocks legitimate traffic.
+  try {
+    if (body && typeof body === "object") {
+      const { blocked, result } = injectionGuard(body);
+      if (blocked) {
+        log.warn("SECURITY", "Prompt injection detected, blocking request");
+        return new Response(
+          JSON.stringify({
+            error: {
+              message: "Request blocked: potential prompt injection detected",
+              type: "injection_detected",
+              code: "SECURITY_001",
+              detections: result?.detections?.length ?? 0,
+            },
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+  } catch (error) {
+    log.warn("SECURITY", `Prompt injection guard failed: ${String(error)}`);
   }
 
   const rawClientBody = cloneLogPayload(body);

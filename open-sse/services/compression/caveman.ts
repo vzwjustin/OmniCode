@@ -548,6 +548,12 @@ export function cavemanCompress(
         }
       }
 
+      // Sanity check: protect against ruleset bugs that bloat or eliminate content
+      if (cleaned.length === 0 || cleaned.length > textPart.length * 1.1) {
+        fallbackApplied = true;
+        return textPart;
+      }
+
       return cleaned;
     };
 

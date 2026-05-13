@@ -99,6 +99,22 @@ export function compressAggressive(
     try {
       currentMessages = currentMessages.map((msg) => {
         if (cfg.preserveSystemPrompt !== false && msg.role === "system") return msg;
+        // Role guard: never summarize tool/function role messages
+        if (msg.role === "tool" || msg.role === "function") return msg;
+        // Skip when structured content contains tool_use/tool_result blocks
+        if (Array.isArray(msg.content)) {
+          const hasToolBlock = msg.content.some(
+            (part) =>
+              part !== null &&
+              typeof part === "object" &&
+              ((part as Record<string, unknown>).type === "tool_use" ||
+                (part as Record<string, unknown>).type === "tool_result" ||
+                (part as Record<string, unknown>).type === "input_tool_result" ||
+                (part as Record<string, unknown>).type === "function_call" ||
+                (part as Record<string, unknown>).type === "function_call_output")
+          );
+          if (hasToolBlock) return msg;
+        }
         const text = extractTextContent(msg.content);
         if (!text || COMPRESSED_MARKER_RE.test(text)) return msg;
         if (text.length <= cfg.maxTokensPerMessage * 4) return msg;

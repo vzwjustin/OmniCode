@@ -78,6 +78,8 @@ export async function POST(request: Request) {
       globalPriority,
       defaultModel,
       testStatus,
+      url: incomingUrl,
+      isActive: incomingIsActive,
       providerSpecificData: incomingPsd,
     } = validation.data;
 
@@ -91,7 +93,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
     }
 
-    let providerSpecificData = incomingPsd || null;
+    let providerSpecificData: Record<string, unknown> | null = incomingPsd || null;
+    // If a top-level `url` was provided (e.g., from onboarding), persist it as
+    // providerSpecificData.baseUrl unless one is already set.
+    if (typeof incomingUrl === "string" && incomingUrl.trim().length > 0) {
+      const existingBaseUrl =
+        providerSpecificData &&
+        typeof providerSpecificData === "object" &&
+        typeof (providerSpecificData as Record<string, unknown>).baseUrl === "string"
+          ? ((providerSpecificData as Record<string, unknown>).baseUrl as string)
+          : "";
+      if (!existingBaseUrl) {
+        providerSpecificData = {
+          ...(providerSpecificData || {}),
+          baseUrl: incomingUrl.trim(),
+        };
+      }
+    }
     const allowMultipleCompatibleConnections =
       process.env.ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE === "true";
 
@@ -154,7 +172,7 @@ export async function POST(request: Request) {
       globalPriority: globalPriority || null,
       defaultModel: defaultModel || null,
       providerSpecificData,
-      isActive: true,
+      isActive: incomingIsActive !== undefined ? incomingIsActive : true,
       testStatus: testStatus || "unknown",
     });
 

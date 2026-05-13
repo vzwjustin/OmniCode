@@ -2,9 +2,10 @@
 /**
  * OmniRoute — Zero-Config Bootstrap
  *
- * Auto-generates required secrets (JWT_SECRET, STORAGE_ENCRYPTION_KEY) if
- * missing or empty, persists them to {DATA_DIR}/server.env so they survive
- * restarts, Docker volume remounts, and upgrades.
+ * Auto-generates required secrets (JWT_SECRET, API_KEY_SECRET,
+ * STORAGE_ENCRYPTION_KEY) if missing or empty, persists them to
+ * {DATA_DIR}/server.env so they survive restarts, Docker volume remounts,
+ * and upgrades.
  *
  * Works across all deployment modes:
  *   - npm / app runners:  called from run-standalone.mjs and run-next.mjs
@@ -317,6 +318,7 @@ if (process.argv[1] && process.argv[1].endsWith("bootstrap-env.mjs")) {
   const env = bootstrapEnv();
   process.stderr.write(`[bootstrap] Done. DATA_DIR resolved to: ${resolveDataDir()}\n`);
   process.stderr.write(`[bootstrap] JWT_SECRET length: ${env.JWT_SECRET?.length ?? 0}\n`);
+  process.stderr.write(`[bootstrap] API_KEY_SECRET length: ${env.API_KEY_SECRET?.length ?? 0}\n`);
   process.stderr.write(
     `[bootstrap] STORAGE_ENCRYPTION_KEY length: ${env.STORAGE_ENCRYPTION_KEY?.length ?? 0}\n`
   );

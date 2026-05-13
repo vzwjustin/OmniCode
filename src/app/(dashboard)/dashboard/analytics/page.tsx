@@ -14,10 +14,16 @@ export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const t = useTranslations("analytics");
 
+  const hasKey = (key: string) => typeof t.has === "function" && t.has(key);
+  const safeT = (key: string, fallback: string) => (hasKey(key) ? t(key) : fallback);
+
   const tabDescriptions: Record<string, string> = {
     overview: t("overviewDescription"),
     evals: t("evalsDescription"),
-    search: "Search request analytics — provider breakdown, cache hit rate, and cost tracking.",
+    search: safeT(
+      "searchDescription",
+      "Search request analytics — provider breakdown, cache hit rate, and cost tracking."
+    ),
     utilization: t("utilizationDescription"),
     comboHealth: t("comboHealthDescription"),
     compression: t("compressionAnalyticsDescription"),
@@ -38,7 +44,7 @@ export default function AnalyticsPage() {
         options={[
           { value: "overview", label: t("overview") },
           { value: "evals", label: t("evals") },
-          { value: "search", label: "Search" },
+          { value: "search", label: safeT("search", "Search") },
           { value: "utilization", label: t("utilization") },
           { value: "comboHealth", label: t("comboHealth") },
           { value: "compression", label: t("compressionAnalyticsTitle") },

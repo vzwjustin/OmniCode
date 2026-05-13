@@ -27,7 +27,10 @@ import { resolveProxyForConnection } from "@/lib/localDb";
 import { CircuitBreakerOpenError, getCircuitBreaker } from "../../shared/utils/circuitBreaker";
 import { logProxyEvent } from "../../lib/proxyLogger";
 import { logTranslationEvent } from "../../lib/translatorEvents";
-import { getRuntimeProviderProfile } from "@omniroute/open-sse/services/accountFallback.ts";
+import {
+  getRuntimeProviderProfile,
+  isProviderFailureCode,
+} from "@omniroute/open-sse/services/accountFallback.ts";
 
 // Models that explicitly cannot run on the codex/ChatGPT-Pro OAuth pool — when
 // a caller writes `codex/deepseek-v4-pro` we transparently reroute to the
@@ -339,13 +342,59 @@ export async function executeChatWithBreaker({
       return { result, tlsFingerprintUsed: false };
     }
 
-    if (!proxyInfo?.proxy && isTlsFingerprintActive()) {
-      const tracked = await breaker.execute(async () => runWithTlsTracking(chatFn));
-      return { result: tracked.result, tlsFingerprintUsed: tracked.tlsFingerprintUsed };
+    // chatFn never throws on upstream provider 5xx — it resolves with
+    // `{ success: false, status }`. If we routed through `breaker.execute()`
+    // the resolved (non-throwing) result would cause `_onSuccess()` to fire and
+    // reset the failure counter; we'd then have to call `_onFailure()`
+    // ourselves, producing CLOSE→reset-to-0→increment-to-1 sequencing on every
+    // request to a fully unhealthy provider. Instead we drive the probe budget
+    // and the outcome calls explicitly so the breaker sees clean signals.
+    const isProviderFailureResult = (res: any) =>
+      res != null &&
+      typeof res === "object" &&
+      res.success === false &&
+      typeof res.status === "number" &&
+      isProviderFailureCode(res.status);
+
+    if (!breaker._acquireProbe()) {
+      const reason =
+        breaker.getStatus?.()?.state === "HALF_OPEN" ? "HALF_OPEN" : "OPEN";
+      throw new CircuitBreakerOpenError(
+        reason === "HALF_OPEN"
+          ? `Circuit breaker "${breaker.name}" is HALF_OPEN, no more probe requests allowed.`
+          : `Circuit breaker "${breaker.name}" is OPEN. Try again later.`,
+        breaker.name,
+        breaker.getRetryAfterMs?.() ?? 0
+      );
     }
 
-    const result = await breaker.execute(chatFn);
-    return { result, tlsFingerprintUsed: false };
+    const recordOutcome = (res: any) => {
+      try {
+        if (isProviderFailureResult(res)) breaker._onFailure();
+        else breaker._onSuccess();
+      } catch {
+        // breaker bookkeeping should never break the request path
+      }
+    };
+
+    try {
+      if (!proxyInfo?.proxy && isTlsFingerprintActive()) {
+        const tracked = await runWithTlsTracking(chatFn);
+        recordOutcome(tracked.result);
+        return { result: tracked.result, tlsFingerprintUsed: tracked.tlsFingerprintUsed };
+      }
+
+      const result = await chatFn();
+      recordOutcome(result);
+      return { result, tlsFingerprintUsed: false };
+    } catch (err) {
+      try {
+        breaker._onFailure();
+      } catch {
+        // breaker bookkeeping should never break the request path
+      }
+      throw err;
+    }
   } catch (cbErr: any) {
     if (cbErr instanceof CircuitBreakerOpenError) {
       log.warn("CIRCUIT", `${provider} circuit open during retry: ${cbErr.message}`);

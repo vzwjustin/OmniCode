@@ -73,9 +73,16 @@ export async function getAccessToken(sa: ServiceAccount): Promise<string> {
     throw new Error("Vertex AI token exchange succeeded but no access_token found");
   }
 
+  // Use the actual expires_in from Google's response when available (in seconds);
+  // fall back to 1 hour if absent or invalid.
+  const expiresInSeconds =
+    typeof tokenData.expires_in === "number" && Number.isFinite(tokenData.expires_in)
+      ? Math.max(60, Math.floor(tokenData.expires_in))
+      : 3600;
+
   TOKEN_CACHE.set(cacheKey, {
     token: accessToken,
-    expiresAt: (now + 3600) * 1000,
+    expiresAt: (now + expiresInSeconds) * 1000,
   });
 
   return accessToken;
@@ -110,21 +117,24 @@ export class VertexExecutor extends BaseExecutor {
 
   async execute(input: ExecuteInput) {
     const { credentials, log } = input;
+    let activeCredentials = credentials;
     if (credentials.apiKey && !credentials.accessToken) {
       try {
         const sa = parseSAFromApiKey(credentials.apiKey);
-        credentials.accessToken = await getAccessToken(sa);
+        const accessToken = await getAccessToken(sa);
+        // Return a NEW credentials object — never mutate caller's input.
+        activeCredentials = { ...credentials, accessToken };
       } catch (err: any) {
         log?.error?.("VERTEX", `Failed to generate JWT token: ${err.message}`);
         throw err;
       }
     }
-    return super.execute(input);
+    return super.execute({ ...input, credentials: activeCredentials });
   }
 
   buildUrl(model: string, stream: boolean, urlIndex = 0, credentials: any = null) {
     const region = credentials?.providerSpecificData?.region || "us-central1";
-    let project = "unknown-project";
+    let project: string | null = null;
 
     if (credentials?.apiKey) {
       try {
@@ -133,6 +143,12 @@ export class VertexExecutor extends BaseExecutor {
       } catch {
         // Ignored, handled in execute
       }
+    }
+
+    if (!project) {
+      throw new Error(
+        "Vertex AI request cannot proceed: project_id could not be resolved from Service Account credentials"
+      );
     }
 
     if (isPartnerModel(model)) {

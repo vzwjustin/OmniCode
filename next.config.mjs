@@ -135,8 +135,11 @@ const nextConfig = {
   transpilePackages: ["@omniroute/open-sse", "@lobehub/icons"],
   allowedDevOrigins: ["localhost", "127.0.0.1", "192.168.*"],
   typescript: {
-    // TODO: Re-enable after fixing all sub-component useTranslations scope issues
-    ignoreBuildErrors: true,
+    // Default: enforce TypeScript errors during `next build` (fail-fast on type regressions).
+    // Set OMNIROUTE_ALLOW_TS_BUILD_ERRORS=true to opt out for local triage / incremental fixes.
+    // This is intentionally inverted from the historical default (which was always `true`)
+    // — see CLAUDE.md "Hard Rules": coverage/types must not silently rot.
+    ignoreBuildErrors: process.env.OMNIROUTE_ALLOW_TS_BUILD_ERRORS === "true",
   },
   images: {
     unoptimized: true,

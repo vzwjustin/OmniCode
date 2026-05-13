@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   BaseExecutor,
+  mergeAbortSignals,
   mergeUpstreamExtraHeaders,
   type ExecuteInput,
   type ProviderCredentials,
@@ -11,7 +12,7 @@ import {
   PETALS_DEFAULT_MODEL,
   normalizePetalsBaseUrl,
 } from "../config/petals.ts";
-import { PROVIDERS } from "../config/constants.ts";
+import { FETCH_TIMEOUT_MS, PROVIDERS } from "../config/constants.ts";
 
 type JsonRecord = Record<string, unknown>;
 type OpenAIMessage = {
@@ -162,6 +163,30 @@ function estimateTokens(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
+function estimatePromptTokens(body: unknown): number {
+  const payload = asRecord(body);
+
+  const directPrompt = extractTextContent(payload.prompt);
+  if (directPrompt) return estimateTokens(directPrompt);
+
+  const directInput = extractTextContent(payload.input);
+  if (directInput) return estimateTokens(directInput);
+
+  const messages = Array.isArray(payload.messages) ? (payload.messages as OpenAIMessage[]) : [];
+  if (messages.length === 0) return 0;
+
+  let joined = "";
+  for (const message of messages) {
+    const text = extractTextContent(message?.content);
+    if (text) {
+      joined += text;
+      joined += "\n";
+    }
+  }
+  if (!joined.trim()) return 0;
+  return estimateTokens(joined);
+}
+
 function buildSseChunk(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
@@ -170,9 +195,11 @@ function buildOpenAiJsonCompletion(
   content: string,
   model: string,
   id: string,
-  created: number
+  created: number,
+  promptTokens: number
 ): Response {
-  const completionTokens = estimateTokens(content);
+  const completionTokens = content ? estimateTokens(content) : 0;
+  const prompt = Math.max(0, Math.floor(promptTokens));
 
   return new Response(
     JSON.stringify({
@@ -188,9 +215,9 @@ function buildOpenAiJsonCompletion(
         },
       ],
       usage: {
-        prompt_tokens: completionTokens,
+        prompt_tokens: prompt,
         completion_tokens: completionTokens,
-        total_tokens: completionTokens * 2,
+        total_tokens: prompt + completionTokens,
       },
     }),
     {
@@ -322,14 +349,32 @@ export class PetalsExecutor extends BaseExecutor {
     }
 
     const transformedBody = Object.fromEntries(payload.entries());
+    const promptTokens = estimatePromptTokens(body);
+
+    // Apply fetch-start timeout only — clear it as soon as headers arrive so
+    // that long-running response bodies do not get killed by elapsed time.
+    const timeoutController = new AbortController();
+    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      const timeoutError = new Error(`Petals fetch start timeout after ${FETCH_TIMEOUT_MS}ms`);
+      timeoutError.name = "TimeoutError";
+      timeoutController.abort(timeoutError);
+    }, FETCH_TIMEOUT_MS);
+    const combinedSignal = signal
+      ? mergeAbortSignals(signal, timeoutController.signal)
+      : timeoutController.signal;
 
     try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: payload.toString(),
-        signal,
-      });
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          headers,
+          body: payload.toString(),
+          signal: combinedSignal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -365,7 +410,7 @@ export class PetalsExecutor extends BaseExecutor {
       return {
         response: stream
           ? buildSynthesizedStream(content, resolvedModel, id, created)
-          : buildOpenAiJsonCompletion(content, resolvedModel, id, created),
+          : buildOpenAiJsonCompletion(content, resolvedModel, id, created, promptTokens),
         url,
         headers,
         transformedBody,

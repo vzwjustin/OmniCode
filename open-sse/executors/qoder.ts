@@ -1,10 +1,11 @@
 import {
   BaseExecutor,
+  mergeAbortSignals,
   mergeUpstreamExtraHeaders,
   type ExecuteInput,
   type ProviderCredentials,
 } from "./base.ts";
-import { PROVIDERS } from "../config/constants.ts";
+import { FETCH_TIMEOUT_MS, PROVIDERS } from "../config/constants.ts";
 import { getQoderDashscopeCompatHeaders } from "../config/providerHeaderProfiles.ts";
 import { sanitizeQwenThinkingToolChoice } from "../services/qwenThinking.ts";
 
@@ -99,13 +100,30 @@ export class QoderExecutor extends BaseExecutor {
 
     const bodyStr = JSON.stringify(payload);
 
+    // Apply fetch-start timeout only — clear it as soon as headers arrive so
+    // that long-running streaming bodies aren't cut off by elapsed time.
+    const timeoutController = new AbortController();
+    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      const timeoutError = new Error(`Qoder fetch start timeout after ${FETCH_TIMEOUT_MS}ms`);
+      timeoutError.name = "TimeoutError";
+      timeoutController.abort(timeoutError);
+    }, FETCH_TIMEOUT_MS);
+    const combinedSignal = signal
+      ? mergeAbortSignals(signal, timeoutController.signal)
+      : timeoutController.signal;
+
     try {
-      const response = await fetch(endpointUrl, {
-        method: "POST",
-        headers,
-        body: bodyStr,
-        signal,
-      });
+      let response: Response;
+      try {
+        response = await fetch(endpointUrl, {
+          method: "POST",
+          headers,
+          body: bodyStr,
+          signal: combinedSignal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const newHeaders = new Headers(response.headers);
 
