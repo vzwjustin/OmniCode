@@ -1469,7 +1469,8 @@ export async function handleChatCore({
       model,
       body.messages ?? body.input,
       body.temperature,
-      body.top_p
+      body.top_p,
+      { system: body.system, tools: body.tools, responseFormat: body.response_format }
     );
     const cached = getCachedResponse(signature);
     if (cached) {
@@ -3936,7 +3937,8 @@ export async function handleChatCore({
         model,
         body.messages ?? body.input,
         body.temperature,
-        body.top_p
+        body.top_p,
+        { system: body.system, tools: body.tools, responseFormat: body.response_format }
       );
       const tokensSaved = usage?.prompt_tokens + usage?.completion_tokens || 0;
       setCachedResponse(signature, model, translatedResponse, tokensSaved);
@@ -4174,7 +4176,8 @@ export async function handleChatCore({
           model,
           body.messages ?? body.input,
           body.temperature,
-          body.top_p
+          body.top_p,
+          { system: body.system, tools: body.tools, responseFormat: body.response_format }
         );
         const u = streamUsage as Record<string, unknown> | null;
         const tokensSaved =
