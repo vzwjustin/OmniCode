@@ -1,6 +1,37 @@
 /** Version manager tool state persistence. */
 
 import { getDbInstance } from "./core";
+import { decrypt, encrypt, EncryptionKeyMismatchError } from "./encryption";
+
+/**
+ * Decrypt a sensitive field on read. Returns null on missing input or on
+ * auth-tag failure (likely STORAGE_ENCRYPTION_KEY mismatch — logged HIGH SEV).
+ *
+ * NOTE: Rotating STORAGE_ENCRYPTION_KEY without re-encrypting these rows will
+ * cause decrypts to fail until the rows are rewritten.
+ */
+function decryptSensitiveField(value: unknown, fieldName: string): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const decrypted = decrypt(value);
+    return typeof decrypted === "string" ? decrypted : null;
+  } catch (err: unknown) {
+    if (err instanceof EncryptionKeyMismatchError) {
+      console.error(
+        `[VersionManager] HIGH SEVERITY: failed to decrypt "${fieldName}". ` +
+          `STORAGE_ENCRYPTION_KEY may be wrong. Returning null.`
+      );
+      return null;
+    }
+    throw err;
+  }
+}
+
+function encryptSensitiveField(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  const encrypted = encrypt(value);
+  return typeof encrypted === "string" ? encrypted : null;
+}
 
 interface VersionManagerRow {
   id?: unknown;
@@ -103,14 +134,11 @@ function rowToVersionManager(row: VersionManagerRow): VersionManagerTool {
     status: typeof record.status === "string" ? record.status : "not_installed",
     pid: record.pid === null ? null : typeof record.pid === "number" ? record.pid : null,
     port: typeof record.port === "number" ? record.port : 8317,
-    apiKey:
-      record.api_key === null ? null : typeof record.api_key === "string" ? record.api_key : null,
+    apiKey: record.api_key === null ? null : decryptSensitiveField(record.api_key, "api_key"),
     managementKey:
       record.management_key === null
         ? null
-        : typeof record.management_key === "string"
-          ? record.management_key
-          : null,
+        : decryptSensitiveField(record.management_key, "management_key"),
     autoUpdate:
       record.auto_update === 1 || record.auto_update === true || record.auto_update === "1",
     autoStart: record.auto_start === 1 || record.auto_start === true || record.auto_start === "1",
@@ -205,8 +233,8 @@ export async function upsertVersionManagerTool(data: {
     data.status ?? "not_installed",
     data.pid ?? null,
     data.port ?? 8317,
-    data.apiKey ?? null,
-    data.managementKey ?? null,
+    encryptSensitiveField(data.apiKey ?? null),
+    encryptSensitiveField(data.managementKey ?? null),
     data.autoUpdate !== undefined ? (data.autoUpdate ? 1 : 0) : 1,
     data.autoStart !== undefined ? (data.autoStart ? 1 : 0) : 0,
     data.healthStatus ?? "unknown",

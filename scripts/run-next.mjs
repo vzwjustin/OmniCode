@@ -35,7 +35,14 @@ for (const [key, value] of Object.entries(mergedEnv)) {
 }
 
 const { dashboardPort } = runtimePorts;
-const hostname = process.env.HOST || "0.0.0.0";
+// Default to loopback for safety. Set OMNIROUTE_BIND_LAN=true (or HOST=...) to expose on LAN/all interfaces.
+const hostname =
+  process.env.HOST || (process.env.OMNIROUTE_BIND_LAN === "true" ? "0.0.0.0" : "127.0.0.1");
+if (process.env.OMNIROUTE_BIND_LAN === "true") {
+  console.warn(
+    "[Security] OMNIROUTE_BIND_LAN=true — Service is listening on all interfaces; only do this on trusted networks."
+  );
+}
 const useTurbopack = dev && mergedEnv.OMNIROUTE_USE_TURBOPACK === "1";
 process.env.OMNIROUTE_WS_BRIDGE_SECRET ||= randomUUID();
 

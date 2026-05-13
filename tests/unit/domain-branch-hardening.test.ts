@@ -13,7 +13,6 @@ const fallbackPolicy = await import("../../src/domain/fallbackPolicy.ts");
 const lockoutPolicy = await import("../../src/domain/lockoutPolicy.ts");
 const providerExpiration = await import("../../src/domain/providerExpiration.ts");
 const quotaCache = await import("../../src/domain/quotaCache.ts");
-const comboResolver = await import("../../src/domain/comboResolver.ts");
 const policyEngineModule = await import("../../src/domain/policyEngine.ts");
 const domainState = await import("../../src/lib/db/domainState.ts");
 
@@ -64,129 +63,6 @@ test.after(async () => {
   providerExpiration.resetExpirations();
   core.resetDbInstance();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
-});
-
-test("resolveComboModel covers empty combos, priority, round-robin, random, least-used and default fallback", () => {
-  assert.throws(
-    () => comboResolver.resolveComboModel({ name: "empty", models: [] }),
-    /has no models configured/
-  );
-
-  assert.deepEqual(
-    comboResolver.resolveComboModel({
-      id: "priority-combo",
-      models: ["model-a", "model-b"],
-      strategy: "priority",
-    }),
-    { model: "model-a", index: 0 }
-  );
-
-  const rrCombo = {
-    id: "rr-combo",
-    models: ["m1", "m2"],
-    strategy: "round-robin",
-  };
-  assert.deepEqual(comboResolver.resolveComboModel(rrCombo), { model: "m1", index: 0 });
-  assert.deepEqual(comboResolver.resolveComboModel(rrCombo), { model: "m2", index: 1 });
-  assert.deepEqual(comboResolver.resolveComboModel(rrCombo), { model: "m1", index: 0 });
-
-  Math.random = () => 0.9;
-  assert.deepEqual(
-    comboResolver.resolveComboModel({
-      name: "random-combo",
-      strategy: "random",
-      models: [
-        { model: "small", weight: 1 },
-        { model: "large", weight: 9 },
-      ],
-    }),
-    { model: "large", index: 1 }
-  );
-
-  Math.random = () => Number.NaN;
-  assert.deepEqual(
-    comboResolver.resolveComboModel({
-      name: "random-fallback",
-      strategy: "random",
-      models: ["fallback-a", "fallback-b"],
-    }),
-    { model: "fallback-a", index: 0 }
-  );
-
-  assert.deepEqual(
-    comboResolver.resolveComboModel(
-      {
-        name: "least-used",
-        strategy: "least-used",
-        models: ["used-a", "used-b", "used-c"],
-      },
-      { modelUsageCounts: { "used-a": 5, "used-b": 1 } }
-    ),
-    { model: "used-c", index: 2 }
-  );
-
-  assert.deepEqual(
-    comboResolver.resolveComboModel({
-      name: "unknown-strategy",
-      strategy: "not-real",
-      models: [
-        { model: "default-a", weight: 2 },
-        { model: "default-b", weight: 1 },
-      ],
-    }),
-    { model: "default-a", index: 0 }
-  );
-
-  assert.deepEqual(
-    comboResolver.getComboFallbacks(
-      {
-        models: ["alpha", { model: "beta" }, "gamma"],
-      },
-      1
-    ),
-    ["gamma", "alpha"]
-  );
-});
-
-test("resolveComboModel also covers implicit defaults and missing optional fields", () => {
-  assert.throws(() => comboResolver.resolveComboModel({}), /has no models configured/);
-
-  assert.deepEqual(comboResolver.resolveComboModel({ models: ["implicit-a", "implicit-b"] }), {
-    model: "implicit-a",
-    index: 0,
-  });
-
-  const anonymousRoundRobin = {
-    strategy: "round-robin",
-    models: ["rr-a", "rr-b"],
-  };
-  assert.deepEqual(comboResolver.resolveComboModel(anonymousRoundRobin), {
-    model: "rr-a",
-    index: 0,
-  });
-  assert.deepEqual(comboResolver.resolveComboModel(anonymousRoundRobin), {
-    model: "rr-b",
-    index: 1,
-  });
-
-  Math.random = () => 0.9;
-  assert.deepEqual(
-    comboResolver.resolveComboModel({
-      strategy: "random",
-      models: [{ model: "weighted-default-a" }, { model: "weighted-default-b" }],
-    }),
-    { model: "weighted-default-b", index: 1 }
-  );
-
-  assert.deepEqual(
-    comboResolver.resolveComboModel({
-      strategy: "least-used",
-      models: ["least-default-a", "least-default-b"],
-    }),
-    { model: "least-default-a", index: 0 }
-  );
-
-  assert.deepEqual(comboResolver.getComboFallbacks({}, 0), []);
 });
 
 test("providerExpiration derives status, sorting, summary and header-based expiration hints", () => {

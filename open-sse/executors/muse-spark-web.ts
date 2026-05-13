@@ -1215,10 +1215,24 @@ export class MuseSparkWebExecutor extends BaseExecutor {
     const headers = buildMetaAiHeaders(cookieHeader);
     mergeUpstreamExtraHeaders(headers, upstreamExtraHeaders);
 
-    const timeoutSignal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
-    const combinedSignal = signal ? mergeAbortSignals(signal, timeoutSignal) : timeoutSignal;
+    // Apply fetch-start timeout only — clear it as soon as headers arrive so
+    // long response bodies aren't cut off by total elapsed time.
+    const timeoutController = new AbortController();
+    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      const timeoutError = new Error(`Meta AI fetch start timeout after ${FETCH_TIMEOUT_MS}ms`);
+      timeoutError.name = "TimeoutError";
+      timeoutController.abort(timeoutError);
+    }, FETCH_TIMEOUT_MS);
+    const combinedSignal = signal
+      ? mergeAbortSignals(signal, timeoutController.signal)
+      : timeoutController.signal;
 
-    const fetchResult = await postMetaAiRequest(headers, transformedBody, combinedSignal, log);
+    let fetchResult: Awaited<ReturnType<typeof postMetaAiRequest>>;
+    try {
+      fetchResult = await postMetaAiRequest(headers, transformedBody, combinedSignal, log);
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!fetchResult.ok) return fetchResult.result;
 
     const upstreamResponse = fetchResult.response;

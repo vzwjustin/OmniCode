@@ -1,34 +1,47 @@
 import { z } from "zod";
 import { skillRegistry } from "@/lib/skills/registry";
 import { skillExecutor } from "@/lib/skills/executor";
+import { resolveEffectiveApiKeyId } from "./memoryTools.ts";
 
+type AuthInfoExtra = {
+  authInfo?: {
+    clientId?: string;
+    scopes?: string[];
+    extra?: Record<string, unknown>;
+  };
+};
+
+// `apiKeyId` is intentionally NOT user-supplied here. It is resolved from the
+// MCP auth context to prevent cross-tenant access.
 export const SkillListSchema = z.object({
-  apiKeyId: z.string().optional(),
   name: z.string().optional(),
   enabled: z.boolean().optional(),
 });
 
 export const SkillEnableSchema = z.object({
-  apiKeyId: z.string(),
   skillId: z.string(),
   enabled: z.boolean(),
 });
 
 export const SkillExecuteSchema = z.object({
-  apiKeyId: z.string(),
   skillName: z.string(),
   input: z.record(z.string(), z.unknown()),
   sessionId: z.string().optional(),
 });
 
+export const SkillExecutionsSchema = z.object({
+  limit: z.number().int().positive().max(100).optional(),
+});
+
 export const skillTools = {
   omniroute_skills_list: {
     name: "omniroute_skills_list",
-    description: "List all registered skills with optional filtering by API key or name",
+    description: "List all registered skills with optional filtering by name or enabled state",
     inputSchema: SkillListSchema,
-    handler: async (args: z.infer<typeof SkillListSchema>) => {
-      await skillRegistry.loadFromDatabase(args.apiKeyId);
-      const skills = skillRegistry.list(args.apiKeyId);
+    handler: async (args: z.infer<typeof SkillListSchema>, extra?: AuthInfoExtra) => {
+      const apiKeyId = resolveEffectiveApiKeyId(extra);
+      await skillRegistry.loadFromDatabase(apiKeyId);
+      const skills = skillRegistry.list(apiKeyId);
 
       let filtered = skills;
       if (args.name) {
@@ -56,8 +69,9 @@ export const skillTools = {
     name: "omniroute_skills_enable",
     description: "Enable or disable a specific skill by ID",
     inputSchema: SkillEnableSchema,
-    handler: async (args: z.infer<typeof SkillEnableSchema>) => {
-      const skill = skillRegistry.getSkill(args.skillId, args.apiKeyId);
+    handler: async (args: z.infer<typeof SkillEnableSchema>, extra?: AuthInfoExtra) => {
+      const apiKeyId = resolveEffectiveApiKeyId(extra);
+      const skill = skillRegistry.getSkill(args.skillId, apiKeyId);
       if (!skill) {
         throw new Error(`Skill not found: ${args.skillId}`);
       }
@@ -65,7 +79,7 @@ export const skillTools = {
       await skillRegistry.register({
         ...skill,
         enabled: args.enabled,
-        apiKeyId: args.apiKeyId,
+        apiKeyId,
       });
 
       return { success: true, skillId: args.skillId, enabled: args.enabled };
@@ -76,9 +90,10 @@ export const skillTools = {
     name: "omniroute_skills_execute",
     description: "Execute a skill with provided input and return the result",
     inputSchema: SkillExecuteSchema,
-    handler: async (args: z.infer<typeof SkillExecuteSchema>) => {
+    handler: async (args: z.infer<typeof SkillExecuteSchema>, extra?: AuthInfoExtra) => {
+      const apiKeyId = resolveEffectiveApiKeyId(extra);
       const execution = await skillExecutor.execute(args.skillName, args.input, {
-        apiKeyId: args.apiKeyId,
+        apiKeyId,
         sessionId: args.sessionId,
       });
 
@@ -97,12 +112,10 @@ export const skillTools = {
   omniroute_skills_executions: {
     name: "omniroute_skills_executions",
     description: "List recent skill execution history",
-    inputSchema: z.object({
-      apiKeyId: z.string().optional(),
-      limit: z.number().int().positive().max(100).optional(),
-    }),
-    handler: async (args: { apiKeyId?: string; limit?: number }) => {
-      const executions = skillExecutor.listExecutions(args.apiKeyId, args.limit || 50);
+    inputSchema: SkillExecutionsSchema,
+    handler: async (args: z.infer<typeof SkillExecutionsSchema>, extra?: AuthInfoExtra) => {
+      const apiKeyId = resolveEffectiveApiKeyId(extra);
+      const executions = skillExecutor.listExecutions(apiKeyId, args.limit || 50);
 
       return {
         executions: executions.map((e) => ({

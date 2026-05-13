@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import {
   buildProviderUrl,
   buildProviderHeaders,
@@ -18,6 +19,9 @@ function getProviderBaseUrl(providerSpecificData: unknown): string | undefined {
 }
 
 export async function POST(request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   let rawBody;
   try {
     rawBody = await request.json();

@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 
 /**
  * POST /api/resilience/reset — Reset all provider circuit breakers
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const { getAllCircuitBreakerStatuses, getCircuitBreaker } =
       await import("@/shared/utils/circuitBreaker");

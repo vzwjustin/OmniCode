@@ -1,11 +1,12 @@
 import {
   BaseExecutor,
+  mergeAbortSignals,
   mergeUpstreamExtraHeaders,
   type ExecuteInput,
   type ExecutorLog,
   type ProviderCredentials,
 } from "./base.ts";
-import { PROVIDERS } from "../config/constants.ts";
+import { FETCH_TIMEOUT_MS, PROVIDERS } from "../config/constants.ts";
 import { v4 as uuidv4 } from "uuid";
 import { refreshKiroToken } from "../services/tokenRefresh.ts";
 
@@ -233,12 +234,29 @@ export class KiroExecutor extends BaseExecutor {
     mergeUpstreamExtraHeaders(headers, upstreamExtraHeaders);
     const transformedBody = await this.transformRequest(model, body, stream, credentials);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(transformedBody),
-      signal,
-    });
+    // Apply fetch-start timeout only — clear it as soon as headers arrive so
+    // that long EventStream bodies aren't cut off by elapsed time.
+    const timeoutController = new AbortController();
+    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      const timeoutError = new Error(`Kiro fetch start timeout after ${FETCH_TIMEOUT_MS}ms`);
+      timeoutError.name = "TimeoutError";
+      timeoutController.abort(timeoutError);
+    }, FETCH_TIMEOUT_MS);
+    const combinedSignal = signal
+      ? mergeAbortSignals(signal, timeoutController.signal)
+      : timeoutController.signal;
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(transformedBody),
+        signal: combinedSignal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       return { response, url, headers, transformedBody };

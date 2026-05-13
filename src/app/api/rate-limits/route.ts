@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getAllModelLockouts } from "@omniroute/open-sse/services/accountFallback.ts";
 import { getCacheStats } from "@omniroute/open-sse/services/signatureCache.ts";
 import { getProviderConnections, updateProviderConnection } from "@/lib/localDb";
@@ -28,7 +29,10 @@ function asRecord(value: unknown): JsonRecord {
  * - Model lockouts
  * - Signature cache stats
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const connections = await getProviderConnections();
     const statuses = connections.map((connRaw) => {
@@ -69,6 +73,9 @@ export async function GET() {
  * Body: { connectionId: string, enabled: boolean }
  */
 export async function POST(request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   let rawBody;
   try {
     rawBody = await request.json();

@@ -169,37 +169,48 @@ test("later requests inject retrieved memories into upstream messages", async ()
 
 test("memory search ranks query-relevant memories first", async () => {
   const apiKey = await seedApiKey();
+  const authExtra = {
+    authInfo: { clientId: apiKey.id, scopes: ["*"], extra: { apiKeyId: apiKey.id } },
+  };
 
-  await memoryTools.omniroute_memory_add.handler({
-    apiKeyId: apiKey.id,
-    sessionId: "search",
-    type: "factual",
-    key: "pref:language",
-    content: "The user writes TypeScript services every day.",
-    metadata: {},
-  });
-  await memoryTools.omniroute_memory_add.handler({
-    apiKeyId: apiKey.id,
-    sessionId: "search",
-    type: "factual",
-    key: "pref:hobby",
-    content: "The user enjoys gardening on weekends.",
-    metadata: {},
-  });
-  await memoryTools.omniroute_memory_add.handler({
-    apiKeyId: apiKey.id,
-    sessionId: "search",
-    type: "factual",
-    key: "pref:stack",
-    content: "TypeScript and Node.js are the preferred backend stack.",
-    metadata: {},
-  });
+  await memoryTools.omniroute_memory_add.handler(
+    {
+      sessionId: "search",
+      type: "factual",
+      key: "pref:language",
+      content: "The user writes TypeScript services every day.",
+      metadata: {},
+    },
+    authExtra
+  );
+  await memoryTools.omniroute_memory_add.handler(
+    {
+      sessionId: "search",
+      type: "factual",
+      key: "pref:hobby",
+      content: "The user enjoys gardening on weekends.",
+      metadata: {},
+    },
+    authExtra
+  );
+  await memoryTools.omniroute_memory_add.handler(
+    {
+      sessionId: "search",
+      type: "factual",
+      key: "pref:stack",
+      content: "TypeScript and Node.js are the preferred backend stack.",
+      metadata: {},
+    },
+    authExtra
+  );
 
-  const result = await memoryTools.omniroute_memory_search.handler({
-    apiKeyId: apiKey.id,
-    query: "typescript backend",
-    limit: 2,
-  });
+  const result = await memoryTools.omniroute_memory_search.handler(
+    {
+      query: "typescript backend",
+      limit: 2,
+    },
+    authExtra
+  );
 
   assert.equal(result.success, true);
   assert.equal(result.data.count, 2);
@@ -295,27 +306,32 @@ test("disabled memory skips both extraction and injection", async () => {
 
 test("memory clear removes all stored memories for an API key", async () => {
   const apiKey = await seedApiKey();
+  const authExtra = {
+    authInfo: { clientId: apiKey.id, scopes: ["*"], extra: { apiKeyId: apiKey.id } },
+  };
 
-  await memoryTools.omniroute_memory_add.handler({
-    apiKeyId: apiKey.id,
-    sessionId: "clear",
-    type: "factual",
-    key: "pref:one",
-    content: "First memory",
-    metadata: {},
-  });
-  await memoryTools.omniroute_memory_add.handler({
-    apiKeyId: apiKey.id,
-    sessionId: "clear",
-    type: "episodic",
-    key: "event:two",
-    content: "Second memory",
-    metadata: {},
-  });
+  await memoryTools.omniroute_memory_add.handler(
+    {
+      sessionId: "clear",
+      type: "factual",
+      key: "pref:one",
+      content: "First memory",
+      metadata: {},
+    },
+    authExtra
+  );
+  await memoryTools.omniroute_memory_add.handler(
+    {
+      sessionId: "clear",
+      type: "episodic",
+      key: "event:two",
+      content: "Second memory",
+      metadata: {},
+    },
+    authExtra
+  );
 
-  const cleared = await memoryTools.omniroute_memory_clear.handler({
-    apiKeyId: apiKey.id,
-  });
+  const cleared = await memoryTools.omniroute_memory_clear.handler({}, authExtra);
   const remaining = await listMemories({ apiKeyId: apiKey.id });
   const remainingList = Array.isArray(remaining) ? remaining : (remaining.data ?? []);
 

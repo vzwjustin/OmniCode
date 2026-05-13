@@ -7,15 +7,20 @@
  *   - tasks/get        — Query task by ID
  *   - tasks/cancel     — Cancel task by ID
  *
- * Auth: Bearer token via Authorization header
+ * Auth: Bearer token via Authorization header, or management dashboard session cookie.
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { getTaskManager } from "@/lib/a2a/taskManager";
 import { logRoutingDecision } from "@/lib/a2a/routingLogger";
 import { createA2AStream, SSE_HEADERS } from "@/lib/a2a/streaming";
 import { A2A_SKILL_HANDLERS, executeA2ATaskWithState } from "@/lib/a2a/taskExecution";
 import { getSettings } from "@/lib/db/settings";
+import { isDashboardSessionAuthenticated, isLoopbackRequest } from "@/shared/utils/apiAuth";
+
+// Custom application error code (JSON-RPC reserves -32000..-32099 for server-defined errors).
+const A2A_ERROR_TASK_NOT_FOUND = -32010;
 
 type A2AMessage = { role: string; content: string };
 
@@ -64,22 +69,68 @@ function toMessageArray(raw: unknown): A2AMessage[] | null {
 
 // ============ Auth ============
 
-function authenticate(req: NextRequest): boolean {
-  // If no API key is configured, allow all requests
-  const configuredKey = process.env.OMNIROUTE_API_KEY;
-  if (!configuredKey) return true;
+/**
+ * Constant-time string comparison to mitigate timing attacks on token comparison.
+ */
+function safeTokenEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) {
+    // Still consume time on a length-matched dummy to avoid leaking length differences.
+    const dummy = Buffer.alloc(bufA.length);
+    try {
+      timingSafeEqual(bufA, dummy);
+    } catch {
+      /* noop */
+    }
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
+}
 
+async function authenticate(req: NextRequest): Promise<boolean> {
+  const configuredKey = process.env.OMNIROUTE_API_KEY;
   const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  return token === configuredKey;
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+  // Bearer token wins if configured and matches.
+  if (configuredKey && token && safeTokenEqual(token, configuredKey)) {
+    return true;
+  }
+
+  // Management session cookie is also accepted.
+  if (await isDashboardSessionAuthenticated(req)) {
+    return true;
+  }
+
+  // No bearer key configured AND no session — only allow on loopback (local dev convenience).
+  if (!configuredKey) {
+    if (isLoopbackRequest(req)) {
+      return true;
+    }
+    // Network-exposed request without configured key and without session → DENY.
+    return false;
+  }
+
+  // Bearer key is configured but token didn't match (or was absent) → deny.
+  return false;
 }
 
 // ============ JSON-RPC Helpers ============
 
+function statusForCode(code: number): number {
+  if (code === -32700) return 400;
+  if (code === -32600) return 400;
+  if (code === -32601) return 404;
+  if (code === -32602) return 400;
+  if (code === -32603) return 500;
+  return 200;
+}
+
 function jsonRpcError(id: string | number | null, code: number, message: string, data?: unknown) {
   return NextResponse.json(
     { jsonrpc: "2.0", id, error: { code, message, data } },
-    { status: code === -32600 ? 400 : code === -32601 ? 404 : code === -32603 ? 500 : 200 }
+    { status: statusForCode(code) }
   );
 }
 
@@ -107,9 +158,9 @@ async function rejectIfA2ADisabled(id: string | number | null) {
 
 export async function POST(req: NextRequest) {
   console.log("==> HIT A2A ROUTER:", req.url);
-  // Auth check
-  if (!authenticate(req)) {
-    return jsonRpcError(null, -32600, "Unauthorized: missing or invalid API key");
+  // Auth check (default-deny when no key configured and not on loopback)
+  if (!(await authenticate(req))) {
+    return jsonRpcError(null, -32600, "Unauthorized: missing or invalid credentials");
   }
 
   // Parse JSON-RPC body
@@ -120,15 +171,51 @@ export async function POST(req: NextRequest) {
     return jsonRpcError(null, -32700, "Parse error: invalid JSON");
   }
 
-  const { jsonrpc, id, method, params } = body;
-  if (jsonrpc !== "2.0" || !method) {
-    return jsonRpcError(id || null, -32600, "Invalid request: missing jsonrpc or method");
+  // JSON-RPC batch requests are not supported.
+  if (Array.isArray(body)) {
+    return jsonRpcError(null, -32600, "Batch requests not supported");
   }
 
-  const disabledResponse = await rejectIfA2ADisabled(id ?? null);
-  if (disabledResponse) return disabledResponse;
+  if (!body || typeof body !== "object") {
+    return jsonRpcError(null, -32600, "Invalid request: body must be a JSON object");
+  }
+
+  const { jsonrpc, id, method, params } = body as {
+    jsonrpc?: unknown;
+    id?: string | number | null;
+    method?: unknown;
+    params?: any;
+  };
+
+  // A request without an `id` field is a JSON-RPC notification — no response.
+  const isNotification = !("id" in body) || id === undefined;
+
+  if (jsonrpc !== "2.0" || typeof method !== "string" || !method) {
+    if (isNotification) {
+      return new Response(null, { status: 204 });
+    }
+    return jsonRpcError(
+      (id ?? null) as string | number | null,
+      -32600,
+      "Invalid request: missing jsonrpc or method"
+    );
+  }
+
+  // For notifications we still verify A2A is enabled but never send a body back.
+  const disabledResponse = await rejectIfA2ADisabled((id ?? null) as string | number | null);
+  if (disabledResponse) {
+    if (isNotification) return new Response(null, { status: 204 });
+    return disabledResponse;
+  }
 
   const tm = getTaskManager();
+  const respondId = (id ?? null) as string | number | null;
+
+  // Helper that suppresses response bodies for notifications.
+  const respond = (factory: () => Response | NextResponse): Response | NextResponse => {
+    if (isNotification) return new Response(null, { status: 204 });
+    return factory();
+  };
 
   switch (method) {
     // ── message/send ──────────────────────────────────────
@@ -136,16 +223,18 @@ export async function POST(req: NextRequest) {
       const skill = params?.skill || "smart-routing";
       const messages = toMessageArray(params?.messages) || toMessageArray(params?.message);
       if (!messages) {
-        return jsonRpcError(
-          id,
-          -32602,
-          "Invalid params: provide `messages[]` or `message.content`"
+        return respond(() =>
+          jsonRpcError(
+            respondId,
+            -32602,
+            "Invalid params: provide `messages[]` or `message.content`"
+          )
         );
       }
 
       const handler = A2A_SKILL_HANDLERS[skill];
       if (!handler) {
-        return jsonRpcError(id, -32601, `Unknown skill: ${skill}`);
+        return respond(() => jsonRpcError(respondId, -32601, `Unknown skill: ${skill}`));
       }
 
       const task = tm.createTask({ skill, messages, metadata: params?.metadata });
@@ -175,16 +264,18 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        return jsonRpcResult(id, {
-          task: { id: task.id, state: "completed" },
-          artifacts: result.artifacts,
-          metadata: result.metadata,
-        });
+        return respond(() =>
+          jsonRpcResult(respondId, {
+            task: { id: task.id, state: "completed" },
+            artifacts: result.artifacts,
+            metadata: result.metadata,
+          })
+        );
       } catch (err) {
         console.error("A2A ERROR TRACE:", err);
         const msg = err instanceof Error ? err.message : String(err);
         tm.updateTask(task.id, "failed", [{ type: "error", content: msg }], msg);
-        return jsonRpcError(id, -32603, `Skill execution failed: ${msg}`);
+        return respond(() => jsonRpcError(respondId, -32603, `Skill execution failed: ${msg}`));
       }
     }
 
@@ -193,16 +284,23 @@ export async function POST(req: NextRequest) {
       const skill = params?.skill || "smart-routing";
       const messages = toMessageArray(params?.messages) || toMessageArray(params?.message);
       if (!messages) {
-        return jsonRpcError(
-          id,
-          -32602,
-          "Invalid params: provide `messages[]` or `message.content`"
+        return respond(() =>
+          jsonRpcError(
+            respondId,
+            -32602,
+            "Invalid params: provide `messages[]` or `message.content`"
+          )
         );
       }
 
       const handler = A2A_SKILL_HANDLERS[skill];
       if (!handler) {
-        return jsonRpcError(id, -32601, `Unknown skill: ${skill}`);
+        return respond(() => jsonRpcError(respondId, -32601, `Unknown skill: ${skill}`));
+      }
+
+      // Streaming with a notification (no id) makes no sense — silently drop.
+      if (isNotification) {
+        return new Response(null, { status: 204 });
       }
 
       const task = tm.createTask({ skill, messages, metadata: params?.metadata });
@@ -224,30 +322,44 @@ export async function POST(req: NextRequest) {
     // ── tasks/get ─────────────────────────────────────────
     case "tasks/get": {
       const taskId = params?.taskId || params?.id;
-      if (!taskId) return jsonRpcError(id, -32602, "Invalid params: taskId required");
+      if (!taskId) {
+        return respond(() => jsonRpcError(respondId, -32602, "Invalid params: taskId required"));
+      }
 
       const task = tm.getTask(taskId);
-      if (!task) return jsonRpcError(id, -32601, `Task not found: ${taskId}`);
+      if (!task) {
+        return respond(() =>
+          jsonRpcError(respondId, A2A_ERROR_TASK_NOT_FOUND, `Task not found: ${taskId}`)
+        );
+      }
 
-      return jsonRpcResult(id, { task });
+      return respond(() => jsonRpcResult(respondId, { task }));
     }
 
     // ── tasks/cancel ──────────────────────────────────────
     case "tasks/cancel": {
       const taskId = params?.taskId || params?.id;
-      if (!taskId) return jsonRpcError(id, -32602, "Invalid params: taskId required");
+      if (!taskId) {
+        return respond(() => jsonRpcError(respondId, -32602, "Invalid params: taskId required"));
+      }
 
       try {
         const task = tm.cancelTask(taskId);
-        return jsonRpcResult(id, { task: { id: task.id, state: task.state } });
+        return respond(() =>
+          jsonRpcResult(respondId, { task: { id: task.id, state: task.state } })
+        );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return jsonRpcError(id, -32603, msg);
+        // Treat cancel-of-missing as the task-not-found application error.
+        if (/not found/i.test(msg)) {
+          return respond(() => jsonRpcError(respondId, A2A_ERROR_TASK_NOT_FOUND, msg));
+        }
+        return respond(() => jsonRpcError(respondId, -32603, msg));
       }
     }
 
     default:
-      return jsonRpcError(id, -32601, `Method not found: ${method}`);
+      return respond(() => jsonRpcError(respondId, -32601, `Method not found: ${method}`));
   }
 }
 

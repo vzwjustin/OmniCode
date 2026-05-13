@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getApiKeys, createApiKey, updateSettings } from "@/lib/localDb";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud, fetchWithTimeout, CLOUD_URL } from "@/lib/cloudSync";
@@ -12,7 +13,10 @@ import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
  * GET /api/sync/cloud
  * Returns current cloud sync status for sidebar indicator
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const { isCloudEnabled } = await import("@/lib/db/settings");
     const enabled = await isCloudEnabled();
@@ -60,6 +64,9 @@ export async function GET() {
  * Sync data with Cloud
  */
 export async function POST(request: any) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   let rawBody;
   try {
     rawBody = await request.json();

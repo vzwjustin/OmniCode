@@ -106,6 +106,37 @@ export function dedupSystemPrompt(
   return { body: { ...body, messages }, applied };
 }
 
+function safeToolResultCompress(content: string, max: number): string {
+  if (content.length <= max) return content;
+  // Try JSON parse first
+  try {
+    const parsed = JSON.parse(content);
+    // If it's an object/array, truncate inside, not at byte boundary
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const head = parsed.slice(0, Math.max(1, Math.floor(parsed.length * 0.3)));
+      return JSON.stringify({ _truncated: true, _originalLen: parsed.length, items: head });
+    }
+    if (typeof parsed === "object" && parsed !== null) {
+      const keys = Object.keys(parsed);
+      const truncated: Record<string, unknown> = {};
+      let acc = 0;
+      for (const k of keys) {
+        const v = JSON.stringify((parsed as Record<string, unknown>)[k]);
+        if (acc + v.length > max - 50) {
+          truncated._truncated = true;
+          break;
+        }
+        truncated[k] = (parsed as Record<string, unknown>)[k];
+        acc += v.length;
+      }
+      return JSON.stringify(truncated);
+    }
+    return content.slice(0, max) + "\n...[truncated]";
+  } catch {
+    return content.slice(0, max) + "\n...[truncated]";
+  }
+}
+
 export function compressToolResults(body: ChatBody): {
   body: ChatBody;
   applied: boolean;
@@ -116,10 +147,12 @@ export function compressToolResults(body: ChatBody): {
   const messages = body.messages.map((msg) => {
     if (msg.role !== "tool" || typeof msg.content !== "string") return msg;
     if (msg.content.length <= MAX_TOOL_LENGTH) return msg;
+    const next = safeToolResultCompress(msg.content, MAX_TOOL_LENGTH);
+    if (next === msg.content) return msg;
     applied = true;
     return {
       ...msg,
-      content: msg.content.slice(0, MAX_TOOL_LENGTH) + "\n...[truncated]",
+      content: next,
     };
   });
   return { body: { ...body, messages }, applied };

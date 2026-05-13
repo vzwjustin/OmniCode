@@ -27,7 +27,10 @@ import { resolveProxyForConnection } from "@/lib/localDb";
 import { CircuitBreakerOpenError, getCircuitBreaker } from "../../shared/utils/circuitBreaker";
 import { logProxyEvent } from "../../lib/proxyLogger";
 import { logTranslationEvent } from "../../lib/translatorEvents";
-import { getRuntimeProviderProfile } from "@omniroute/open-sse/services/accountFallback.ts";
+import {
+  getRuntimeProviderProfile,
+  isProviderFailureCode,
+} from "@omniroute/open-sse/services/accountFallback.ts";
 
 // Models that explicitly cannot run on the codex/ChatGPT-Pro OAuth pool — when
 // a caller writes `codex/deepseek-v4-pro` we transparently reroute to the

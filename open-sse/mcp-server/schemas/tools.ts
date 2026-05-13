@@ -950,10 +950,30 @@ export const cacheStatsTool: McpToolDefinition<typeof cacheStatsInput, typeof ca
   sourceEndpoints: ["/api/cache"],
 };
 
-export const cacheFlushInput = z.object({
-  signature: z.string().optional().describe("Specific cache signature to invalidate"),
-  model: z.string().optional().describe("Invalidate all entries for a specific model"),
-});
+export const cacheFlushInput = z
+  .object({
+    signature: z.string().optional().describe("Specific cache signature to invalidate"),
+    provider: z.string().optional().describe("Invalidate all entries for a specific provider"),
+    model: z.string().optional().describe("Invalidate all entries for a specific model"),
+    scope: z
+      .string()
+      .optional()
+      .describe("Invalidate a named cache scope (e.g. 'completions', 'embeddings')"),
+    confirmAll: z
+      .boolean()
+      .optional()
+      .describe(
+        "Explicitly opt in to flushing the entire cache. Required when no narrower filter is provided."
+      ),
+  })
+  .refine(
+    (val) =>
+      Boolean(val.signature || val.provider || val.model || val.scope || val.confirmAll === true),
+    {
+      message:
+        "Must provide at least one of `signature`, `provider`, `model`, `scope`, or `confirmAll: true`.",
+    }
+  );
 
 export const cacheFlushOutput = z.object({
   ok: z.boolean(),

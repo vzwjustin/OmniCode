@@ -250,6 +250,13 @@ export const createProviderSchema = z
     globalPriority: z.number().int().min(1).max(100).nullable().optional(),
     defaultModel: z.string().max(200).nullable().optional(),
     testStatus: z.string().max(50).optional(),
+    url: z
+      .string()
+      .trim()
+      .max(2000)
+      .refine((value) => value.length === 0 || isHttpUrl(value), "url must be a valid http(s) URL")
+      .optional(),
+    isActive: z.boolean().optional(),
     providerSpecificData: z
       .record(z.string(), z.unknown())
       .optional()
@@ -534,6 +541,29 @@ export const v1ImageGenerationSchema = z
   })
   .catchall(z.unknown());
 
+export const v1VideoGenerationSchema = z
+  .object({
+    model: modelIdSchema,
+    prompt: nonEmptyStringSchema,
+    duration_seconds: z.coerce.number().positive().optional(),
+    aspect_ratio: z.string().trim().min(1).optional(),
+    n: z.coerce.number().int().positive().optional(),
+    seed: z.coerce.number().int().optional(),
+  })
+  .catchall(z.unknown());
+
+export const v1MusicGenerationSchema = z
+  .object({
+    model: modelIdSchema,
+    prompt: nonEmptyStringSchema,
+    duration_seconds: z.coerce.number().positive().optional(),
+    lyrics: z.string().optional(),
+    style: z.string().optional(),
+    n: z.coerce.number().int().positive().optional(),
+    seed: z.coerce.number().int().optional(),
+  })
+  .catchall(z.unknown());
+
 export const v1AudioSpeechSchema = z
   .object({
     model: modelIdSchema,
@@ -575,6 +605,39 @@ export const providerChatCompletionSchema = z
         code: z.ZodIssueCode.custom,
         message: "messages, input or prompt is required",
         path: [],
+      });
+    }
+  });
+
+// Combined chat-completions / responses / messages body schema.
+// Accepts OpenAI Chat-Completions shape (messages[]), Responses API shape (input),
+// and Anthropic Messages shape (top-level `system` plus messages[]).
+// Use this for /v1/chat/completions, /v1/responses, /v1/messages, /v1/completions.
+export const v1ChatCompletionsSchema = z
+  .object({
+    model: modelIdSchema,
+    messages: z.array(chatMessageSchema).min(1).optional(),
+    input: z.union([nonEmptyStringSchema, z.array(z.unknown()).min(1)]).optional(),
+    prompt: nonEmptyStringSchema.optional(),
+    // Anthropic-shape
+    system: z.union([z.string(), z.array(z.unknown())]).optional(),
+    // OpenAI common fields (kept loose; provider executors enforce stricter rules)
+    stream: z.boolean().optional(),
+    temperature: z.number().optional(),
+    top_p: z.number().optional(),
+    max_tokens: z.coerce.number().int().positive().optional(),
+    max_completion_tokens: z.coerce.number().int().positive().optional(),
+    response_format: z.unknown().optional(),
+    tools: z.array(z.unknown()).optional(),
+    tool_choice: z.unknown().optional(),
+  })
+  .catchall(z.unknown())
+  .superRefine((value, ctx) => {
+    if (value.messages === undefined && value.input === undefined && value.prompt === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one of `messages`, `input`, or `prompt` is required",
+        path: ["messages"],
       });
     }
   });

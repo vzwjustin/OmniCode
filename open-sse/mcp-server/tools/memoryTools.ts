@@ -3,8 +3,45 @@ import { retrieveMemories } from "@/lib/memory/retrieval";
 import { createMemory, deleteMemory, listMemories } from "@/lib/memory/store";
 import { MemoryType } from "@/lib/memory/types";
 
+/**
+ * Resolve the effective tenant `apiKeyId` for an MCP tool call.
+ *
+ * Precedence:
+ *   1. `extra.authInfo.extra.apiKeyId` (token-bound tenant claim) or `extra.authInfo.clientId`
+ *   2. `OMNIROUTE_API_KEY_ID` env (server-configured key id)
+ *
+ * The caller-supplied `apiKeyId` input is intentionally IGNORED to prevent
+ * cross-tenant data access from any MCP client.
+ */
+type AuthInfoExtra = {
+  authInfo?: {
+    clientId?: string;
+    scopes?: string[];
+    extra?: Record<string, unknown>;
+  };
+};
+
+export function resolveEffectiveApiKeyId(extra: AuthInfoExtra | undefined): string {
+  const fromAuthExtra = extra?.authInfo?.extra?.apiKeyId;
+  if (typeof fromAuthExtra === "string" && fromAuthExtra.trim()) {
+    return fromAuthExtra.trim();
+  }
+  const fromClientId = extra?.authInfo?.clientId;
+  if (typeof fromClientId === "string" && fromClientId.trim()) {
+    return fromClientId.trim();
+  }
+  const fromEnv = process.env.OMNIROUTE_API_KEY_ID;
+  if (typeof fromEnv === "string" && fromEnv.trim()) {
+    return fromEnv.trim();
+  }
+  throw new Error(
+    "Tenant binding unavailable: no authInfo.apiKeyId/clientId and OMNIROUTE_API_KEY_ID is not set."
+  );
+}
+
+// Note: `apiKeyId` is intentionally NOT part of the user-facing schemas. The
+// effective tenant id is resolved from the MCP transport's auth context.
 export const MemorySearchSchema = z.object({
-  apiKeyId: z.string(),
   query: z.string().optional(),
   type: z.enum(["factual", "episodic", "procedural", "semantic"]).optional(),
   maxTokens: z.number().int().positive().max(8000).optional(),
@@ -12,7 +49,6 @@ export const MemorySearchSchema = z.object({
 });
 
 export const MemoryAddSchema = z.object({
-  apiKeyId: z.string(),
   sessionId: z.string().optional(),
   type: z.enum(["factual", "episodic", "procedural", "semantic"]),
   key: z.string().min(1),
@@ -21,7 +57,6 @@ export const MemoryAddSchema = z.object({
 });
 
 export const MemoryClearSchema = z.object({
-  apiKeyId: z.string(),
   type: z.enum(["factual", "episodic", "procedural", "semantic"]).optional(),
   olderThan: z.string().optional(),
 });
@@ -31,7 +66,8 @@ export const memoryTools = {
     name: "omniroute_memory_search",
     description: "Search memories by query, type, or API key with token budget enforcement",
     inputSchema: MemorySearchSchema,
-    handler: async (args: z.infer<typeof MemorySearchSchema>) => {
+    handler: async (args: z.infer<typeof MemorySearchSchema>, extra?: AuthInfoExtra) => {
+      const apiKeyId = resolveEffectiveApiKeyId(extra);
       const config = {
         enabled: true,
         maxTokens: args.maxTokens || 2000,
@@ -43,7 +79,7 @@ export const memoryTools = {
         query: args.query,
       };
 
-      const memories = await retrieveMemories(args.apiKeyId, config);
+      const memories = await retrieveMemories(apiKeyId, config);
 
       const filtered = args.type ? memories.filter((m) => m.type === args.type) : memories;
 
@@ -64,9 +100,10 @@ export const memoryTools = {
     name: "omniroute_memory_add",
     description: "Add a new memory entry",
     inputSchema: MemoryAddSchema,
-    handler: async (args: z.infer<typeof MemoryAddSchema>) => {
+    handler: async (args: z.infer<typeof MemoryAddSchema>, extra?: AuthInfoExtra) => {
+      const apiKeyId = resolveEffectiveApiKeyId(extra);
       const memory = await createMemory({
-        apiKeyId: args.apiKeyId,
+        apiKeyId,
         sessionId: args.sessionId || "",
         type: args.type as MemoryType,
         key: args.key,
@@ -89,9 +126,10 @@ export const memoryTools = {
     name: "omniroute_memory_clear",
     description: "Clear memories for an API key, optionally filtered by type or age",
     inputSchema: MemoryClearSchema,
-    handler: async (args: z.infer<typeof MemoryClearSchema>) => {
+    handler: async (args: z.infer<typeof MemoryClearSchema>, extra?: AuthInfoExtra) => {
+      const apiKeyId = resolveEffectiveApiKeyId(extra);
       const result = await listMemories({
-        apiKeyId: args.apiKeyId,
+        apiKeyId,
         type: args.type as MemoryType | undefined,
       });
       const existingMemories = Array.isArray(result)

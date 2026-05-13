@@ -963,18 +963,57 @@ export async function handleCacheStats() {
   }
 }
 
-export async function handleCacheFlush(args: { signature?: string; model?: string }) {
+export async function handleCacheFlush(args: {
+  signature?: string;
+  provider?: string;
+  model?: string;
+  scope?: string;
+  confirmAll?: boolean;
+}) {
   const start = Date.now();
   try {
+    const hasNarrowFilter = Boolean(args.signature || args.provider || args.model || args.scope);
+
+    // Defense in depth: reject empty-args at the handler level even if the schema is bypassed.
+    if (!hasNarrowFilter && args.confirmAll !== true) {
+      const msg =
+        "omniroute_cache_flush refused: provide one of `signature`, `provider`, `model`, `scope`, or set `confirmAll: true` to wipe everything.";
+      await logToolCall("omniroute_cache_flush", args, null, Date.now() - start, false, msg);
+      return { content: [{ type: "text" as const, text: `Error: ${msg}` }], isError: true };
+    }
+
     const params = new URLSearchParams();
-    let scope = "all";
+    let scope: string;
 
     if (args.signature) {
       params.set("signature", args.signature);
       scope = "signature";
+    } else if (args.provider) {
+      params.set("provider", args.provider);
+      scope = "provider";
     } else if (args.model) {
       params.set("model", args.model);
       scope = "model";
+    } else if (args.scope) {
+      params.set("scope", args.scope);
+      scope = `scope:${args.scope}`;
+    } else {
+      // confirmAll === true at this point.
+      scope = "all";
+      params.set("confirmAll", "true");
+      // High-severity audit entry for full cache flushes.
+      try {
+        await logToolCall(
+          "omniroute_cache_flush",
+          { ...args, _severity: "high", _audit: "full_cache_wipe_requested" },
+          null,
+          0,
+          true,
+          "high_severity:full_cache_flush"
+        );
+      } catch {
+        /* best-effort audit; do not block the operation */
+      }
     }
 
     const query = params.toString();

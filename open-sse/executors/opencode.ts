@@ -3,19 +3,16 @@ import { PROVIDERS } from "../config/constants.ts";
 import { getModelTargetFormat } from "../config/providerModels.ts";
 
 export class OpencodeExecutor extends BaseExecutor {
-  _requestFormat: string | null = null;
-
   constructor(provider: string) {
     super(provider, PROVIDERS[provider] || PROVIDERS.openai);
   }
 
+  resolveRequestFormat(model: string): string {
+    return getModelTargetFormat(this.provider, model) || "openai";
+  }
+
   async execute(input: ExecuteInput) {
-    this._requestFormat = getModelTargetFormat(this.provider, input.model) || "openai";
-    try {
-      return await super.execute(input);
-    } finally {
-      this._requestFormat = null;
-    }
+    return await super.execute(input);
   }
 
   buildUrl(
@@ -28,7 +25,8 @@ export class OpencodeExecutor extends BaseExecutor {
     void credentials;
 
     const base = this.config.baseUrl;
-    switch (this._requestFormat) {
+    const requestFormat = this.resolveRequestFormat(model);
+    switch (requestFormat) {
       case "claude":
         return `${base}/messages`;
       case "openai-responses":
@@ -40,19 +38,26 @@ export class OpencodeExecutor extends BaseExecutor {
     }
   }
 
-  buildHeaders(credentials: ProviderCredentials | null, stream = true) {
+  buildHeaders(
+    credentials: ProviderCredentials | null,
+    stream = true,
+    _clientHeaders?: Record<string, string> | null,
+    model?: string
+  ) {
+    void _clientHeaders;
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     const key = credentials?.apiKey || credentials?.accessToken;
+    const requestFormat = model ? this.resolveRequestFormat(model) : "openai";
 
     if (key) {
-      if (this._requestFormat === "claude") {
+      if (requestFormat === "claude") {
         headers["x-api-key"] = key;
       } else {
         headers["Authorization"] = `Bearer ${key}`;
       }
     }
 
-    if (this._requestFormat === "claude") {
+    if (requestFormat === "claude") {
       headers["anthropic-version"] = "2023-06-01";
     }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { createProviderNode, getProviderNodes } from "@/models";
 import {
   OPENAI_COMPATIBLE_PREFIX,
@@ -33,7 +34,10 @@ function sanitizeClaudeCodeCompatibleBaseUrl(baseUrl: string) {
 }
 
 // GET /api/provider-nodes - List all provider nodes
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const nodes = await getProviderNodes();
     return NextResponse.json({
@@ -48,6 +52,9 @@ export async function GET() {
 
 // POST /api/provider-nodes - Create provider node
 export async function POST(request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   let rawBody;
   try {
     rawBody = await request.json();

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import {
   getUpstreamProxyConfig,
   upsertUpstreamProxyConfig,
@@ -14,9 +15,12 @@ const upstreamProxySchema = z.object({
 });
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ providerId: string }> }
 ) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   const { providerId } = await params;
   if (!providerId) {
     return NextResponse.json({ error: "providerId required" }, { status: 400 });
@@ -32,6 +36,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ providerId: string }> }
 ) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   const { providerId } = await params;
   if (!providerId) {
     return NextResponse.json({ error: "providerId required" }, { status: 400 });
@@ -55,9 +62,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ providerId: string }> }
 ) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   const { providerId } = await params;
   if (!providerId) {
     return NextResponse.json({ error: "providerId required" }, { status: 400 });

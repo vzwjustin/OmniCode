@@ -11,7 +11,7 @@ export type McpToolExtraLike = {
   _meta?: unknown;
 };
 
-export type ScopeSource = "authInfo" | "meta" | "env" | "none";
+export type ScopeSource = "authInfo" | "env" | "none";
 
 export interface CallerScopeContext {
   callerId: string;
@@ -36,28 +36,6 @@ function normalizeScopeList(raw: unknown): string[] {
   return Array.from(new Set(normalized));
 }
 
-function extractMetaScopeList(meta: unknown): string[] {
-  if (!meta || typeof meta !== "object") return [];
-  const metaRecord = meta as Record<string, unknown>;
-
-  const direct = normalizeScopeList(metaRecord.scopes);
-  if (direct.length > 0) return direct;
-
-  const auth = metaRecord.auth;
-  if (auth && typeof auth === "object") {
-    const authScopes = normalizeScopeList((auth as Record<string, unknown>).scopes);
-    if (authScopes.length > 0) return authScopes;
-  }
-
-  const omni = metaRecord.omniroute;
-  if (omni && typeof omni === "object") {
-    const omniScopes = normalizeScopeList((omni as Record<string, unknown>).scopes);
-    if (omniScopes.length > 0) return omniScopes;
-  }
-
-  return [];
-}
-
 function scopeMatches(grantedScope: string, requiredScope: string): boolean {
   if (grantedScope === "*" || grantedScope === requiredScope) {
     return true;
@@ -69,6 +47,15 @@ function scopeMatches(grantedScope: string, requiredScope: string): boolean {
   return false;
 }
 
+/**
+ * Resolve caller scopes.
+ *
+ * Only `authInfo.scopes` (derived from the validated bearer token / API key)
+ * and the server-configured fallback env scopes are honored.
+ *
+ * Caller-supplied `_meta.scopes` is INTENTIONALLY IGNORED to prevent scope
+ * escalation by malicious JSON-RPC callers.
+ */
 export function resolveCallerScopeContext(
   extra: McpToolExtraLike | undefined,
   fallbackScopes: readonly string[] = []
@@ -81,11 +68,6 @@ export function resolveCallerScopeContext(
   const authScopes = normalizeScopeList(extra?.authInfo?.scopes);
   if (authScopes.length > 0) {
     return { callerId, scopes: authScopes, source: "authInfo" };
-  }
-
-  const metaScopes = extractMetaScopeList(extra?._meta);
-  if (metaScopes.length > 0) {
-    return { callerId, scopes: metaScopes, source: "meta" };
   }
 
   const fallback = normalizeScopeList(fallbackScopes);

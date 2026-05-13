@@ -6,7 +6,8 @@
  * completions format and Perplexity's internal protocol.
  */
 
-import { BaseExecutor, type ExecuteInput } from "./base.ts";
+import { BaseExecutor, mergeAbortSignals, type ExecuteInput } from "./base.ts";
+import { FETCH_TIMEOUT_MS } from "../config/constants.ts";
 
 const PPLX_SSE_ENDPOINT = "https://www.perplexity.ai/rest/sse/perplexity_ask";
 const PPLX_API_VERSION = "client-1.11.0";
@@ -721,17 +722,33 @@ export class PerplexityWebExecutor extends BaseExecutor {
       `Query to ${model} (pref=${modelPref}, mode=${pplxMode}), len=${query.length}`
     );
 
+    // Apply fetch-start timeout only — clear it as soon as headers arrive so
+    // that long SSE bodies are not killed by total elapsed time.
+    const timeoutController = new AbortController();
+    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      const timeoutError = new Error(`Perplexity fetch start timeout after ${FETCH_TIMEOUT_MS}ms`);
+      timeoutError.name = "TimeoutError";
+      timeoutController.abort(timeoutError);
+    }, FETCH_TIMEOUT_MS);
+    const combinedSignal = signal
+      ? mergeAbortSignals(signal, timeoutController.signal)
+      : timeoutController.signal;
+
     // Fetch from Perplexity
     const fetchOptions: RequestInit = {
       method: "POST",
       headers,
       body: JSON.stringify(pplxBody),
+      signal: combinedSignal,
     };
-    if (signal) fetchOptions.signal = signal;
 
     let response: Response;
     try {
-      response = await fetch(PPLX_SSE_ENDPOINT, fetchOptions);
+      try {
+        response = await fetch(PPLX_SSE_ENDPOINT, fetchOptions);
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (err) {
       log?.error?.("PPLX-WEB", `Fetch failed: ${err instanceof Error ? err.message : String(err)}`);
       const errResp = new Response(

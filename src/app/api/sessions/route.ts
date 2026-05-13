@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import {
   getActiveSessions,
   getActiveSessionCount,
   getAllActiveSessionCountsByKey,
 } from "@omniroute/open-sse/services/sessionManager.ts";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const sessions = getActiveSessions();
     const count = getActiveSessionCount();

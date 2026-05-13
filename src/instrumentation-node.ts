@@ -133,6 +133,34 @@ export async function registerNodejs(): Promise<void> {
     const { initBatchProcessor } = await import("@omniroute/open-sse/services/batchProcessor");
     initBatchProcessor();
     console.log("[STARTUP] Batch processor started");
+
+    try {
+      const { startRetentionCleanupJob } = await import("@/lib/jobs/retentionCleanupJob");
+      startRetentionCleanupJob();
+      console.log("[STARTUP] Retention cleanup job started");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn("[STARTUP] Failed to start retention cleanup job:", msg);
+    }
+
+    try {
+      const { initCompressionScheduler } = await import("@/lib/db/compressionScheduler");
+      void initCompressionScheduler();
+      console.log("[STARTUP] Compression scheduler started");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn("[STARTUP] Failed to start compression scheduler:", msg);
+    }
+
+    try {
+      const { startRawOutputCleanup } =
+        await import("@omniroute/open-sse/services/compression/rawOutputScheduler");
+      startRawOutputCleanup();
+      console.log("[STARTUP] RTK raw-output retention cleanup scheduled");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn("[STARTUP] Could not start RTK raw-output cleanup:", msg);
+    }
   }
 
   try {

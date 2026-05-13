@@ -260,7 +260,9 @@ async function generateHandoffAsync(options: {
   const historyText = formatMessagesForPrompt(selectedMessages);
   if (!historyText) return;
 
-  const summaryPrompt = HANDOFF_PROMPT_TEMPLATE.replace("{HISTORY}", historyText);
+  // Use a function replacer so '$&', '$$', '$1', etc. inside historyText are
+  // not interpreted as String.replace replacement patterns.
+  const summaryPrompt = HANDOFF_PROMPT_TEMPLATE.replace("{HISTORY}", () => historyText);
   const summaryBody = {
     model: summaryModel,
     messages: [{ role: "user", content: summaryPrompt }],

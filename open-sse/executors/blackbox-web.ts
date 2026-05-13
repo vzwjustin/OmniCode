@@ -443,17 +443,30 @@ export class BlackboxWebExecutor extends BaseExecutor {
       selectedElement: null,
     };
 
-    const timeoutSignal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
-    const combinedSignal = signal ? mergeAbortSignals(signal, timeoutSignal) : timeoutSignal;
+    // Apply fetch-start timeout only — clear it as soon as headers arrive so
+    // long SSE bodies aren't cut off by total elapsed time.
+    const timeoutController = new AbortController();
+    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      const timeoutError = new Error(`Blackbox fetch start timeout after ${FETCH_TIMEOUT_MS}ms`);
+      timeoutError.name = "TimeoutError";
+      timeoutController.abort(timeoutError);
+    }, FETCH_TIMEOUT_MS);
+    const combinedSignal = signal
+      ? mergeAbortSignals(signal, timeoutController.signal)
+      : timeoutController.signal;
 
     let upstreamResponse: Response;
     try {
-      upstreamResponse = await fetch(BLACKBOX_CHAT_API, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(transformedBody),
-        signal: combinedSignal,
-      });
+      try {
+        upstreamResponse = await fetch(BLACKBOX_CHAT_API, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(transformedBody),
+          signal: combinedSignal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       log?.error?.("BLACKBOX-WEB", `Fetch failed: ${message}`);
