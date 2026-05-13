@@ -1,8 +1,34 @@
-import { getProviderConnections, updateProviderConnection } from "@/lib/localDb";
+import { getProviderConnections, updateProviderConnection, getSettings } from "@/lib/localDb";
 import { buildConfigSyncEnvelope, toLegacyCloudSyncPayload } from "@/lib/sync/bundle";
 
-const CLOUD_URL = process.env.CLOUD_URL || process.env.NEXT_PUBLIC_CLOUD_URL;
+// Env-pinned cloud URL (highest precedence). When unset, callers should fall
+// back to the persisted `settings.cloudUrl` via resolveCloudUrl().
+const CLOUD_URL_ENV = process.env.CLOUD_URL || process.env.NEXT_PUBLIC_CLOUD_URL || null;
 const CLOUD_SYNC_TIMEOUT_MS = Number(process.env.CLOUD_SYNC_TIMEOUT_MS || 12000);
+
+/**
+ * Resolve the effective cloud URL: prefer env (CLOUD_URL /
+ * NEXT_PUBLIC_CLOUD_URL), otherwise the persisted dashboard setting.
+ *
+ * This lets operators choose between hard-coding the URL at deploy time and
+ * letting end-users configure it from the dashboard without an env edit +
+ * restart. Returns `null` if neither source provides a value.
+ */
+export async function resolveCloudUrl(): Promise<string | null> {
+  if (CLOUD_URL_ENV) return CLOUD_URL_ENV;
+  try {
+    const settings = await getSettings();
+    const stored = typeof settings?.cloudUrl === "string" ? settings.cloudUrl.trim() : "";
+    return stored.length > 0 ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+// Backwards-compat export — older modules import CLOUD_URL directly. When the
+// URL is set via the dashboard, this will be `null` and callers MUST use
+// resolveCloudUrl() instead.
+const CLOUD_URL = CLOUD_URL_ENV;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -38,8 +64,12 @@ export async function fetchWithTimeout(url, options = {}, timeoutMs = CLOUD_SYNC
  * @param {string|null} createdKey - Key created during enable
  */
 export async function syncToCloud(machineId, createdKey = null) {
-  if (!CLOUD_URL) {
-    return { error: "NEXT_PUBLIC_CLOUD_URL is not configured" };
+  const effectiveCloudUrl = await resolveCloudUrl();
+  if (!effectiveCloudUrl) {
+    return {
+      error:
+        "Cloud URL is not configured. Set it in Settings → Cloud (or define CLOUD_URL / NEXT_PUBLIC_CLOUD_URL in your environment).",
+    };
   }
 
   // Keep legacy field names for upstream compatibility, but derive them
@@ -50,7 +80,7 @@ export async function syncToCloud(machineId, createdKey = null) {
   let response;
   try {
     // Send to Cloud
-    response = await fetchWithTimeout(`${CLOUD_URL}/sync/${machineId}`, {
+    response = await fetchWithTimeout(`${effectiveCloudUrl}/sync/${machineId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

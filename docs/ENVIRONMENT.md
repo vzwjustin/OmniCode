@@ -677,3 +677,75 @@ The following variables appeared in previous versions of `.env.example` but have
 | ------------------------- | ------------------------ | ------------------- | ------------------------------------------------------ |
 | `APP_LOG_RETENTION_DAYS`  | `90`                     | `7`                 | ✅ Removed misleading value; documented `7` as default |
 | `CALL_LOG_RETENTION_DAYS` | `90`                     | `7`                 | ✅ Removed misleading value; documented `7` as default |
+
+---
+
+## Security & Resilience Tunables (added in 3.8+ audit waves)
+
+These were introduced by the multi-agent audit fixes. All are safe to leave unset — defaults are conservative for production-style deployments.
+
+### Network exposure
+
+| Variable             | Default                                                       | Effect                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OMNIROUTE_BIND_LAN` | `false` outside Docker, `true` inside Docker (set by image)   | When false, `scripts/run-next.mjs` binds to `127.0.0.1` only. Setting `true` re-enables `0.0.0.0` for LAN access. Logs a warning when active. |
+| `HOST`               | Resolves to `127.0.0.1` by default unless `OMNIROUTE_BIND_LAN` | Explicit override; takes precedence over the LAN gate.                                                                                       |
+
+### Reverse-proxy / proxy-header trust
+
+| Variable              | Default | Effect                                                                                                                                                                                |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRUST_PROXY_HEADERS` | `false` | When true, `X-Forwarded-For` / `CF-Connecting-IP` / `X-Real-IP` are honored when deriving the client IP. Required for accurate brute-force lockouts behind a reverse proxy. |
+| `TRUST_PROXY_FROM`    | _unset_ | Comma-separated CIDRs of trusted upstream proxies. When set, XFF/CF-Connecting-IP is honored only when the immediate peer matches. Implies `TRUST_PROXY_HEADERS=true`. |
+
+### Auth lifecycle
+
+| Variable                              | Default        | Effect                                                                                                                                                              |
+| ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OMNIROUTE_BCRYPT_COST`               | `14`           | bcrypt cost factor for the management password hash. Allowed range 10–15; values outside that range fall back to `14`.                                              |
+| `OMNIROUTE_SESSION_TTL_DAYS`          | `7`            | JWT session lifetime in days. Cookie `Max-Age` mirrors this value.                                                                                                  |
+| `OMNIROUTE_DASHBOARD_ALLOWED_ORIGINS` | request `Host` | Comma-separated list of origins allowed to issue state-changing requests against `/api/*` with the session cookie. CSRF guard rejects mismatches.                   |
+| `LOGIN_GUARD_GLOBAL_THRESHOLD`        | `30`           | Total failed logins (across all IPs) that trip the global lockout.                                                                                                  |
+| `LOGIN_GUARD_GLOBAL_WINDOW_SECONDS`   | `300`          | Window for the global counter.                                                                                                                                      |
+| `LOGIN_GUARD_GLOBAL_LOCKOUT_SECONDS`  | `900`          | Lockout duration when the global threshold fires.                                                                                                                   |
+
+### MCP / A2A
+
+| Variable                          | Default | Effect                                                                                                                                                                                  |
+| --------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OMNIROUTE_MCP_ENFORCE_SCOPES`    | `true`  | Enforce per-tool scope checks. Set to `false` to disable for dev (not recommended in production).                                                                                       |
+| `OMNIROUTE_MCP_ALLOW_ANONYMOUS`   | `false` | Allow `/api/mcp/sse` and `/api/mcp/stream` without management auth. Intended for local dev only; logs a security warning once at startup when enabled.                                  |
+
+### Skill execution
+
+| Variable                                      | Default | Effect                                                                                                                                |
+| --------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `OMNIROUTE_SKILL_MAX_CONCURRENT_PER_KEY`      | `8`     | Cap on concurrent skill executions per API key. Values must be 1–128 inclusive; out-of-range values fall back to `8`.                 |
+| `OMNIROUTE_RTK_RAW_OUTPUT_TTL_MS`             | `604800000` (7d) | Time-to-live for retained RTK raw-output files before the cleanup scheduler removes them.                                  |
+
+### Persistence
+
+| Variable                                 | Default                       | Effect                                                                                                                                                |
+| ---------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OMNIROUTE_ALLOW_PLAINTEXT_STORAGE`      | `false`                       | When `STORAGE_ENCRYPTION_KEY` is missing in `NODE_ENV=production`, the process refuses to start. Set `true` to opt out (development/testing only).    |
+| `OMNIROUTE_RETENTION_CLEANUP_INTERVAL_MS` | `21600000` (6h)              | Frequency of the retention scheduler that prunes `call_logs`, `usage_history`, `mcp_tool_audit`, `a2a_task_events`, `memories`, `compression_analytics`. |
+| `OMNIROUTE_STRICT_MIGRATION_NUMBERING`   | `false` (warn)                | Throw on startup when migration version numbers have gaps (e.g. missing `026`). Default warns to surface the gap without breaking deployments.        |
+| `OMNIROUTE_DISABLE_BACKGROUND_SERVICES`  | `false`                       | Skip startup wiring of retention/cleanup/aggregation schedulers. Useful for tests.                                                                    |
+
+### WebSocket bridge
+
+| Variable                              | Default | Effect                                                                                          |
+| ------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `OMNIROUTE_WS_MAX_ACTIVE_REQUESTS`    | `32`    | Per-session concurrent request cap on `/v1/ws`. Allowed range 1+; below 1 falls back to `32`.   |
+
+### TS build
+
+| Variable                              | Default | Effect                                                                                                       |
+| ------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `OMNIROUTE_ALLOW_TS_BUILD_ERRORS`     | `false` | When false, `next build` refuses to ship if TypeScript surfaces errors. Set `true` to bypass for hotfixes.    |
+
+### Browser security headers
+
+| Variable                              | Default | Effect                                                                                                                                              |
+| ------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OMNIROUTE_ENABLE_HSTS`               | `false` | Set `true` to emit `Strict-Transport-Security: max-age=31536000; includeSubDomains` on dashboard routes. Only enable when terminating HTTPS yourself. |

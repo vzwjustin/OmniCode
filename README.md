@@ -627,6 +627,8 @@ omniroute
 
 Dashboard opens at `http://localhost:20128` · API at `http://localhost:20128/v1`.
 
+> **Upgrading from 3.7.x or earlier?** See [`docs/AUDIT_FIXES.md`](docs/AUDIT_FIXES.md) — the 3.8 audit waves changed several security defaults (loopback-only bind, JWT revocation, OAuth `state` validation, MCP transport auth). Most are zero-config but reverse-proxy deployments should review the env reference.
+
 ### 2) Connect providers
 
 1. Dashboard → **Providers** → connect at least one provider (OAuth or API key)

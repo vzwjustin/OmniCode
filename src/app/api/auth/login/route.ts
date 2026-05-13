@@ -228,7 +228,12 @@ export async function POST(request) {
 
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   } catch (error) {
-    console.error("[AUTH] Login failed:", error);
+    // Scrub any $2[aby]$... bcrypt hash from the message before logging.
+    // bcryptjs occasionally surfaces the hash in error messages when a malformed
+    // hash is encountered; we never want that in stdout/log aggregators.
+    const rawMessage = error instanceof Error ? error.message : "unknown_error";
+    const safeMessage = rawMessage.replace(/\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}/g, "[bcrypt-hash-redacted]");
+    console.error("[AUTH] Login failed:", safeMessage);
     logAuditEvent({
       action: "auth.login.error",
       actor: "system",
@@ -238,7 +243,7 @@ export async function POST(request) {
       ipAddress: auditContext.ipAddress || undefined,
       requestId: auditContext.requestId,
       metadata: {
-        message: error instanceof Error ? error.message : "unknown_error",
+        message: safeMessage,
       },
     });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

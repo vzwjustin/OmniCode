@@ -7,11 +7,23 @@ import { logger } from "../../../open-sse/utils/logger.ts";
 
 const log = logger("SKILLS_EXECUTOR");
 
+function resolveSkillConcurrency(): number {
+  const raw = process.env.OMNIROUTE_SKILL_MAX_CONCURRENT_PER_KEY;
+  const parsed = raw ? Number.parseInt(raw, 10) : 8;
+  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 128) return 8;
+  return parsed;
+}
+
 class SkillExecutor {
   private static instance: SkillExecutor;
   private handlers: Map<string, SkillHandler> = new Map();
   private timeout: number = 30000;
   private maxRetries: number = 3;
+  // Concurrency cap: protects the gateway from runaway parallel skill calls
+  // (e.g. a model emitting many tool_calls in one response that each invoke a
+  // sandboxed skill). Per-apiKey counter, configurable via env.
+  private maxConcurrentPerKey: number = resolveSkillConcurrency();
+  private inflightByKey: Map<string, number> = new Map();
 
   private constructor() {}
 
@@ -56,6 +68,17 @@ class SkillExecutor {
     const db = getDbInstance();
     const executionId = randomUUID();
     const startTime = Date.now();
+
+    // Per-tenant concurrency cap. If exceeded, reject the call rather than
+    // queue indefinitely — callers (model tool_call loops) handle errors and
+    // back off; an unbounded queue would consume memory.
+    const inflight = this.inflightByKey.get(context.apiKeyId) ?? 0;
+    if (inflight >= this.maxConcurrentPerKey) {
+      throw new Error(
+        `Skill concurrency limit reached for this API key (${inflight}/${this.maxConcurrentPerKey}). Retry shortly.`
+      );
+    }
+    this.inflightByKey.set(context.apiKeyId, inflight + 1);
 
     log.info("skills.executor.start", { skillId: skill.id, skillName, apiKeyId: context.apiKeyId });
 
@@ -125,16 +148,32 @@ class SkillExecutor {
       ).run(SkillStatus.ERROR, errorMessage, durationMs, executionId);
 
       throw err;
+    } finally {
+      // Release the inflight slot regardless of outcome
+      const current = this.inflightByKey.get(context.apiKeyId) ?? 1;
+      if (current <= 1) this.inflightByKey.delete(context.apiKeyId);
+      else this.inflightByKey.set(context.apiKeyId, current - 1);
     }
   }
 
   private async executeWithTimeout<T>(promise: Promise<T>): Promise<T> {
-    return Promise.race([
-      promise,
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error("Skill execution timed out")), this.timeout)
-      ),
-    ]);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("Skill execution timed out")),
+            this.timeout
+          );
+        }),
+      ]);
+    } finally {
+      // Clear the timeout once the handler resolves first; previously the
+      // unclearable timer remained pending and (in long-running processes)
+      // would accumulate up to one expired-timer scheduling slot per call.
+      if (timer) clearTimeout(timer);
+    }
   }
 
   getExecution(executionId: string): SkillExecution | undefined {

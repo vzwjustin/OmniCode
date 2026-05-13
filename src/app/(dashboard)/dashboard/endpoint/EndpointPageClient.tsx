@@ -151,6 +151,13 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
   const [selectedProvider, setSelectedProvider] = useState(null); // for provider models popup
   const [cloudBaseUrl, setCloudBaseUrl] = useState(BUILD_TIME_CLOUD_URL); // dynamic cloud URL from API response
   const [cloudConfigured, setCloudConfigured] = useState(Boolean(BUILD_TIME_CLOUD_URL));
+  // Source: "env" (pinned by deploy, read-only in UI), "settings" (configured
+  // via this dashboard, editable), or null (not configured at all).
+  const [cloudUrlSource, setCloudUrlSource] = useState<"env" | "settings" | null>(null);
+  // Inline configurator state — only relevant when cloudUrlSource !== "env".
+  const [cloudUrlDraft, setCloudUrlDraft] = useState("");
+  const [savingCloudUrl, setSavingCloudUrl] = useState(false);
+  const [cloudUrlError, setCloudUrlError] = useState<string | null>(null);
   const [viewTab, setViewTab] = useState("api");
   const [mcpStatus, setMcpStatus] = useState<any>(null);
   const [a2aStatus, setA2aStatus] = useState<any>(null);
@@ -446,6 +453,11 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
         if (data.cloudUrl) {
           setCloudBaseUrl(data.cloudUrl);
         }
+        if (data.cloudUrlSource === "env" || data.cloudUrlSource === "settings") {
+          setCloudUrlSource(data.cloudUrlSource);
+        } else {
+          setCloudUrlSource(null);
+        }
         if (data.machineId) {
           setResolvedMachineId(data.machineId);
         }
@@ -478,15 +490,70 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
   const handleCloudToggle = (checked) => {
     if (checked) {
       if (!cloudConfigured) {
+        // The dashboard now offers an inline configurator (see below). Keep
+        // this status as a fallback hint in case the button somehow triggers
+        // while the configurator isn't rendered.
         setCloudStatus({
           type: "warning",
-          message: "Cloud sync is not configured on this instance.",
+          message:
+            "Cloud sync needs a URL first — fill it in below and click Save, then enable sync.",
         });
         return;
       }
       setShowCloudModal(true);
     } else {
       setShowDisableModal(true);
+    }
+  };
+
+  /**
+   * Persist `cloudUrl` to settings. Once saved, the GET endpoint returns
+   * `cloudConfigured: true` and the toggle becomes enabled. The user can
+   * still override later by editing the input again or by removing the URL.
+   */
+  const handleSaveCloudUrl = async () => {
+    const raw = cloudUrlDraft.trim();
+    setCloudUrlError(null);
+
+    if (!raw) {
+      setCloudUrlError("Enter a cloud sync URL");
+      return;
+    }
+    // Lightweight shape check — server-side Zod does the real validation.
+    let parsed: URL | null = null;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      setCloudUrlError("Use a full URL, e.g. https://omniroute-cloud.example.com");
+      return;
+    }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      setCloudUrlError("URL must start with https:// (or http:// for local testing)");
+      return;
+    }
+
+    setSavingCloudUrl(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cloudUrl: parsed.toString().replace(/\/$/, "") }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setCloudUrlError(body?.error || `Couldn't save (HTTP ${res.status})`);
+        return;
+      }
+      // Re-fetch settings so cloudConfigured + cloudUrlSource flip.
+      await loadCloudSettings();
+      setCloudStatus({
+        type: "success",
+        message: "Cloud URL saved. Click Enable sync above to start syncing.",
+      });
+    } catch (e: any) {
+      setCloudUrlError(e?.message || "Network error");
+    } finally {
+      setSavingCloudUrl(false);
     }
   };
 
@@ -1194,12 +1261,81 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
                 {t("enableCloud")}
               </Button>
             ) : (
-              <span className="text-xs px-2 py-1 rounded-full bg-surface text-text-muted border border-border/70">
+              <span
+                className="text-xs px-2 py-1 rounded-full bg-surface text-text-muted border border-border/70"
+                title="Add a Cloud URL below to enable sync"
+              >
                 Cloud not configured
               </span>
             )}
           </div>
         </div>
+
+        {/*
+          Inline cloud configurator. Replaces the previous dead-end "Cloud
+          not configured" pill that required an env edit + restart. Hidden
+          when the URL was pinned via env (CLOUD_URL / NEXT_PUBLIC_CLOUD_URL)
+          because the env value takes precedence and editing here would be
+          confusing.
+        */}
+        {!cloudConfigured && cloudUrlSource !== "env" && (
+          <div className="mt-4 p-4 rounded-xl border border-border bg-bg-subtle">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-[18px] text-primary">cloud_upload</span>
+              <h3 className="text-sm font-semibold text-text-main">Set up cloud sync</h3>
+            </div>
+            <p className="text-xs text-text-muted mb-3">
+              Cloud sync mirrors your provider keys and combos to a remote OmniRoute
+              control plane so other devices stay in lock-step. You need a URL pointing
+              at your cloud instance — usually something like{" "}
+              <code className="px-1 py-0.5 rounded bg-surface text-text-main">
+                https://omniroute-cloud.example.com
+              </code>
+              .{" "}
+              <a
+                href="https://github.com/diegosouzapw/OmniRoute#-cloud-sync"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                How does this work?
+              </a>
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="url"
+                value={cloudUrlDraft}
+                onChange={(e) => {
+                  setCloudUrlDraft(e.target.value);
+                  if (cloudUrlError) setCloudUrlError(null);
+                }}
+                placeholder="https://omniroute-cloud.example.com"
+                className="flex-1 px-3 py-2 text-sm rounded-lg border border-border bg-bg-main text-text-main placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={savingCloudUrl}
+                aria-invalid={Boolean(cloudUrlError)}
+                aria-describedby={cloudUrlError ? "cloud-url-error" : undefined}
+              />
+              <Button
+                size="sm"
+                variant="primary"
+                icon="save"
+                onClick={handleSaveCloudUrl}
+                disabled={savingCloudUrl || !cloudUrlDraft.trim()}
+              >
+                {savingCloudUrl ? "Saving…" : "Save"}
+              </Button>
+            </div>
+            {cloudUrlError && (
+              <p id="cloud-url-error" className="text-xs text-red-400 mt-2">
+                {cloudUrlError}
+              </p>
+            )}
+            <p className="text-xs text-text-muted/70 mt-3">
+              Tip: don't have a cloud instance yet? You can skip this — OmniRoute works
+              fully local. Sync is optional.
+            </p>
+          </div>
+        )}
 
         {/* Cloud Status Toast */}
         {cloudStatus && (

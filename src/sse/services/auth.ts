@@ -717,8 +717,33 @@ function buildQuotaPreflightRateLimitedResult(
   };
 }
 
-// Mutex to prevent race conditions during account selection
-let selectionMutex = Promise.resolve();
+// Mutex(es) to prevent race conditions during account selection.
+//
+// Originally this was one global Promise that serialized ALL provider account
+// selections — two unrelated providers (e.g. openai + anthropic) blocked each
+// other for no good reason. We now key by provider so concurrent requests to
+// different providers proceed in parallel while same-provider selections
+// remain serialized.
+const selectionMutexes = new Map<string, Promise<void>>();
+function acquireSelectionMutex(provider: string): {
+  prev: Promise<void>;
+  release: () => void;
+} {
+  const prev = selectionMutexes.get(provider) ?? Promise.resolve();
+  let release: () => void = () => {};
+  const next = new Promise<void>((resolve) => {
+    release = () => {
+      // If our promise is still the current head for this provider, clear it
+      // so the map doesn't grow unbounded across many distinct providers.
+      if (selectionMutexes.get(provider) === next) {
+        selectionMutexes.delete(provider);
+      }
+      resolve();
+    };
+  });
+  selectionMutexes.set(provider, next);
+  return { prev, release };
+}
 
 // ─── Anti-Thundering Herd: per-connection mutex for markAccountUnavailable ───
 // Prevents multiple concurrent requests from marking the same connection
@@ -760,12 +785,9 @@ export async function getProviderCredentials(
   requestedModel: string | null = null,
   options: CredentialSelectionOptions = {}
 ) {
-  // Acquire mutex to prevent race conditions
-  const currentMutex = selectionMutex;
-  let resolveMutex: (() => void) | undefined;
-  selectionMutex = new Promise((resolve) => {
-    resolveMutex = resolve;
-  });
+  // Acquire per-provider mutex to prevent race conditions. Different providers
+  // proceed in parallel.
+  const { prev: currentMutex, release: resolveMutex } = acquireSelectionMutex(provider);
 
   try {
     await currentMutex;
@@ -1311,7 +1333,7 @@ export async function getProviderCredentials(
       maxConcurrent: connection.maxConcurrent,
     };
   } finally {
-    if (resolveMutex) resolveMutex();
+    resolveMutex();
   }
 }
 

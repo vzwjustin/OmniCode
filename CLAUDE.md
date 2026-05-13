@@ -334,9 +334,12 @@ git push -u origin feat/your-feature
 - **TypeScript**: 5.9+, target ES2022, module esnext, resolution bundler
 - **Path aliases**: `@/*` → `src/`, `@omniroute/open-sse` → `open-sse/`, `@omniroute/open-sse/*` → `open-sse/*`
 - **Default port**: 20128 (API + dashboard on same port)
+- **Default bind**: `127.0.0.1` outside Docker (loopback only). Set `OMNIROUTE_BIND_LAN=true` to bind `0.0.0.0`.
 - **Data directory**: `DATA_DIR` env var, defaults to `~/.omniroute/`
-- **Key env vars**: `PORT`, `JWT_SECRET`, `API_KEY_SECRET`, `INITIAL_PASSWORD`, `REQUIRE_API_KEY`, `APP_LOG_LEVEL`
-- Setup: `cp .env.example .env` then generate `JWT_SECRET` (`openssl rand -base64 48`) and `API_KEY_SECRET` (`openssl rand -hex 32`)
+- **Key env vars**: `PORT`, `JWT_SECRET`, `API_KEY_SECRET`, `STORAGE_ENCRYPTION_KEY`, `INITIAL_PASSWORD`, `REQUIRE_API_KEY`, `APP_LOG_LEVEL`, `OMNIROUTE_BIND_LAN`, `OMNIROUTE_MCP_ENFORCE_SCOPES`, `OMNIROUTE_BCRYPT_COST`, `TRUST_PROXY_HEADERS`
+- Setup: `cp .env.example .env` then generate `JWT_SECRET` (`openssl rand -base64 48`), `API_KEY_SECRET` (`openssl rand -hex 32`), `STORAGE_ENCRYPTION_KEY` (`openssl rand -hex 32`)
+- **Full env reference**: see [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md). The "Security & Resilience Tunables" section covers the 3.8+ audit fixes.
+- **What changed in 3.8 audit waves**: see [`docs/AUDIT_FIXES.md`](docs/AUDIT_FIXES.md) for a per-area summary and upgrade guidance.
 
 ---
 
