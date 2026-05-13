@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { deleteMemory, getMemory } from "@/lib/memory/store";
+import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 
+/**
+ * Memory store is a management surface — both reads and deletes can leak or
+ * destroy persistent conversational state. Every exported handler must gate on
+ * `requireManagementAuth` (dashboard session or API key with `manage` scope).
+ */
 export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await props.params;
     const success = await deleteMemory(id);
@@ -16,6 +25,9 @@ export async function DELETE(request: Request, props: { params: Promise<{ id: st
 }
 
 export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const authError = await requireManagementAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await props.params;
     const memory = await getMemory(id);
