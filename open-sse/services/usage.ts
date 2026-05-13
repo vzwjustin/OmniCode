@@ -590,7 +590,11 @@ function orderGlmQuotas(quotas: Record<string, UsageQuota>): Record<string, Usag
   return ordered;
 }
 
-async function getGlmUsage(apiKey: string, providerSpecificData?: Record<string, unknown>) {
+async function getGlmUsage(
+  apiKey: string,
+  providerSpecificData?: Record<string, unknown>,
+  useGlmtLabels = false
+) {
   if (!apiKey) {
     return { message: "API key not available. Add a coding plan API key to view usage." };
   }
@@ -625,7 +629,9 @@ async function getGlmUsage(apiKey: string, providerSpecificData?: Record<string,
     const resetAt = resetMs > 0 ? new Date(resetMs).toISOString() : null;
 
     if (type === "TOKENS_LIMIT") {
-      const quotaName = getGlmTokenQuotaName(src, quotas);
+      const quotaName = useGlmtLabels
+        ? (getGlmQuotaLabel(src.type, src.unit) ?? getGlmTokenQuotaName(src, quotas))
+        : getGlmTokenQuotaName(src, quotas);
       const usedPercent = toPercentage(src.percentage);
       const remaining = Math.max(0, 100 - usedPercent);
 
@@ -876,11 +882,12 @@ export async function getUsageForProvider(connection, options: { forceRefresh?: 
       return await getQoderUsage(accessToken);
     case "glm":
     case "glm-cn":
-    case "glmt":
       return await getGlmUsage(apiKey, {
         ...(providerSpecificData || {}),
         ...(provider === "glm-cn" ? { apiRegion: "china" } : {}),
       });
+    case "glmt":
+      return await getGlmUsage(apiKey, providerSpecificData, true);
     case "minimax":
     case "minimax-cn":
       return await getMiniMaxUsage(apiKey, provider);
