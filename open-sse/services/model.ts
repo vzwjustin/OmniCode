@@ -389,6 +389,15 @@ async function resolveModelByProviderInference(modelId, extendedContext) {
     return { provider, model: canonicalModel, extendedContext };
   }
 
+  // gpt-5.5-medium (and any future alias targets) are codex-canonical models even when
+  // other providers also register them. Prefer codex before falling through to ambiguity.
+  if (candidatesToUse.includes("codex")) {
+    const codexCanonicalModels = new Set(CODEX_PREFERRED_UNPREFIXED_MODEL_ALIASES.values());
+    if (codexCanonicalModels.has(modelId)) {
+      return { provider: "codex", model: modelId, extendedContext };
+    }
+  }
+
   if (candidatesToUse.length > 1) {
     const aliasesForHint = candidatesToUse.map((p) => PROVIDER_ID_TO_ALIAS[p] || p);
     const hints = aliasesForHint.slice(0, 2).map((alias) => `${alias}/${modelId}`);
