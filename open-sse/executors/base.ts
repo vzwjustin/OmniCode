@@ -691,13 +691,45 @@ export class BaseExecutor {
             }
           }
 
-          // Real CLI always pairs context_management with thinking. Mirror
-          // that invariant so long sessions don't accumulate thinking blocks
-          // toward the context cap.
-          if (tb.thinking && !tb.context_management) {
+          // Real CLI pairs context_management with thinking, but Anthropic's
+          // `clear_thinking_20251015` strategy is strict: it requires
+          // `thinking.type` to be "enabled" or "adaptive". Any other state —
+          // missing, disabled, non-object, or a different type — returns
+          // 400 "`clear_thinking_20251015` strategy requires `thinking` to be
+          // enabled or adaptive". Enforce the invariant in both directions:
+          //   1. thinking active   + no context_management → add the edit
+          //   2. thinking inactive + clear_thinking present → strip the edit
+          //      (and drop context_management entirely if it becomes empty)
+          const thinkingType =
+            tb.thinking && typeof tb.thinking === "object"
+              ? (tb.thinking as { type?: unknown }).type
+              : undefined;
+          const thinkingActive = thinkingType === "enabled" || thinkingType === "adaptive";
+
+          if (thinkingActive && !tb.context_management) {
             tb.context_management = {
               edits: [{ type: "clear_thinking_20251015", keep: "all" }],
             };
+          } else if (
+            !thinkingActive &&
+            tb.context_management &&
+            typeof tb.context_management === "object"
+          ) {
+            const cm = tb.context_management as { edits?: unknown };
+            if (Array.isArray(cm.edits)) {
+              cm.edits = (cm.edits as unknown[]).filter(
+                (edit) =>
+                  !edit ||
+                  typeof edit !== "object" ||
+                  (edit as { type?: unknown }).type !== "clear_thinking_20251015"
+              );
+              if ((cm.edits as unknown[]).length === 0) {
+                delete tb.context_management;
+              }
+            } else {
+              // Unrecognized shape — safest to drop rather than risk the 400.
+              delete tb.context_management;
+            }
           }
 
           const seed = activeCredentials?.accessToken || activeCredentials?.apiKey || "anon";

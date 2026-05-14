@@ -642,6 +642,144 @@ test("DefaultExecutor.execute only injects adaptive thinking defaults for Claude
   assert.equal((requestBodies[1] as any).output_config, undefined);
 });
 
+// Regression: Anthropic's `clear_thinking_20251015` strategy is strict —
+// it requires `thinking.type` to be "enabled" or "adaptive". Sending the
+// strategy with thinking disabled / missing / non-active returns
+// 400 "`clear_thinking_20251015` strategy requires `thinking` to be enabled
+// or adaptive". The executor enforces the invariant in both directions.
+//
+// We rely on body-level `thinking` shape (no `x-omniroute-thinking` header
+// override) so the new pairing logic at base.ts:694+ is the path under test —
+// the explicit "off" header takes a different branch that wholesale-deletes
+// context_management before our normalization ever runs.
+test("DefaultExecutor.execute pairs clear_thinking_20251015 with thinking only when thinking.type is active", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestBodies: unknown[] = [];
+
+  globalThis.fetch = async (_url, init = {}) => {
+    requestBodies.push(JSON.parse(String(init.body)));
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+
+  const claudeHeaders = {
+    "x-app": "cli",
+    "user-agent": "claude-cli/2.1.116 (external, cli)",
+  };
+
+  try {
+    const claude = new DefaultExecutor("claude");
+
+    // (1) Body has thinking explicitly disabled, no context_management.
+    //     Old code wrongly added clear_thinking because `tb.thinking` was
+    //     truthy. New code checks .type === "enabled"|"adaptive" and skips.
+    await claude.execute({
+      model: "claude-sonnet-4-5",
+      body: {
+        model: "claude-sonnet-4-5",
+        messages: [{ role: "user", content: "hi" }],
+        max_tokens: 1,
+        thinking: { type: "disabled" },
+      },
+      stream: false,
+      credentials: { apiKey: "cc-key", providerSpecificData: { ccSessionId: "s-1" } },
+      clientHeaders: claudeHeaders,
+      extendedContext: false,
+    });
+
+    // (2) Body has thinking disabled AND a pre-existing clear_thinking edit
+    //     (e.g. forwarded by an upstream proxy). Must strip the edit.
+    await claude.execute({
+      model: "claude-sonnet-4-5",
+      body: {
+        model: "claude-sonnet-4-5",
+        messages: [{ role: "user", content: "hi" }],
+        max_tokens: 1,
+        thinking: { type: "disabled" },
+        context_management: {
+          edits: [{ type: "clear_thinking_20251015", keep: "all" }],
+        },
+      },
+      stream: false,
+      credentials: { apiKey: "cc-key", providerSpecificData: { ccSessionId: "s-1" } },
+      clientHeaders: claudeHeaders,
+      extendedContext: false,
+    });
+
+    // (3) Body has thinking enabled — clear_thinking edit must be present.
+    await claude.execute({
+      model: "claude-sonnet-4-5",
+      body: {
+        model: "claude-sonnet-4-5",
+        messages: [{ role: "user", content: "hi" }],
+        max_tokens: 1,
+        thinking: { type: "enabled", budget_tokens: 1024 },
+      },
+      stream: false,
+      credentials: { apiKey: "cc-key", providerSpecificData: { ccSessionId: "s-1" } },
+      clientHeaders: claudeHeaders,
+      extendedContext: false,
+    });
+
+    // (4) Body has thinking disabled + context_management with clear_thinking
+    //     AND a non-clear_thinking edit. Only clear_thinking is stripped;
+    //     other edits and the surrounding context_management object are kept.
+    await claude.execute({
+      model: "claude-sonnet-4-5",
+      body: {
+        model: "claude-sonnet-4-5",
+        messages: [{ role: "user", content: "hi" }],
+        max_tokens: 1,
+        thinking: { type: "disabled" },
+        context_management: {
+          edits: [
+            { type: "clear_thinking_20251015", keep: "all" },
+            { type: "some_other_edit", keep: "all" },
+          ],
+        },
+      },
+      stream: false,
+      credentials: { apiKey: "cc-key", providerSpecificData: { ccSessionId: "s-1" } },
+      clientHeaders: claudeHeaders,
+      extendedContext: false,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  // (1) thinking.type === "disabled" → no context_management upstream.
+  assert.equal(
+    (requestBodies[0] as any).context_management,
+    undefined,
+    "thinking disabled should NOT have clear_thinking edit added"
+  );
+
+  // (2) thinking.type === "disabled" + pre-existing clear_thinking → stripped,
+  //     and since edits become empty, the whole context_management drops.
+  assert.equal(
+    (requestBodies[1] as any).context_management,
+    undefined,
+    "thinking disabled should strip pre-existing clear_thinking edit"
+  );
+
+  // (3) thinking enabled → clear_thinking edit present.
+  assert.deepEqual(
+    (requestBodies[2] as any).context_management,
+    { edits: [{ type: "clear_thinking_20251015", keep: "all" }] },
+    "thinking enabled should pair with clear_thinking edit"
+  );
+  assert.deepEqual((requestBodies[2] as any).thinking, { type: "enabled", budget_tokens: 1024 });
+
+  // (4) Selective strip: clear_thinking removed, some_other_edit preserved.
+  assert.deepEqual(
+    (requestBodies[3] as any).context_management,
+    { edits: [{ type: "some_other_edit", keep: "all" }] },
+    "thinking disabled should only strip clear_thinking edit, preserve others"
+  );
+});
+
 test("DefaultExecutor.transformRequest injects OpenAI stream usage and preserves model ids with slashes", () => {
   const executor = new DefaultExecutor("openai");
   const body = { model: "zai-org/GLM-5-FP8", messages: [{ role: "user", content: "hi" }] };
