@@ -168,7 +168,7 @@ export async function runSetupCommand(argv) {
   const prompt = createPrompt();
 
   try {
-    printHeading("OmniRoute Setup");
+    printHeading("OmniCoder Setup");
     const { db, dbPath } = await openOmniRouteDb();
     printInfo(`Database: ${dbPath}`);
 

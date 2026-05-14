@@ -23,7 +23,7 @@ export async function openOmniRouteDb() {
     if (message.includes("NODE_MODULE_VERSION") || message.includes("ERR_DLOPEN_FAILED")) {
       throw new Error(
         "better-sqlite3 native binding is incompatible with this Node.js runtime. " +
-          "Run `npm rebuild better-sqlite3` in the OmniRoute project and try again."
+          "Run `npm rebuild better-sqlite3` in the OmniCoder project and try again."
       );
     }
     throw error;

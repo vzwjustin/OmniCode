@@ -27,13 +27,13 @@ function publicConnection(connection) {
 function printProvidersHelp() {
   console.log(`
 Usage:
-  omniroute providers available
-  omniroute providers available --search openai
-  omniroute providers available --category api-key
-  omniroute providers list
-  omniroute providers test <id|name>
-  omniroute providers test-all
-  omniroute providers validate
+  omnicoder providers available
+  omnicoder providers available --search openai
+  omnicoder providers available --category api-key
+  omnicoder providers list
+  omnicoder providers test <id|name>
+  omnicoder providers test-all
+  omnicoder providers validate
 
 Options:
   --json                 Print machine-readable JSON
@@ -41,7 +41,7 @@ Options:
   --category <category>  Filter available providers by category
 
 Notes:
-  "available" shows the OmniRoute provider catalog.
+  "available" shows the OmniCoder provider catalog.
   "list" shows provider connections already configured in local SQLite.
   Provider commands read local SQLite directly and do not require the server to be running.
   API-key provider tests update test_status, last_tested, and error fields in SQLite.
@@ -51,10 +51,10 @@ Notes:
 function printAvailableHelp() {
   console.log(`
 Usage:
-  omniroute providers available
-  omniroute providers available --search openai
-  omniroute providers available --category api-key
-  omniroute providers available --json
+  omnicoder providers available
+  omnicoder providers available --search openai
+  omnicoder providers available --category api-key
+  omnicoder providers available --json
 
 Options:
   --json                 Print machine-readable JSON
@@ -62,15 +62,15 @@ Options:
   --category <category>  Filter by category, for example api-key, oauth, free
 
 Notes:
-  Shows the OmniRoute provider catalog, not locally configured provider connections.
+  Shows the OmniCoder provider catalog, not locally configured provider connections.
 `);
 }
 
 function printListHelp() {
   console.log(`
 Usage:
-  omniroute providers list
-  omniroute providers list --json
+  omnicoder providers list
+  omnicoder providers list --json
 
 Options:
   --json  Print machine-readable JSON
@@ -83,8 +83,8 @@ Notes:
 function printTestHelp() {
   console.log(`
 Usage:
-  omniroute providers test <id|name>
-  omniroute providers test <id|name> --json
+  omnicoder providers test <id|name>
+  omnicoder providers test <id|name> --json
 
 Options:
   --json  Print machine-readable JSON
@@ -97,8 +97,8 @@ Notes:
 function printTestAllHelp() {
   console.log(`
 Usage:
-  omniroute providers test-all
-  omniroute providers test-all --json
+  omnicoder providers test-all
+  omnicoder providers test-all --json
 
 Options:
   --json  Print machine-readable JSON
@@ -111,8 +111,8 @@ Notes:
 function printValidateHelp() {
   console.log(`
 Usage:
-  omniroute providers validate
-  omniroute providers validate --json
+  omnicoder providers validate
+  omnicoder providers validate --json
 
 Options:
   --json  Print machine-readable JSON
@@ -292,7 +292,7 @@ async function availableCommand(flags) {
   if (hasFlag(flags, "json")) {
     console.log(JSON.stringify({ count: providers.length, categories, providers }, null, 2));
   } else {
-    printHeading("OmniRoute Available Providers");
+    printHeading("OmniCoder Available Providers");
     printAvailableProviderTable(providers, categories);
   }
 
@@ -306,7 +306,7 @@ async function listCommand(flags) {
     if (hasFlag(flags, "json")) {
       console.log(JSON.stringify({ providers: connections }, null, 2));
     } else {
-      printHeading("OmniRoute Providers");
+      printHeading("OmniCoder Providers");
       printProviderTable(connections);
     }
     return 0;
@@ -364,7 +364,7 @@ async function testAllCommand(flags) {
     if (hasFlag(flags, "json")) {
       console.log(JSON.stringify({ results }, null, 2));
     } else {
-      printHeading("OmniRoute Provider Tests");
+      printHeading("OmniCoder Provider Tests");
       for (const result of results) {
         const label = result.valid
           ? "\x1b[32mOK\x1b[0m"
@@ -390,7 +390,7 @@ async function validateCommand(flags) {
     if (hasFlag(flags, "json")) {
       console.log(JSON.stringify({ results }, null, 2));
     } else {
-      printHeading("OmniRoute Provider Validation");
+      printHeading("OmniCoder Provider Validation");
       if (results.length === 0) {
         console.log("No providers configured.");
       }

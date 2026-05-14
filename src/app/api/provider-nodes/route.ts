@@ -95,7 +95,7 @@ export async function POST(request) {
       // SSRF guard — reject base URLs that resolve to private/loopback/IMDS.
       if (!arePrivateBaseUrlsAllowed()) {
         const check = await validateOutboundUrl(finalBaseUrl, "public-only");
-        if (check.ok !== true) {
+        if (check.ok === false) {
           return NextResponse.json(
             { error: "blocked_baseurl", reason: check.reason },
             { status: 400 }
@@ -130,7 +130,7 @@ export async function POST(request) {
       // SSRF guard — reject base URLs that resolve to private/loopback/IMDS.
       if (!arePrivateBaseUrlsAllowed()) {
         const check = await validateOutboundUrl(sanitizedBaseUrl, "public-only");
-        if (check.ok !== true) {
+        if (check.ok === false) {
           return NextResponse.json(
             { error: "blocked_baseurl", reason: check.reason },
             { status: 400 }
