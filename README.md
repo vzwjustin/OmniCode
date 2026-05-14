@@ -32,7 +32,7 @@ Coding with one provider is fragile: quota expires, rate limits kick in mid-sess
 
 ```bash
 # Clone and install locally
-git clone https://github.com/vzwjustin/OmniRoute.git omnicoder
+git clone https://github.com/vzwjustin/OmniCode.git omnicoder
 cd omnicoder
 env -u NODE_ENV npm install
 env -u NODE_ENV npm run build:cli

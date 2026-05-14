@@ -311,5 +311,5 @@ Releases are managed via the `/generate-release` workflow. When a new GitHub Rel
 
 - **Architecture**: See [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
 - **API Reference**: See [`docs/reference/API_REFERENCE.md`](docs/reference/API_REFERENCE.md)
-- **Issues**: [Report an issue](https://github.com/vzwjustin/OmniRoute/issues)
+- **Issues**: [Report an issue](https://github.com/vzwjustin/OmniCode/issues)
 - **ADRs**: See `docs/adr/` for architectural decision records
