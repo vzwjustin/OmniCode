@@ -44,7 +44,7 @@ const EXAMPLE_BODIES: Record<string, string> = {
     2
   ),
   "/api/v1/responses": JSON.stringify(
-    { model: "openai/gpt-4o-mini", input: "What is OmniCode?" },
+    { model: "openai/gpt-4o-mini", input: "What is OmniCoder?" },
     null,
     2
   ),

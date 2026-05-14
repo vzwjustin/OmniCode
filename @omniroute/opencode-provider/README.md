@@ -1,6 +1,6 @@
 # @omniroute/opencode-provider
 
-Provider plugin for connecting [OpenCode](https://github.com/anomalyco/opencode) to [OmniRoute](https://github.com/diegosouzapw/OmniRoute).
+Provider plugin for connecting [OpenCode](https://github.com/anomalyco/opencode) to [OmniRoute](https://github.com/vzwjustin/OmniCode).
 
 ## Installation
 

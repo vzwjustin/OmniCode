@@ -175,12 +175,12 @@ Persisted to `<DATA_DIR>/server.env`. `DATA_DIR` resolves to:
 Set via `session.defaultSession.webRequest.onHeadersReceived`. Notable directives:
 
 - `frame-ancestors 'none'`, `object-src 'none'`, `child-src 'none'`
-- `connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://*.omniroute.online https://*.omniroute.dev`
+- `connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://*.github.com/vzwjustin/OmniCode https://*.omniroute.dev`
 - Dev mode adds `'unsafe-eval'` to `script-src` only
 
 ## Auto-update
 
-Uses `electron-updater` with the GitHub provider (`diegosouzapw/OmniRoute`).
+Uses `electron-updater` with the GitHub provider (`vzwjustin/OmniCode`).
 
 - `autoDownload = false`, `autoInstallOnAppQuit = true`
 - Events forwarded to renderer via `update-status` IPC:
@@ -256,7 +256,7 @@ Artifacts land in `electron/dist-electron/`:
 - `OmniCode-X.Y.Z-mac.dmg`, `OmniCode-X.Y.Z-arm64-mac.dmg` (macOS)
 - `OmniCode-X.Y.Z.AppImage`, `omniroute-desktop_X.Y.Z_amd64.deb` (Linux)
 
-Releases are published to GitHub Releases (`diegosouzapw/OmniRoute`), which is also where `electron-updater` checks for new versions.
+Releases are published to GitHub Releases (`vzwjustin/OmniCode`), which is also where `electron-updater` checks for new versions.
 
 ## Troubleshooting
 

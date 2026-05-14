@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "OmniCode",
-    short_name: "OmniCode",
+    name: "OmniCoder",
+    short_name: "OmniCoder",
     description:
-      "OmniCode is an AI gateway for multi-provider LLMs. One endpoint for all your AI providers.",
+      "OmniCoder is an AI gateway for multi-provider LLMs. One endpoint for all your AI providers.",
     start_url: "/",
     scope: "/",
     display: "fullscreen",

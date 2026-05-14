@@ -182,7 +182,7 @@ export default function AgentsPage() {
           </div>
           <div className="flex flex-wrap items-center gap-1 text-xs">
             <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
-              {t("flowOmniCode")}
+              {t("flowOmniCoder")}
             </span>
             <span className="material-symbols-outlined text-[14px] text-text-muted">
               arrow_forward
@@ -223,9 +223,9 @@ export default function AgentsPage() {
                 <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                   <span className="material-symbols-outlined text-[20px] text-primary">hub</span>
                 </div>
-                <p className="text-xs font-semibold text-primary">{t("flowDiagramOmniCode")}</p>
+                <p className="text-xs font-semibold text-primary">{t("flowDiagramOmniCoder")}</p>
                 <p className="mt-0.5 text-[10px] text-text-muted">
-                  {t("flowDiagramOmniCodeDesc")}
+                  {t("flowDiagramOmniCoderDesc")}
                 </p>
               </div>
               <div className="flex items-center justify-center px-2 py-1 md:py-0">
@@ -301,7 +301,7 @@ export default function AgentsPage() {
               <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-mono text-blue-500">
                 <span>IDE</span>
                 <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
-                <span>OmniCode</span>
+                <span>OmniCoder</span>
                 <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
                 <span>Provider API</span>
               </div>
@@ -323,7 +323,7 @@ export default function AgentsPage() {
               <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-mono text-emerald-500">
                 <span>Client</span>
                 <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
-                <span>OmniCode</span>
+                <span>OmniCoder</span>
                 <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
                 <span>CLI Binary</span>
               </div>

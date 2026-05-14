@@ -4,20 +4,20 @@ import { docsNavigation } from "./lib/docsNavigation";
 import { WhatsNewSection } from "./components/WhatsNewSection";
 
 export const metadata: Metadata = {
-  title: "OmniCode Documentation",
+  title: "OmniCoder Documentation",
   description:
     "Everything you need to route, compress, and scale your AI — setup guides, API reference, compression, deployment, and more.",
   openGraph: {
-    title: "OmniCode Documentation",
+    title: "OmniCoder Documentation",
     description:
-      "Comprehensive docs for OmniCode AI gateway — setup, API, compression, deployment, and more.",
+      "Comprehensive docs for OmniCoder AI gateway — setup, API, compression, deployment, and more.",
     type: "website",
-    url: "https://omniroute.online/docs",
+    url: "https://github.com/vzwjustin/OmniCode/docs",
   },
   twitter: {
     card: "summary_large_image",
-    title: "OmniCode Documentation",
-    description: "Comprehensive docs for OmniCode AI gateway",
+    title: "OmniCoder Documentation",
+    description: "Comprehensive docs for OmniCoder AI gateway",
   },
 };
 
@@ -26,7 +26,7 @@ const featuredLinks = [
     slug: "setup-guide",
     title: "Setup Guide",
     icon: "rocket_launch",
-    desc: "Get OmniCode running in 3 minutes",
+    desc: "Get OmniCoder running in 3 minutes",
   },
   {
     slug: "api-reference",
@@ -46,7 +46,7 @@ export default function DocsHomePage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-text-main mb-4">OmniCode Documentation</h1>
+        <h1 className="text-4xl font-bold text-text-main mb-4">OmniCoder Documentation</h1>
         <p className="text-lg text-text-muted mb-6">
           Everything you need to route, compress, and scale your AI
         </p>

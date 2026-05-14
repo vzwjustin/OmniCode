@@ -28,7 +28,7 @@ export default function BootstrapBanner() {
           You&apos;re running in zero-config mode
         </p>
         <p className="mt-0.5 text-amber-800/80 dark:text-amber-200/80">
-          OmniCode generated secure encryption keys for you on first launch and saved them to{" "}
+          OmniCoder generated secure encryption keys for you on first launch and saved them to{" "}
           <code className="font-mono bg-amber-200/50 dark:bg-amber-500/20 px-1 rounded text-xs">
             {dataDir}
           </code>

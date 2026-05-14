@@ -5,11 +5,11 @@ import LanguageSelector from "@/shared/components/LanguageSelector";
 
 export const metadata = {
   title: {
-    template: "%s — OmniCode Docs",
-    default: "OmniCode Documentation",
+    template: "%s — OmniCoder Docs",
+    default: "OmniCoder Documentation",
   },
   description:
-    "Comprehensive documentation for OmniCode AI gateway — setup, API, compression, deployment, and more.",
+    "Comprehensive documentation for OmniCoder AI gateway — setup, API, compression, deployment, and more.",
   robots: {
     index: true,
     follow: true,

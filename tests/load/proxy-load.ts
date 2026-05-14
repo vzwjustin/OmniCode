@@ -9,7 +9,7 @@
  *
  * Usage:
  *   k6 run tests/load/proxy-load.js
- *   k6 run tests/load/proxy-load.js --env BASE_URL=https://llms.omniroute.online
+ *   k6 run tests/load/proxy-load.js --env BASE_URL=https://llms.github.com/vzwjustin/OmniCode
  *   k6 run tests/load/proxy-load.js --env VUS=50 --env DURATION=120s
  *
  * Prerequisites:

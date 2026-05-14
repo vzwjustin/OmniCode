@@ -196,8 +196,8 @@ test("renderMarkdown converts italic text", () => {
 });
 
 test("renderMarkdown converts links", () => {
-  const html = renderMarkdown("[OmniRoute](https://omniroute.online)");
-  assert.ok(html.includes('href="https://omniroute.online"'));
+  const html = renderMarkdown("[OmniRoute](https://github.com/vzwjustin/OmniCode)");
+  assert.ok(html.includes('href="https://github.com/vzwjustin/OmniCode"'));
   assert.ok(html.includes("OmniRoute</a>"));
   assert.ok(html.includes('<a class="text-primary hover:underline"'));
 });

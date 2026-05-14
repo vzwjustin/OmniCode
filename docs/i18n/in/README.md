@@ -15,33 +15,33 @@ _Your universal API proxy — one endpoint, 100+ providers, zero downtime. Now w
 <div align="center">
 
 [![npm version](https://img.shields.io/npm/v/omniroute?color=cb3837&logo=npm)](https://www.npmjs.com/package/omniroute)
-[![Docker Hub](https://img.shields.io/docker/v/diegosouzapw/omniroute?label=Docker%20Hub&logo=docker&color=2496ED)](https://hub.docker.com/r/diegosouzapw/omniroute)
+[![Docker Hub](https://img.shields.io/docker/v/vzwjustin/omnicoder?label=Docker%20Hub&logo=docker&color=2496ED)](https://hub.docker.com/r/vzwjustin/omnicoder)
 
 ![NPM Downloads](https://img.shields.io/npm/dw/omniroute?label=npm%20down%20week&color=red)
 ![NPM Downloads](https://img.shields.io/npm/dm/omniroute?label=npm%20down%20month&color=red)
 
 ![NPM Downloads](https://img.shields.io/npm/d18m/omniroute?label=npm%20down%20year&color=red)
-![Docker Pulls](https://img.shields.io/docker/pulls/diegosouzapw/omniroute)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/diegosouzapw/omniroute/total?style=flat&label=eletron%20donwloads&color=blue)
+![Docker Pulls](https://img.shields.io/docker/pulls/vzwjustin/omnicoder)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/vzwjustin/omnicoder/total?style=flat&label=eletron%20donwloads&color=blue)
 
-[![stars](https://custom-icon-badges.demolab.com/github/stars/diegosouzapw/OmniRoute?logo=star&style=flat)](https://github.com/diegosouzapw/OmniRoute/stargazers)
-[![open issues](https://custom-icon-badges.demolab.com/github/issues-raw/diegosouzapw/OmniRoute?logo=issue)](https://github.com/diegosouzapw/OmniRoute/issues)
-[![license](https://custom-icon-badges.demolab.com/github/license/diegosouzapw/OmniRoute?logo=law)](https://github.com/diegosouzapw/OmniRoute/blob/main/LICENSE)
-[![last commit](https://custom-icon-badges.demolab.com/github/last-commit/diegosouzapw/OmniRoute?logo=history&logoColor=white)](https://github.com/diegosouzapw/OmniRoute/commits/main)
-[![total contributions](https://custom-icon-badges.demolab.com/badge/dynamic/json?logo=graph&logoColor=fff&color=blue&label=total%20contributions&query=%24.totalContributions&url=https%3A%2F%2Fstreak-stats.demolab.com%2F%3Fuser%3Ddiegosouzapw%26type%3Djson)](https://github.com/diegosouzapw)
-[![code size](https://custom-icon-badges.demolab.com/github/languages/code-size/diegosouzapw/OmniRoute?logo=file-code&logoColor=white)](https://github.com/diegosouzapw/OmniRoute)
-[![pr closed](https://custom-icon-badges.demolab.com/github/issues-pr-closed/diegosouzapw/OmniRoute?color=purple&logo=git-pull-request&logoColor=white)](https://github.com/diegosouzapw/OmniRoute/pulls?q=is%3Apr+is%3Aclosed)
-[![tag](https://custom-icon-badges.demolab.com/github/v/tag/diegosouzapw/OmniRoute?logo=tag&logoColor=white)](https://github.com/diegosouzapw/OmniRoute/tags)
-[![github streak](https://custom-icon-badges.demolab.com/badge/dynamic/json?logo=fire&logoColor=fff&color=orange&label=github%20streak&query=%24.currentStreak.length&suffix=%20days&url=https%3A%2F%2Fstreak-stats.demolab.com%2F%3Fuser%3Ddiegosouzapw%26type%3Djson)](https://github.com/diegosouzapw)
-[![followers](https://custom-icon-badges.demolab.com/github/followers/diegosouzapw?logo=person-add)](https://github.com/diegosouzapw?tab=followers)
-[![fork](https://custom-icon-badges.demolab.com/github/forks/diegosouzapw/OmniRoute?logo=fork)](https://github.com/diegosouzapw/OmniRoute/network/members)
-[![watch](https://custom-icon-badges.demolab.com/github/watchers/diegosouzapw/OmniRoute?logo=eye)](https://github.com/diegosouzapw/OmniRoute/watchers)
+[![stars](https://custom-icon-badges.demolab.com/github/stars/vzwjustin/OmniCode?logo=star&style=flat)](https://github.com/vzwjustin/OmniCode/stargazers)
+[![open issues](https://custom-icon-badges.demolab.com/github/issues-raw/vzwjustin/OmniCode?logo=issue)](https://github.com/vzwjustin/OmniCode/issues)
+[![license](https://custom-icon-badges.demolab.com/github/license/vzwjustin/OmniCode?logo=law)](https://github.com/vzwjustin/OmniCode/blob/main/LICENSE)
+[![last commit](https://custom-icon-badges.demolab.com/github/last-commit/vzwjustin/OmniCode?logo=history&logoColor=white)](https://github.com/vzwjustin/OmniCode/commits/main)
+[![total contributions](https://custom-icon-badges.demolab.com/badge/dynamic/json?logo=graph&logoColor=fff&color=blue&label=total%20contributions&query=%24.totalContributions&url=https%3A%2F%2Fstreak-stats.demolab.com%2F%3Fuser%3Dvzwjustin%26type%3Djson)](https://github.com/vzwjustin)
+[![code size](https://custom-icon-badges.demolab.com/github/languages/code-size/vzwjustin/OmniCode?logo=file-code&logoColor=white)](https://github.com/vzwjustin/OmniCode)
+[![pr closed](https://custom-icon-badges.demolab.com/github/issues-pr-closed/vzwjustin/OmniCode?color=purple&logo=git-pull-request&logoColor=white)](https://github.com/vzwjustin/OmniCode/pulls?q=is%3Apr+is%3Aclosed)
+[![tag](https://custom-icon-badges.demolab.com/github/v/tag/vzwjustin/OmniCode?logo=tag&logoColor=white)](https://github.com/vzwjustin/OmniCode/tags)
+[![github streak](https://custom-icon-badges.demolab.com/badge/dynamic/json?logo=fire&logoColor=fff&color=orange&label=github%20streak&query=%24.currentStreak.length&suffix=%20days&url=https%3A%2F%2Fstreak-stats.demolab.com%2F%3Fuser%3Dvzwjustin%26type%3Djson)](https://github.com/vzwjustin)
+[![followers](https://custom-icon-badges.demolab.com/github/followers/vzwjustin?logo=person-add)](https://github.com/vzwjustin?tab=followers)
+[![fork](https://custom-icon-badges.demolab.com/github/forks/vzwjustin/OmniCode?logo=fork)](https://github.com/vzwjustin/OmniCode/network/members)
+[![watch](https://custom-icon-badges.demolab.com/github/watchers/vzwjustin/OmniCode?logo=eye)](https://github.com/vzwjustin/OmniCode/watchers)
 
-[![License](https://img.shields.io/github/license/diegosouzapw/OmniRoute)](https://github.com/diegosouzapw/OmniRoute/blob/main/LICENSE)
-[![Website](https://img.shields.io/badge/Website-omniroute.online-blue?logo=google-chrome&logoColor=white)](https://omniroute.online)
+[![License](https://img.shields.io/github/license/vzwjustin/OmniCode)](https://github.com/vzwjustin/OmniCode/blob/main/LICENSE)
+[![Website](https://img.shields.io/badge/Website-github.com/vzwjustin/OmniCode-blue?logo=google-chrome&logoColor=white)](https://github.com/vzwjustin/OmniCode)
 [![WhatsApp](https://img.shields.io/badge/WhatsApp-Community-25D366?logo=whatsapp&logoColor=white)](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)
 
-[🌐 Website](https://omniroute.online) • [🚀 Quick Start](#-quick-start) • [💡 Features](#-key-features) • [📖 Docs](#-documentation) • [💰 Pricing](#-pricing-at-a-glance) • [💬 WhatsApp](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)
+[🌐 Website](https://github.com/vzwjustin/OmniCode) • [🚀 Quick Start](#-quick-start) • [💡 Features](#-key-features) • [📖 Docs](#-documentation) • [💰 Pricing](#-pricing-at-a-glance) • [💬 WhatsApp](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)
 
 </div>
 
@@ -159,7 +159,7 @@ _Connect any AI-powered IDE or CLI tool through OmniCode — free API gateway fo
     </tr>
   </table>
 
-<sub>📡 All agents connect via <code>http://localhost:20128/v1</code> or <code>http://cloud.omniroute.online/v1</code> — one config, unlimited models and quota</sub>
+<sub>📡 All agents connect via <code>http://localhost:20128/v1</code> or <code>http://cloud.github.com/vzwjustin/OmniCode/v1</code> — one config, unlimited models and quota</sub>
 
 ---
 
@@ -185,7 +185,7 @@ _Connect any AI-powered IDE or CLI tool through OmniCode — free API gateway fo
 
 > 💬 **Join our community!** [WhatsApp Group](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t) — Get help, share tips, and stay updated.
 
-- **Website**: [omniroute.online](https://omniroute.online)
+- **Website**: [github.com/vzwjustin/OmniCode](https://github.com/vzwjustin/OmniCode)
 - **GitHub**: [Source on GitHub](https://github.com/vzwjustin/OmniRoute)
 - **Issues**: [Report an issue](https://github.com/vzwjustin/OmniRoute/issues)
 - **WhatsApp**: [Community Group](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)
@@ -916,8 +916,8 @@ depends="openssl"
 short_desc="Universal AI gateway with smart routing for multiple LLM providers"
 maintainer="zenobit <zenobit@disroot.org>"
 license="MIT"
-homepage="https://github.com/diegosouzapw/OmniRoute"
-distfiles="https://github.com/diegosouzapw/OmniRoute/archive/refs/tags/v${version}.tar.gz"
+homepage="https://github.com/vzwjustin/OmniCode"
+distfiles="https://github.com/vzwjustin/OmniCode/archive/refs/tags/v${version}.tar.gz"
 checksum=009400afee90a9f32599d8fe734145cfd84098140b7287990183dde45ae2245b
 system_accounts="_omniroute"
 omniroute_homedir="/var/lib/omniroute"
@@ -1012,7 +1012,7 @@ post_install() {
 
 ## 🐳 Docker
 
-OmniCode is available as a public Docker image on [Docker Hub](https://hub.docker.com/r/diegosouzapw/omniroute).
+OmniCode is available as a public Docker image on [Docker Hub](https://hub.docker.com/r/vzwjustin/omnicoder).
 
 **Quick run:**
 
@@ -1023,7 +1023,7 @@ docker run -d \
   --stop-timeout 40 \
   -p 20128:20128 \
   -v omniroute-data:/app/data \
-  diegosouzapw/omniroute:latest
+  vzwjustin/omnicoder:latest
 ```
 
 **With environment file:**
@@ -1039,7 +1039,7 @@ docker run -d \
   --env-file .env \
   -p 20128:20128 \
   -v omniroute-data:/app/data \
-  diegosouzapw/omniroute:latest
+  vzwjustin/omnicoder:latest
 ```
 
 **Using Docker Compose:**
@@ -1072,7 +1072,7 @@ OmniCode can be securely exposed using Caddy's automatic SSL provisioning. Ensur
 ```yaml
 services:
   omniroute:
-    image: diegosouzapw/omniroute:latest
+    image: vzwjustin/omnicoder:latest
     container_name: omniroute
     restart: unless-stopped
     volumes:
@@ -1096,8 +1096,8 @@ volumes:
 
 | Image                    | Tag      | Size   | Description           |
 | ------------------------ | -------- | ------ | --------------------- |
-| `diegosouzapw/omniroute` | `latest` | ~250MB | Latest stable release |
-| `diegosouzapw/omniroute` | `3.6.2`  | ~250MB | Current version       |
+| `vzwjustin/omnicoder` | `latest` | ~250MB | Latest stable release |
+| `vzwjustin/omnicoder` | `3.6.2`  | ~250MB | Current version       |
 
 ---
 
@@ -2245,9 +2245,9 @@ Se não quiser criar credenciais próprias agora, ainda é possível usar o flux
 - **Auth**: OAuth 2.0 (PKCE) + JWT + API Keys + MCP Scoped Authorization
 - **Testing**: Node.js test runner + Vitest (900+ tests including unit, integration, E2E)
 - **CI/CD**: GitHub Actions (auto npm publish + Docker Hub on release)
-- **Website**: [omniroute.online](https://omniroute.online)
+- **Website**: [github.com/vzwjustin/OmniCode](https://github.com/vzwjustin/OmniCode)
 - **Package**: [npmjs.com/package/omniroute](https://www.npmjs.com/package/omniroute)
-- **Docker**: [hub.docker.com/r/diegosouzapw/omniroute](https://hub.docker.com/r/diegosouzapw/omniroute)
+- **Docker**: [hub.docker.com/r/vzwjustin/omnicoder](https://hub.docker.com/r/vzwjustin/omnicoder)
 - **Resilience**: Circuit breaker, exponential backoff, anti-thundering herd, TLS spoofing, auto-combo self-healing
 
 </details>
@@ -2305,7 +2305,7 @@ OmniCode has **218+ features planned** across multiple development phases. Here 
 
 ## 👥 Contributors
 
-[![Contributors](https://contrib.rocks/image?repo=diegosouzapw/OmniRoute&max=100&columns=20&anon=1)](https://github.com/diegosouzapw/OmniRoute/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=vzwjustin/OmniCode&max=100&columns=20&anon=1)](https://github.com/vzwjustin/OmniCode/graphs/contributors)
 
 ### How to Contribute
 
@@ -2328,21 +2328,21 @@ gh release create v2.0.0 --title "v2.0.0" --generate-notes
 
 ## 📊 Star History
 
-<a href="https://www.star-history.com/?repos=diegosouzapw%2Fomniroute&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=vzwjustin%2Fomniroute&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=diegosouzapw/omniroute&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=diegosouzapw/omniroute&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=diegosouzapw/omniroute&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=vzwjustin/omnicoder&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=vzwjustin/omnicoder&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=vzwjustin/omnicoder&type=date&legend=top-left" />
  </picture>
 </a>
 
 ## 🌍 StarMapper
 
-<a href="https://starmapper.bruniaux.com/diegosouzapw/omniroute">
+<a href="https://starmapper.bruniaux.com/vzwjustin/omnicoder">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://starmapper.bruniaux.com/api/map-image/diegosouzapw/omniroute?theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://starmapper.bruniaux.com/api/map-image/diegosouzapw/omniroute?theme=light" />
-    <img alt="StarMapper" src="https://starmapper.bruniaux.com/api/map-image/diegosouzapw/omniroute" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://starmapper.bruniaux.com/api/map-image/vzwjustin/omnicoder?theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://starmapper.bruniaux.com/api/map-image/vzwjustin/omnicoder?theme=light" />
+    <img alt="StarMapper" src="https://starmapper.bruniaux.com/api/map-image/vzwjustin/omnicoder" />
   </picture>
 </a>
 
@@ -2363,6 +2363,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 <div align="center">
   <sub>Built with ❤️ for developers who code 24/7</sub>
   <br/>
-  <sub><a href="https://omniroute.online">omniroute.online</a></sub>
+  <sub><a href="https://github.com/vzwjustin/OmniCode">github.com/vzwjustin/OmniCode</a></sub>
 </div>
 <!-- GitHub Discussions enabled for community Q&A -->

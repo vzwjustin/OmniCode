@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       if (missingTables.length > 0) {
         return NextResponse.json(
           {
-            error: `Invalid OmniCode database. Missing tables: ${missingTables.join(", ")}`,
+            error: `Invalid OmniCoder database. Missing tables: ${missingTables.join(", ")}`,
           },
           { status: 400 }
         );

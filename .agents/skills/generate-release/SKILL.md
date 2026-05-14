@@ -198,7 +198,7 @@ echo "" >> /tmp/changelog_body.txt
 echo "### ⚠️ After merging: run Phase 2 steps to tag, publish, and deploy." >> /tmp/changelog_body.txt
 
 gh pr create \
-  --repo diegosouzapw/OmniRoute \
+  --repo vzwjustin/OmniCode \
   --base main \
   --head release/v$VERSION \
   --title "Release v$VERSION" \
@@ -233,7 +233,7 @@ git checkout main
 git pull origin main
 
 # Build and pack locally
-cd /home/diegosouzapw/dev/proxys/OmniRoute && rm -f omniroute-*.tgz && rm -rf .next/cache app/.next/cache && npm run build:cli && rm -rf app/logs app/coverage app/.git app/.app-build-backup* && npm pack --ignore-scripts
+cd /home/vzwjustin/dev/proxys/OmniRoute && rm -f omniroute-*.tgz && rm -rf .next/cache app/.next/cache && npm run build:cli && rm -rf app/logs app/coverage app/.git app/.app-build-backup* && npm pack --ignore-scripts
 
 # Deploy to LOCAL VPS (192.168.0.15)
 scp omniroute-*.tgz root@192.168.0.15:/tmp/
@@ -271,7 +271,7 @@ if [ -z "$NOTES" ]; then NOTES="OmniRoute v$VERSION Release"; fi
 
 git tag -a "v$VERSION" -m "Release v$VERSION"
 git push origin "v$VERSION"
-gh release create "v$VERSION" --repo diegosouzapw/OmniRoute --title "v$VERSION" --notes "$NOTES" --target main || gh release edit "v$VERSION" --repo diegosouzapw/OmniRoute --title "v$VERSION" --notes "$NOTES"
+gh release create "v$VERSION" --repo vzwjustin/OmniCode --title "v$VERSION" --notes "$NOTES" --target main || gh release edit "v$VERSION" --repo vzwjustin/OmniCode --title "v$VERSION" --notes "$NOTES"
 ```
 
 ### 14. 🐳 Trigger Docker Hub build (MANDATORY — keep npm and Docker in sync)
@@ -282,10 +282,10 @@ gh release create "v$VERSION" --repo diegosouzapw/OmniRoute --title "v$VERSION" 
 
 ```bash
 # Verify the Docker workflow triggered
-gh run list --repo diegosouzapw/OmniRoute --workflow docker-publish.yml --limit 3
+gh run list --repo vzwjustin/OmniCode --workflow docker-publish.yml --limit 3
 
 # Wait for the Docker build to complete (usually 5–10 min)
-gh run watch --repo diegosouzapw/OmniRoute
+gh run watch --repo vzwjustin/OmniCode
 ```
 
 ### 15. Publish to NPM (Optional/Automated)
@@ -323,11 +323,11 @@ Wait for and verify the successful completion of the following automated jobs:
 
 ```bash
 # Monitor Docker Hub workflow
-gh run list --repo diegosouzapw/OmniRoute --workflow docker-publish.yml --limit 1
+gh run list --repo vzwjustin/OmniCode --workflow docker-publish.yml --limit 1
 gh run watch <RUN_ID>
 
 # Monitor Electron build
-gh run list --repo diegosouzapw/OmniRoute --workflow electron-release.yml --limit 1
+gh run list --repo vzwjustin/OmniCode --workflow electron-release.yml --limit 1
 gh run watch <RUN_ID>
 
 # Verify NPM version
@@ -340,7 +340,7 @@ If a workflow fails:
 
 - Use `gh run view <RUN_ID> --log-failed` to identify the error.
 - Apply the fix on the `main` branch.
-- If necessary, re-trigger the workflow using `gh workflow run <workflow_name.yml> --repo diegosouzapw/OmniRoute --ref v3.x.y`
+- If necessary, re-trigger the workflow using `gh workflow run <workflow_name.yml> --repo vzwjustin/OmniCode --ref v3.x.y`
 
 ### 20. Preserve release branch
 
@@ -356,7 +356,7 @@ If a workflow fails:
 - The `prepublishOnly` script runs `npm run build:cli` automatically during `npm publish`
 - After npm publish, verify with `npm info omniroute version`
 - Lock file sync errors are caused by skipping `npm install` after version bump
-- Use `gh auth switch -u diegosouzapw` if git push fails with wrong account
+- Use `gh auth switch -u vzwjustin` if git push fails with wrong account
 
 ## Known CI Pitfalls
 

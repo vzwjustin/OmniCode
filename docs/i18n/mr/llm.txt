@@ -28,7 +28,7 @@ OmniCode solves the problem of managing multiple AI provider subscriptions, quot
 - **Proxy engine:** Custom pipeline with format translation, circuit breaker, rate limiting, auto-combo engine
 - **i18n:** next-intl with 40+ languages
 - **Desktop:** Electron (cross-platform: Windows, macOS, Linux)
-- **Package:** Published on npm (`omniroute`) and Docker Hub (`diegosouzapw/omniroute`)
+- **Package:** Published on npm (`omniroute`) and Docker Hub (`vzwjustin/omnicoder`)
 
 ## Project Structure
 
@@ -497,10 +497,10 @@ OmniCode solves the problem of managing multiple AI provider subscriptions, quot
 
 ## Links
 
-- Repository: https://github.com/diegosouzapw/OmniRoute
-- Website: https://omniroute.online
+- Repository: https://github.com/vzwjustin/OmniCode
+- Website: https://github.com/vzwjustin/OmniCode
 - npm: https://www.npmjs.com/package/omniroute
-- Docker Hub: https://hub.docker.com/r/diegosouzapw/omniroute
+- Docker Hub: https://hub.docker.com/r/vzwjustin/omnicoder
 - Documentation: See `/docs/` directory
 
 ### Documentation Index

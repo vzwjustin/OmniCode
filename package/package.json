@@ -1,11 +1,11 @@
 {
-  "name": "omniroute",
+  "name": "omnicoder",
   "version": "3.8.0",
-  "description": "Unified AI router with 160+ providers, RTK+Caveman compression, auto fallback, MCP/A2A, desktop, PWA, and OpenAI-compatible APIs.",
+  "description": "Lean AI proxy for coding tools — one endpoint, 150+ providers, smart routing, compression, MCP server.",
   "type": "module",
   "bin": {
-    "omniroute": "bin/omniroute.mjs",
-    "omniroute-reset-password": "bin/reset-password.mjs"
+    "omnicoder": "bin/omnicoder.mjs",
+    "omnicoder-reset-password": "bin/reset-password.mjs"
   },
   "files": [
     "bin/",
@@ -54,12 +54,12 @@
     "auto-fallback"
   ],
   "license": "MIT",
-  "author": "diegosouzapw",
+  "author": "vzwjustin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/diegosouzapw/OmniRoute"
+    "url": "https://github.com/vzwjustin/OmniCode"
   },
-  "homepage": "https://omniroute.online",
+  "homepage": "https://github.com/vzwjustin/OmniCode",
   "scripts": {
     "dev": "node scripts/run-next.mjs dev",
     "prebuild:docs": "node scripts/generate-docs-index.mjs",
@@ -207,7 +207,7 @@
       "@swc/core",
       "better-sqlite3",
       "esbuild",
-      "omniroute",
+      "omnicoder",
       "sharp"
     ]
   },
