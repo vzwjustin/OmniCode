@@ -1,4 +1,4 @@
-# 🚀 OmniRoute — The Free AI Gateway (ไทย)
+# 🚀 OmniCode — The Free AI Gateway (ไทย)
 
 🌐 **Languages:** 🇺🇸 [English](../../../README.md) · 🇸🇦 [ar](../ar/README.md) · 🇧🇬 [bg](../bg/README.md) · 🇧🇩 [bn](../bn/README.md) · 🇨🇿 [cs](../cs/README.md) · 🇩🇰 [da](../da/README.md) · 🇩🇪 [de](../de/README.md) · 🇪🇸 [es](../es/README.md) · 🇮🇷 [fa](../fa/README.md) · 🇫🇮 [fi](../fi/README.md) · 🇫🇷 [fr](../fr/README.md) · 🇮🇳 [gu](../gu/README.md) · 🇮🇱 [he](../he/README.md) · 🇮🇳 [hi](../hi/README.md) · 🇭🇺 [hu](../hu/README.md) · 🇮🇩 [id](../id/README.md) · 🇮🇹 [it](../it/README.md) · 🇯🇵 [ja](../ja/README.md) · 🇰🇷 [ko](../ko/README.md) · 🇮🇳 [mr](../mr/README.md) · 🇲🇾 [ms](../ms/README.md) · 🇳🇱 [nl](../nl/README.md) · 🇳🇴 [no](../no/README.md) · 🇵🇭 [phi](../phi/README.md) · 🇵🇱 [pl](../pl/README.md) · 🇵🇹 [pt](../pt/README.md) · 🇧🇷 [pt-BR](../pt-BR/README.md) · 🇷🇴 [ro](../ro/README.md) · 🇷🇺 [ru](../ru/README.md) · 🇸🇰 [sk](../sk/README.md) · 🇸🇪 [sv](../sv/README.md) · 🇰🇪 [sw](../sw/README.md) · 🇮🇳 [ta](../ta/README.md) · 🇮🇳 [te](../te/README.md) · 🇹🇭 [th](../th/README.md) · 🇹🇷 [tr](../tr/README.md) · 🇺🇦 [uk-UA](../uk-UA/README.md) · 🇵🇰 [ur](../ur/README.md) · 🇻🇳 [vi](../vi/README.md) · 🇨🇳 [zh-CN](../zh-CN/README.md)
 
@@ -52,7 +52,7 @@ _Your universal API proxy — one endpoint, 100+ providers, zero downtime. Now w
 ## 🖼️ Main Dashboard
 
 <div align="center">
-  <img src="./docs/screenshots/MainOmniRoute.png" alt="OmniRoute Dashboard" width="800"/>
+  <img src="./docs/screenshots/MainOmniRoute.png" alt="OmniCode Dashboard" width="800"/>
 </div>
 
 ---
@@ -80,7 +80,7 @@ _Your universal API proxy — one endpoint, 100+ providers, zero downtime. Now w
 
 ### 🤖 Free AI Provider for your favorite coding agents
 
-_Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway for unlimited coding._
+_Connect any AI-powered IDE or CLI tool through OmniCode — free API gateway for unlimited coding._
 
   <table>
     <tr>
@@ -163,7 +163,7 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
 
 ---
 
-## 🤔 Why OmniRoute?
+## 🤔 Why OmniCode?
 
 **Stop wasting money and hitting limits:**
 
@@ -172,7 +172,7 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
 - <img src="https://img.shields.io/badge/✗-e74c3c?style=flat-square" height="16"/> Expensive APIs ($20-50/month per provider)
 - <img src="https://img.shields.io/badge/✗-e74c3c?style=flat-square" height="16"/> Manual switching between providers
 
-**OmniRoute solves this:**
+**OmniCode solves this:**
 
 - ✅ **Maximize subscriptions** - Track quota, use every bit before reset
 - ✅ **Auto fallback** - Subscription → API Key → Cheap → Free, zero downtime
@@ -200,7 +200,7 @@ When opening an issue, please run the system-info command and attach the generat
 npm run system-info
 ```
 
-This generates a `system-info.txt` with your Node.js version, OmniRoute version, OS details, installed CLI tools (qoder, gemini, claude, codex, antigravity, droid, etc.), Docker/PM2 status, and system packages — everything we need to reproduce your issue quickly. Attach the file directly to your GitHub issue.
+This generates a `system-info.txt` with your Node.js version, OmniCode version, OS details, installed CLI tools (qoder, gemini, claude, codex, antigravity, droid, etc.), Docker/PM2 status, and system packages — everything we need to reproduce your issue quickly. Attach the file directly to your GitHub issue.
 
 ---
 
@@ -214,7 +214,7 @@ This generates a `system-info.txt` with your Node.js version, OmniRoute version,
        │ http://localhost:20128/v1
        ↓
 ┌─────────────────────────────────────────┐
-│           OmniRoute (Smart Router)        │
+│           OmniCode (Smart Router)        │
 │  • Format translation (OpenAI ↔ Claude) │
 │  • Quota tracking + Embeddings + Images │
 │  • Auto token refresh                   │
@@ -233,16 +233,16 @@ Result: Never stop coding, minimal cost
 
 ---
 
-## 🎯 What OmniRoute Solves — 30 Real Pain Points & Use Cases
+## 🎯 What OmniCode Solves — 30 Real Pain Points & Use Cases
 
-> **Every developer using AI tools faces these problems daily.** OmniRoute was built to solve them all — from cost overruns to regional blocks, from broken OAuth flows to protocol operations and enterprise observability.
+> **Every developer using AI tools faces these problems daily.** OmniCode was built to solve them all — from cost overruns to regional blocks, from broken OAuth flows to protocol operations and enterprise observability.
 
 <details>
 <summary><b>💸 1. "I pay for an expensive subscription but still get interrupted by limits"</b></summary>
 
 Developers pay $20–200/month for Claude Pro, Codex Pro, or GitHub Copilot. Even paying, quota has a ceiling — 5h of usage, weekly limits, or per-minute rate limits. Mid-coding session, the provider stops responding and the developer loses flow and productivity.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Smart 4-Tier Fallback** — If subscription quota runs out, automatically redirects to API Key → Cheap → Free with zero manual intervention
 - **Provider Limits Tracking** — Cached quota snapshots refresh on a server-side schedule (default `PROVIDER_LIMITS_SYNC_INTERVAL_MINUTES=70`) with manual refresh available in the UI
@@ -259,7 +259,7 @@ Developers pay $20–200/month for Claude Pro, Codex Pro, or GitHub Copilot. Eve
 
 OpenAI uses one format, Claude (Anthropic) uses another, Gemini yet another. If a dev wants to test models from different providers or fallback between them, they need to reconfigure SDKs, change endpoints, deal with incompatible formats. Custom providers (FriendLI, NIM) have non-standard model endpoints.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Unified Endpoint** — A single `http://localhost:20128/v1` serves as proxy for all 100+ providers
 - **Format Translation** — Automatic and transparent: OpenAI ↔ Claude ↔ Gemini ↔ Responses API
@@ -276,7 +276,7 @@ OpenAI uses one format, Claude (Anthropic) uses another, Gemini yet another. If 
 
 Providers like OpenAI/Codex block access from certain geographic regions. Users get errors like `unsupported_country_region_territory` during OAuth and API connections. This is especially frustrating for developers from developing countries.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **3-Level Proxy Config** — Configurable proxy at 3 levels: global (all traffic), per-provider (one provider only), and per-connection/key
 - **Color-Coded Proxy Badges** — Visual indicators: 🟢 global proxy, 🟡 provider proxy, 🔵 connection proxy, always showing the IP
@@ -293,7 +293,7 @@ Providers like OpenAI/Codex block access from certain geographic regions. Users 
 
 Not everyone can pay $20–200/month for AI subscriptions. Students, devs from emerging countries, hobbyists, and freelancers need access to quality models at zero cost.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Free Tier Providers Built-in** — Native support for 100% free providers: Qoder (5 unlimited models via OAuth: kimi-k2-thinking, qwen3-coder-plus, deepseek-r1, minimax-m2, kimi-k2), Qwen (4 unlimited models: qwen3-coder-plus, qwen3-coder-flash, qwen3-coder-next, vision-model), Kiro (Claude + AWS Builder ID for free), Gemini CLI (180K tokens/month free)
 - **Ollama Cloud** — Cloud-hosted Ollama models at `api.ollama.com` with free "Light usage" tier; use `ollamacloud/<model>` prefix
@@ -308,7 +308,7 @@ Not everyone can pay $20–200/month for AI subscriptions. Students, devs from e
 
 When exposing an AI gateway to the network (LAN, VPS, Docker), anyone with the address can consume the developer's tokens/quota. Without protection, APIs are vulnerable to misuse, prompt injection, and abuse.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **API Key Management** — Generation, rotation, and scoping per provider with a dedicated `/dashboard/api-manager` page
 - **Model-Level Permissions** — Restrict API keys to specific models (`openai/*`, wildcard patterns), with Allow All/Restrict toggle
@@ -326,7 +326,7 @@ When exposing an AI gateway to the network (LAN, VPS, Docker), anyone with the a
 
 AI providers can become unstable, return 5xx errors, or hit temporary rate limits. If a dev depends on a single provider, they're interrupted. Without circuit breakers, repeated retries can crash the application.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Request Queue & Pacing** — Per-connection request buckets smooth bursts before they hit upstream rate caps
 - **Connection Cooldown** — A single connection cools down after retryable failures with optional upstream `Retry-After` hints and exponential backoff
@@ -343,7 +343,7 @@ AI providers can become unstable, return 5xx errors, or hit temporary rate limit
 
 Developers use Cursor, Claude Code, Codex CLI, OpenClaw, Gemini CLI, Kilo Code... Each tool needs a different config (API endpoint, key, model). Reconfiguring when switching providers or models is a waste of time.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **CLI Tools Dashboard** — Dedicated page with one-click setup for Claude Code, Codex CLI, OpenClaw, Kilo Code, Antigravity, Cline
 - **GitHub Copilot Config Generator** — Generates `chatLanguageModels.json` for VS Code with bulk model selection
@@ -357,7 +357,7 @@ Developers use Cursor, Claude Code, Codex CLI, OpenClaw, Gemini CLI, Kilo Code..
 
 Claude Code, Codex, Gemini CLI, Copilot — all use OAuth 2.0 with expiring tokens. Developers need to re-authenticate constantly, deal with `client_secret is missing`, `redirect_uri_mismatch`, and failures on remote servers. OAuth on LAN/VPS is particularly problematic.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Auto Token Refresh** — OAuth tokens refresh in background before expiration
 - **OAuth 2.0 (PKCE) Built-in** — Automatic flow for Claude Code, Codex, Gemini CLI, Copilot, Kiro, Qwen, Qoder
@@ -373,7 +373,7 @@ Claude Code, Codex, Gemini CLI, Copilot — all use OAuth 2.0 with expiring toke
 
 Developers use multiple paid providers but have no unified view of spending. Each provider has its own billing dashboard, but there's no consolidated view. Unexpected costs can pile up.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Cost Analytics Dashboard** — Per-token cost tracking and budget management per provider
 - **Budget Limits per Tier** — Spending ceiling per tier that triggers automatic fallback
@@ -388,7 +388,7 @@ Developers use multiple paid providers but have no unified view of spending. Eac
 
 When a call fails, the dev doesn't know if it was a rate limit, expired token, wrong format, or provider error. Fragmented logs across different terminals. Without observability, debugging is trial-and-error.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Unified Logs Dashboard** — 4 tabs: Request Logs, Proxy Logs, Audit Logs, Console
 - **Console Log Viewer** — Real-time terminal-style viewer with color-coded levels, auto-scroll, search, filter
@@ -396,7 +396,7 @@ When a call fails, the dev doesn't know if it was a rate limit, expired token, w
 - **Translator Playground** — 4 debugging modes: Playground (format translation), Chat Tester (round-trip), Test Bench (batch), Live Monitor (real-time)
 - **Request Telemetry** — p50/p95/p99 latency + X-Request-Id tracing
 - **File-Based Detail Artifacts** — App logs rotate by size, retention days, and archive count; detailed request/response payloads live in `DATA_DIR/call_logs/` and rotate independently of SQLite summaries
-- **System Info Report** — `npm run system-info` generates `system-info.txt` with your full environment (Node version, OmniRoute version, OS, CLI tools, Docker/PM2 status). Attach it when reporting issues for instant triage.
+- **System Info Report** — `npm run system-info` generates `system-info.txt` with your full environment (Node version, OmniCode version, OS, CLI tools, Docker/PM2 status). Attach it when reporting issues for instant triage.
 
 </details>
 
@@ -405,7 +405,7 @@ When a call fails, the dev doesn't know if it was a rate limit, expired token, w
 
 Installing, configuring, and maintaining an AI proxy across different environments (local, VPS, Docker, cloud) is labor-intensive. Problems like hardcoded paths, `EACCES` on directories, port conflicts, and cross-platform builds add friction.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **npm global install** — `npm install -g omniroute && omniroute` — done
 - **Docker Multi-Platform** — AMD64 + ARM64 native (Apple Silicon, AWS Graviton, Raspberry Pi)
@@ -422,7 +422,7 @@ Installing, configuring, and maintaining an AI proxy across different environmen
 
 Teams in non-English-speaking countries, especially in Latin America, Asia, and Europe, struggle with English-only interfaces. Language barriers reduce adoption and increase configuration errors.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Dashboard i18n — 30 Languages** — All 500+ keys translated including Arabic, Bulgarian, Danish, German, Spanish, Finnish, French, Hebrew, Hindi, Hungarian, Indonesian, Italian, Japanese, Korean, Malay, Dutch, Norwegian, Polish, Portuguese (PT/BR), Romanian, Russian, Slovak, Swedish, Thai, Ukrainian, Vietnamese, Chinese, Filipino, English
 - **RTL Support** — Right-to-left support for Arabic and Hebrew
@@ -436,7 +436,7 @@ Teams in non-English-speaking countries, especially in Latin America, Asia, and 
 
 AI isn't just chat completion. Devs need to generate images, transcribe audio, create embeddings for RAG, rerank documents, and moderate content. Each API has a different endpoint and format.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Embeddings** — `/v1/embeddings` with 6 providers and 9+ models
 - **Image Generation** — `/v1/images/generations` with 10 providers and 20+ models (OpenAI, xAI, Together, Fireworks, Nebius, Hyperbolic, NanoBanana, Antigravity, SD WebUI, ComfyUI)
@@ -455,7 +455,7 @@ AI isn't just chat completion. Devs need to generate images, transcribe audio, c
 
 Developers want to know which model is best for their use case — code, translation, reasoning — but comparing manually is slow. No integrated eval tools exist.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **LLM Evaluations** — Golden set testing with 10 pre-loaded cases covering greetings, math, geography, code generation, JSON compliance, translation, markdown, safety refusal
 - **4 Match Strategies** — `exact`, `contains`, `regex`, `custom` (JS function)
@@ -470,7 +470,7 @@ Developers want to know which model is best for their use case — code, transla
 
 As request volume grows, without caching the same questions generate duplicate costs. Without idempotency, duplicate requests waste processing. Per-provider rate limits must be respected.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Semantic Cache** — Two-tier cache (signature + semantic) reduces cost and latency
 - **Request Idempotency** — 5s deduplication window for identical requests
@@ -486,7 +486,7 @@ As request volume grows, without caching the same questions generate duplicate c
 
 Developers who want all responses in a specific language, with a specific tone, or want to limit reasoning tokens. Configuring this in every tool/request is impractical.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **System Prompt Injection** — Global prompt applied to all requests
 - **Thinking Budget Validation** — Reasoning token allocation control per request (passthrough, auto, custom, adaptive)
@@ -504,7 +504,7 @@ Developers who want all responses in a specific language, with a specific tone, 
 
 Many AI gateways expose MCP only as a hidden implementation detail. Teams need a visible, manageable operation layer.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - MCP appears in the dashboard navigation and endpoint protocol tab
 - Dedicated MCP management page with process, tools, scopes, and audit
@@ -517,7 +517,7 @@ Many AI gateways expose MCP only as a hidden implementation detail. Teams need a
 
 Agent workflows need both direct replies and long-running streamed execution with lifecycle control.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - A2A JSON-RPC endpoint (`POST /a2a`) with `message/send` and `message/stream`
 - SSE streaming with terminal state propagation
@@ -530,7 +530,7 @@ Agent workflows need both direct replies and long-running streamed execution wit
 
 Operational teams need to know if MCP is actually alive, not just whether an API is reachable.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - Runtime heartbeat file with PID, timestamps, transport, tool count, and scope mode
 - MCP status API combining heartbeat + recent activity
@@ -543,7 +543,7 @@ Operational teams need to know if MCP is actually alive, not just whether an API
 
 When tools mutate config or trigger ops actions, teams need forensic traceability.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - SQLite-backed audit logging for MCP tool calls
 - Filters by tool, success/failure, API key, and pagination
@@ -556,7 +556,7 @@ When tools mutate config or trigger ops actions, teams need forensic traceabilit
 
 Different clients should have least-privilege access to tool categories.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - 10 granular MCP scopes for controlled tool access
 - Scope enforcement and visibility in MCP management UI
@@ -569,7 +569,7 @@ Different clients should have least-privilege access to tool categories.
 
 Teams need quick runtime changes during incidents or cost events.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - Switch combo activation directly from MCP dashboard
 - Tune queue, cooldown, breaker, and wait settings from the dedicated Resilience page
@@ -582,7 +582,7 @@ Teams need quick runtime changes during incidents or cost events.
 
 Without lifecycle visibility, task incidents become hard to triage.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - Task listing/filtering by state/skill with pagination
 - Drill-down on task metadata, events, and artifacts
@@ -595,7 +595,7 @@ Without lifecycle visibility, task incidents become hard to triage.
 
 Streaming workflows require operational insight into concurrency and live connections.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - Active stream counters integrated into A2A status
 - Last task timestamp and per-state counts
@@ -608,7 +608,7 @@ Streaming workflows require operational insight into concurrency and live connec
 
 External clients and orchestrators need machine-readable metadata for onboarding.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - Agent Card exposed at `/.well-known/agent.json`
 - Capabilities and skills shown in management UI
@@ -621,7 +621,7 @@ External clients and orchestrators need machine-readable metadata for onboarding
 
 If users cannot discover protocol surfaces, adoption and support quality drop.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - Consolidated **Endpoints** page with tabs for Proxy, MCP, A2A, and API Endpoints
 - Inline service status toggles (Online/Offline) for MCP and A2A
@@ -634,7 +634,7 @@ If users cannot discover protocol surfaces, adoption and support quality drop.
 
 Mock tests are not enough to validate protocol compatibility before release.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - E2E suite that boots app and uses real MCP SDK client transport
 - A2A client tests for discovery, send, stream, get, and cancel flows
@@ -647,7 +647,7 @@ Mock tests are not enough to validate protocol compatibility before release.
 
 Splitting observability by protocol creates blind spots and longer MTTR.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - Unified dashboards/logs/analytics in one product
 - Health + audit + request telemetry across OpenAI, MCP, and A2A layers
@@ -660,7 +660,7 @@ Splitting observability by protocol creates blind spots and longer MTTR.
 
 Running many separate services increases operational cost and failure modes.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - OpenAI-compatible proxy, MCP server, and A2A server in one stack
 - Shared auth, resilience, data store, and observability
@@ -673,7 +673,7 @@ Running many separate services increases operational cost and failure modes.
 
 Teams lose velocity when stitching multiple ad-hoc services and scripts.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - Unified endpoint strategy for clients and agents
 - Built-in protocol management UIs and smoke validation paths
@@ -686,7 +686,7 @@ Teams lose velocity when stitching multiple ad-hoc services and scripts.
 
 During deep debugging, long histories with tool results quickly exceed provider token windows, causing failed requests and orphaned context.
 
-**How OmniRoute solves it:**
+**How OmniCode solves it:**
 
 - **Proactive Context Compression** — Evaluates token budgets before the request hits upstream and proactively prunes old conversation history with a smart binary-search mechanism.
 - **Structural Integrity Guards** — Automatically tracks explicit `tool_use` definitions and ensures that if a tool input is truncated, its corresponding `tool_result` is also safely removed, preventing API validation errors.
@@ -781,7 +781,7 @@ Dashboard opens at `http://localhost:20128` and API base URL is `http://localhos
 
 #### Arch Linux (AUR)
 
-Arch Linux users can install the [AUR package](https://aur.archlinux.org/packages/omniroute-bin), which installs OmniRoute and provides a systemd user service:
+Arch Linux users can install the [AUR package](https://aur.archlinux.org/packages/omniroute-bin), which installs OmniCode and provides a systemd user service:
 
 ```bash
 yay -S omniroute-bin
@@ -806,14 +806,14 @@ PORT=20128 DASHBOARD_PORT=20129 omniroute
 
 ### 2) Uninstalling
 
-When you no longer need OmniRoute, we provide two quick scripts for a clean removal:
+When you no longer need OmniCode, we provide two quick scripts for a clean removal:
 
 | Command                  | Action                                                                              |
 | ------------------------ | ----------------------------------------------------------------------------------- |
 | `npm run uninstall`      | Removes the system app but **keeps your DB and configurations** in `~/.omniroute`.  |
 | `npm run uninstall:full` | Removes the app AND permanently **erases all configurations, keys, and databases**. |
 
-> Note: To run these commands, navigate to the OmniRoute project folder (if you cloned it) and run them. Alternatively, if globally installed, you can simply run `npm uninstall -g omniroute`.
+> Note: To run these commands, navigate to the OmniCode project folder (if you cloned it) and run them. Alternatively, if globally installed, you can simply run `npm uninstall -g omniroute`.
 
 ### Long-Running Streaming Timeouts
 
@@ -822,16 +822,16 @@ For most deployments, you only need:
 | Variable                 | Default                       | Purpose                                                                                                                                      |
 | ------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `REQUEST_TIMEOUT_MS`     | `600000`                      | Shared baseline for upstream response-start timeout, hidden Undici timeouts, TLS fingerprint requests, and API bridge request/proxy timeouts |
-| `STREAM_IDLE_TIMEOUT_MS` | inherits `REQUEST_TIMEOUT_MS` | Maximum gap between streaming chunks before OmniRoute aborts the SSE stream                                                                  |
+| `STREAM_IDLE_TIMEOUT_MS` | inherits `REQUEST_TIMEOUT_MS` | Maximum gap between streaming chunks before OmniCode aborts the SSE stream                                                                  |
 
 Backward compatibility is preserved: existing `FETCH_TIMEOUT_MS`, `API_BRIDGE_PROXY_TIMEOUT_MS`, and other per-layer timeout vars still work and override the shared baseline.
 
-For Claude Code-compatible upstreams (`anthropic-compatible-cc-*`), OmniRoute also derives the outbound `X-Stainless-Timeout` header from the resolved fetch timeout so provider-side read timeouts stay aligned with your env configuration.
+For Claude Code-compatible upstreams (`anthropic-compatible-cc-*`), OmniCode also derives the outbound `X-Stainless-Timeout` header from the resolved fetch timeout so provider-side read timeouts stay aligned with your env configuration.
 
-For third-party Claude Code-compatible reverse proxies, OmniRoute keeps the default
+For third-party Claude Code-compatible reverse proxies, OmniCode keeps the default
 `anthropic-beta` set conservative and, when `Client Cache Control` is left on `Auto`,
 only forwards client-provided `cache_control` markers. If the request does not include
-`cache_control`, OmniRoute does not inject bridge-owned markers.
+`cache_control`, OmniCode does not inject bridge-owned markers.
 
 Advanced overrides are available if you need finer control:
 
@@ -849,10 +849,10 @@ Advanced overrides are available if you need finer control:
 | `API_BRIDGE_SERVER_KEEPALIVE_TIMEOUT_MS` | `5000`                                     | Keep-alive timeout on the API bridge server                          |
 | `API_BRIDGE_SERVER_SOCKET_TIMEOUT_MS`    | `0`                                        | Socket inactivity timeout on the API bridge server (`0` disables it) |
 
-For streaming requests, `FETCH_TIMEOUT_MS` only covers connection setup / waiting for the first upstream response. Once the stream is active, OmniRoute will only abort on an actual stall (`STREAM_IDLE_TIMEOUT_MS`) or Undici body inactivity (`FETCH_BODY_TIMEOUT_MS`).
+For streaming requests, `FETCH_TIMEOUT_MS` only covers connection setup / waiting for the first upstream response. Once the stream is active, OmniCode will only abort on an actual stall (`STREAM_IDLE_TIMEOUT_MS`) or Undici body inactivity (`FETCH_BODY_TIMEOUT_MS`).
 
-If you run OmniRoute behind Nginx, Caddy, Cloudflare, or another reverse proxy, make sure the proxy
-timeouts are also higher than your OmniRoute stream/fetch timeouts.
+If you run OmniCode behind Nginx, Caddy, Cloudflare, or another reverse proxy, make sure the proxy
+timeouts are also higher than your OmniCode stream/fetch timeouts.
 
 ### 2) Connect providers and create your API key
 
@@ -860,7 +860,7 @@ timeouts are also higher than your OmniRoute stream/fetch timeouts.
 2. Open Dashboard → `Endpoints` and create an API key.
 3. (Optional) Open Dashboard → `Combos` and set your fallback chain.
 
-### 3) Point your coding tool to OmniRoute
+### 3) Point your coding tool to OmniCode
 
 ```txt
 Base URL: http://localhost:20128/v1
@@ -1022,7 +1022,7 @@ post_install() {
 
 ## 🐳 Docker
 
-OmniRoute is available as a public Docker image on [Docker Hub](https://hub.docker.com/r/diegosouzapw/omniroute).
+OmniCode is available as a public Docker image on [Docker Hub](https://hub.docker.com/r/diegosouzapw/omniroute).
 
 **Quick run:**
 
@@ -1067,17 +1067,17 @@ Dashboard support for Docker deployments now includes a one-click **Cloudflare Q
 Notes:
 
 - Quick Tunnel URLs are temporary and change after every restart.
-- Quick Tunnels are not auto-restored after an OmniRoute or container restart. Re-enable them from the dashboard when needed.
+- Quick Tunnels are not auto-restored after an OmniCode or container restart. Re-enable them from the dashboard when needed.
 - Managed install currently supports Linux, macOS, and Windows on `x64` / `arm64`.
 - Managed Quick Tunnels default to HTTP/2 transport to avoid noisy QUIC UDP buffer warnings in constrained container environments. Set `CLOUDFLARED_PROTOCOL=quic` or `auto` if you want a different transport.
 - Docker images bundle system CA roots and pass them to managed `cloudflared`, which avoids TLS trust failures when the tunnel bootstraps inside the container.
-- SQLite runs in WAL mode. `docker stop` should be allowed to finish so OmniRoute can checkpoint the latest changes back into `storage.sqlite`.
+- SQLite runs in WAL mode. `docker stop` should be allowed to finish so OmniCode can checkpoint the latest changes back into `storage.sqlite`.
 - The bundled Compose files already set a 40s stop grace period. If you run the image directly, keep `--stop-timeout 40` (or similar) so manual stops do not cut off shutdown cleanup.
-- Set `CLOUDFLARED_BIN=/absolute/path/to/cloudflared` if you want OmniRoute to use an existing binary instead of downloading one.
+- Set `CLOUDFLARED_BIN=/absolute/path/to/cloudflared` if you want OmniCode to use an existing binary instead of downloading one.
 
 **Using Docker Compose with Caddy (HTTPS Auto-TLS):**
 
-OmniRoute can be securely exposed using Caddy's automatic SSL provisioning. Ensure your domain's DNS A record points to your server's IP.
+OmniCode can be securely exposed using Caddy's automatic SSL provisioning. Ensure your domain's DNS A record points to your server's IP.
 
 ```yaml
 services:
@@ -1113,12 +1113,12 @@ volumes:
 
 ## 🖥️ Desktop App — Offline & Always-On
 
-> 🆕 **NEW!** OmniRoute is now available as a **native desktop application** for Windows, macOS, and Linux.
+> 🆕 **NEW!** OmniCode is now available as a **native desktop application** for Windows, macOS, and Linux.
 
-Run OmniRoute as a standalone desktop app — no terminal, no browser, no internet required for local models. The Electron-based app includes:
+Run OmniCode as a standalone desktop app — no terminal, no browser, no internet required for local models. The Electron-based app includes:
 
 - 🖥️ **Native Window** — Dedicated app window with system tray integration
-- 🔄 **Auto-Start** — Launch OmniRoute on system login
+- 🔄 **Auto-Start** — Launch OmniCode on system login
 - 🔔 **Native Notifications** — Get alerts for quota exhaustion or provider issues
 - ⚡ **One-Click Install** — NSIS (Windows), DMG (macOS), AppImage (Linux)
 - 🌐 **Offline Mode** — Works fully offline with bundled server
@@ -1138,7 +1138,7 @@ npm run electron:build:linux   # Linux (.AppImage)
 
 ### System Tray
 
-When minimized, OmniRoute lives in your system tray with quick actions:
+When minimized, OmniCode lives in your system tray with quick actions:
 
 - Open dashboard
 - Change server port
@@ -1197,7 +1197,7 @@ NVIDIA NIM (nvidia/)   → 70+ open models — 40 RPM forever
 Cerebras (cerebras/)   → Llama/Qwen world-fastest — 1M tok/day
 ```
 
-**Zero cost. Never stops coding.** Configure this as one OmniRoute combo and all fallbacks happen automatically — no manual switching ever.
+**Zero cost. Never stops coding.** Configure this as one OmniCode combo and all fallbacks happen automatically — no manual switching ever.
 
 ---
 
@@ -1205,7 +1205,7 @@ Cerebras (cerebras/)   → Llama/Qwen world-fastest — 1M tok/day
 
 ## 🆓 Free Models — What You Actually Get
 
-> All models below are **100% free with zero credit card required**. OmniRoute auto-routes between them when one quota runs out — combine them all for an unbreakable $0 combo.
+> All models below are **100% free with zero credit card required**. OmniCode auto-routes between them when one quota runs out — combine them all for an unbreakable $0 combo.
 
 ### 🔵 CLAUDE MODELS (via Kiro — AWS Builder ID)
 
@@ -1354,7 +1354,7 @@ Then in `/dashboard/media` → **Transcription** tab: upload any audio or video 
 
 ## 💡 Key Features
 
-OmniRoute v3.6 is built as an operational platform, not just a relay proxy.
+OmniCode v3.6 is built as an operational platform, not just a relay proxy.
 
 ### 🆕 New — v3.6.x Highlights (Apr 2026)
 
@@ -1534,7 +1534,7 @@ Combo: "my-coding-stack"
   4. if/kimi-k2-thinking
 ```
 
-When quota, rate, or health fails, OmniRoute automatically moves to the next candidate without manual switching.
+When quota, rate, or health fails, OmniCode automatically moves to the next candidate without manual switching.
 
 #### Protocol management that is visible and operable
 
@@ -1559,11 +1559,11 @@ Plus protocol validation with real clients via `npm run test:protocols:e2e`.
 
 ## 🧪 Evaluations (Evals)
 
-OmniRoute includes a built-in evaluation framework to test LLM response quality against a golden set. Access it via **Analytics → Evals** in the dashboard.
+OmniCode includes a built-in evaluation framework to test LLM response quality against a golden set. Access it via **Analytics → Evals** in the dashboard.
 
 ### Built-in Golden Set
 
-The pre-loaded "OmniRoute Golden Set" contains test cases for:
+The pre-loaded "OmniCode Golden Set" contains test cases for:
 
 - Greetings, math, geography, code generation
 - JSON format compliance, translation, markdown generation
@@ -1672,7 +1672,7 @@ Models:
   cc/claude-haiku-4-5-20251001
 ```
 
-**Pro Tip:** Use Opus for complex tasks, Sonnet for speed. OmniRoute tracks quota per model!
+**Pro Tip:** Use Opus for complex tasks, Sonnet for speed. OmniCode tracks quota per model!
 
 ### OpenAI Codex (Plus/Pro)
 
@@ -1693,7 +1693,7 @@ Each Codex account now has policy toggles in `Dashboard -> Providers`:
 - `5h` (ON/OFF): enforce the 5-hour window threshold policy.
 - `Weekly` (ON/OFF): enforce the weekly window threshold policy.
 - Threshold behavior: when an enabled window reaches >=90% usage, that account is skipped.
-- Rotation behavior: OmniRoute routes to the next eligible Codex account automatically.
+- Rotation behavior: OmniCode routes to the next eligible Codex account automatically.
 - Reset behavior: when the provider `resetAt` time passes, the account becomes eligible again automatically.
 
 Scenarios:
@@ -1744,7 +1744,7 @@ Models:
 
 **Models:** `nvidia/llama-3.3-70b-instruct`, `nvidia/mistral-7b-instruct`, and 50+ more
 
-**Pro Tip:** OpenAI-compatible API — works seamlessly with OmniRoute's format translation!
+**Pro Tip:** OpenAI-compatible API — works seamlessly with OmniCode's format translation!
 
 ### DeepSeek
 
@@ -1896,7 +1896,7 @@ Cost: $0 forever!
 ```
 Settings → Models → Advanced:
   OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [from OmniRoute dashboard]
+  OpenAI API Key: [from OmniCode dashboard]
   Model: cc/claude-opus-4-7
 ```
 
@@ -1937,7 +1937,7 @@ Dashboard → CLI Tools → OpenClaw → Select Model → Apply
 }
 ```
 
-> **Note:** OpenClaw only works with local OmniRoute. Use `127.0.0.1` instead of `localhost` to avoid IPv6 resolution issues.
+> **Note:** OpenClaw only works with local OmniCode. Use `127.0.0.1` instead of `localhost` to avoid IPv6 resolution issues.
 
 ### Cline / Continue / RooCode
 
@@ -1945,18 +1945,18 @@ Dashboard → CLI Tools → OpenClaw → Select Model → Apply
 Settings → API Configuration:
   Provider: OpenAI Compatible
   Base URL: http://localhost:20128/v1
-  API Key: [from OmniRoute dashboard]
+  API Key: [from OmniCode dashboard]
   Model: if/kimi-k2-thinking
 ```
 
 ### OpenCode
 
-**Step 1:** Add OmniRoute as a custom provider:
+**Step 1:** Add OmniCode as a custom provider:
 
 ```bash
 opencode
 /connect
-# Select "Other" → Enter ID: "omniroute" → Enter your OmniRoute API key
+# Select "Other" → Enter ID: "omniroute" → Enter your OmniCode API key
 ```
 
 **Step 2:** Create/edit `opencode.json` in your project root:
@@ -1967,7 +1967,7 @@ opencode
   "provider": {
     "omniroute": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OmniRoute",
+      "name": "OmniCode",
       "options": {
         "baseURL": "http://localhost:20128/v1"
       },
@@ -1985,10 +1985,10 @@ opencode
 
 ```bash
 /models
-# Select any OmniRoute model from the list
+# Select any OmniCode model from the list
 ```
 
-> **Tip:** Add any model available in your OmniRoute `/v1/models` endpoint to the `models` section. Use the format `provider/model-id` from your OmniRoute dashboard.
+> **Tip:** Add any model available in your OmniCode `/v1/models` endpoint to the `models` section. Use the format `provider/model-id` from your OmniCode dashboard.
 
 </details>
 
@@ -2011,7 +2011,7 @@ opencode
 
 **OAuth token expired**
 
-- Auto-refreshed by OmniRoute
+- Auto-refreshed by OmniCode
 - If issues persist: Dashboard → Provider → Reconnect
 
 **High costs**
@@ -2050,7 +2050,7 @@ opencode
 **Connection test shows "Invalid" for OpenAI-compatible providers**
 
 - Many providers don't expose a `/models` endpoint
-- OmniRoute v1.0.6+ includes fallback validation via chat completions
+- OmniCode v1.0.6+ includes fallback validation via chat completions
 - Ensure base URL includes `/v1` suffix
 
 ### 🔐 OAuth on a Remote Server
@@ -2058,13 +2058,13 @@ opencode
 <a name="oauth-on-a-remote-server"></a>
 <a name="oauth-em-servidor-remoto"></a>
 
-> **⚠️ Important for users running OmniRoute on a VPS, Docker, or any remote server**
+> **⚠️ Important for users running OmniCode on a VPS, Docker, or any remote server**
 
 #### Why does Antigravity / Gemini CLI OAuth fail on remote servers?
 
 The **Antigravity** and **Gemini CLI** providers use **Google OAuth 2.0**. Google requires the `redirect_uri` in the OAuth flow to exactly match one of the pre-registered URIs in the app's Google Cloud Console.
 
-The OAuth credentials bundled in OmniRoute are registered **for `localhost` only**. When you access OmniRoute on a remote server (e.g. `https://omniroute.myserver.com`), Google rejects the authentication with:
+The OAuth credentials bundled in OmniCode are registered **for `localhost` only**. When you access OmniCode on a remote server (e.g. `https://omniroute.myserver.com`), Google rejects the authentication with:
 
 ```
 Error 400: redirect_uri_mismatch
@@ -2084,7 +2084,7 @@ Go to: [https://console.cloud.google.com/apis/credentials](https://console.cloud
 
 - Click **"+ Create Credentials"** → **"OAuth client ID"**
 - Application type: **"Web application"**
-- Name: anything you like (e.g. `OmniRoute Remote`)
+- Name: anything you like (e.g. `OmniCode Remote`)
 
 **3. Add Authorized Redirect URIs**
 
@@ -2115,7 +2115,7 @@ GEMINI_OAUTH_CLIENT_SECRET=GOCSPX-your-secret
 GEMINI_CLI_OAUTH_CLIENT_SECRET=GOCSPX-your-secret
 ```
 
-**6. Restart OmniRoute**
+**6. Restart OmniCode**
 
 ```bash
 # npm:
@@ -2137,10 +2137,10 @@ Google will now redirect correctly to `https://your-server.com/callback`.
 
 If you don't want to set up your own credentials right now, you can still use the **manual URL flow**:
 
-1. OmniRoute opens the Google authorization URL
+1. OmniCode opens the Google authorization URL
 2. After authorizing, Google tries to redirect to `localhost` (which fails on the remote server)
 3. **Copy the full URL** from your browser's address bar (even if the page doesn't load)
-4. Paste that URL into the field shown in the OmniRoute connection modal
+4. Paste that URL into the field shown in the OmniCode connection modal
 5. Click **"Connect"**
 
 > This works because the authorization code in the URL is valid regardless of whether the redirect page loaded.
@@ -2154,7 +2154,7 @@ If you don't want to set up your own credentials right now, you can still use th
 
 Os provedores **Antigravity** e **Gemini CLI** usam **Google OAuth 2.0** para autenticação. O Google exige que a `redirect_uri` usada no fluxo OAuth seja **exatamente** uma das URIs pré-cadastradas no Google Cloud Console do aplicativo.
 
-As credenciais OAuth embutidas no OmniRoute estão cadastradas **apenas para `localhost`**. Quando você acessa o OmniRoute em um servidor remoto (ex: `https://omniroute.meuservidor.com`), o Google rejeita a autenticação com:
+As credenciais OAuth embutidas no OmniCode estão cadastradas **apenas para `localhost`**. Quando você acessa o OmniCode em um servidor remoto (ex: `https://omniroute.meuservidor.com`), o Google rejeita a autenticação com:
 
 ```
 Error 400: redirect_uri_mismatch
@@ -2174,7 +2174,7 @@ Abra: [https://console.cloud.google.com/apis/credentials](https://console.cloud.
 
 - Clique em **"+ Create Credentials"** → **"OAuth client ID"**
 - Tipo de aplicativo: **"Web application"**
-- Nome: escolha qualquer nome (ex: `OmniRoute Remote`)
+- Nome: escolha qualquer nome (ex: `OmniCode Remote`)
 
 **3. Adicione as Authorized Redirect URIs**
 
@@ -2205,7 +2205,7 @@ GEMINI_OAUTH_CLIENT_SECRET=GOCSPX-seu-secret
 GEMINI_CLI_OAUTH_CLIENT_SECRET=GOCSPX-seu-secret
 ```
 
-**6. Reinicie o OmniRoute**
+**6. Reinicie o OmniCode**
 
 ```bash
 # Se usando npm:
@@ -2227,10 +2227,10 @@ Agora o Google redirecionará corretamente para `https://seu-servidor.com/callba
 
 Se não quiser criar credenciais próprias agora, ainda é possível usar o fluxo **manual de URL**:
 
-1. O OmniRoute abrirá a URL de autorização do Google
+1. O OmniCode abrirá a URL de autorização do Google
 2. Após você autorizar, o Google tentará redirecionar para `localhost` (que falha no servidor remoto)
 3. **Copie a URL completa** da barra de endereço do seu browser (mesmo que a página não carregue)
-4. Cole essa URL no campo que aparece no modal de conexão do OmniRoute
+4. Cole essa URL no campo que aparece no modal de conexão do OmniCode
 5. Clique em **"Connect"**
 
 > Este workaround funciona porque o código de autorização na URL é válido independente do redirect ter carregado ou não.
@@ -2291,7 +2291,7 @@ Se não quiser criar credenciais próprias agora, ainda é possível usar o flux
 
 ## 🗺️ Roadmap
 
-OmniRoute has **218+ features planned** across multiple development phases. Here are the key areas:
+OmniCode has **218+ features planned** across multiple development phases. Here are the key areas:
 
 | Category                      | Planned Features | Highlights                                                                                            |
 | ----------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------- |
@@ -2359,7 +2359,7 @@ gh release create v2.0.0 --title "v2.0.0" --generate-notes
 
 ## 🙏 Acknowledgments
 
-Special thanks to **[9router](https://github.com/decolua/9router)** by **[decolua](https://github.com/decolua)** — the original project that inspired this fork. OmniRoute builds upon that incredible foundation with additional features, multi-modal APIs, and a full TypeScript rewrite.
+Special thanks to **[9router](https://github.com/decolua/9router)** by **[decolua](https://github.com/decolua)** — the original project that inspired this fork. OmniCode builds upon that incredible foundation with additional features, multi-modal APIs, and a full TypeScript rewrite.
 
 Special thanks to **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** — the original Go implementation that inspired this JavaScript port.
 
