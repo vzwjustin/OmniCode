@@ -842,7 +842,7 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
           type: "info",
           message: translateOrFallback(
             "tailscaleWaitingForLogin",
-            "Complete the Tailscale login in the opened browser tab. OmniRoute will retry automatically."
+            "Complete the Tailscale login in the opened browser tab. OmniCode will retry automatically."
           ),
         });
 
@@ -870,7 +870,7 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
           type: "info",
           message: translateOrFallback(
             "tailscaleWaitingForFunnel",
-            "Enable Funnel for this device in the opened browser tab. OmniRoute will keep polling."
+            "Enable Funnel for this device in the opened browser tab. OmniCode will keep polling."
           ),
         });
 
@@ -1285,7 +1285,7 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
               <h3 className="text-sm font-semibold text-text-main">Set up cloud sync</h3>
             </div>
             <p className="text-xs text-text-muted mb-3">
-              Cloud sync mirrors your provider keys and combos to a remote OmniRoute
+              Cloud sync mirrors your provider keys and combos to a remote OmniCode
               control plane so other devices stay in lock-step. You need a URL pointing
               at your cloud instance — usually something like{" "}
               <code className="px-1 py-0.5 rounded bg-surface text-text-main">
@@ -1331,7 +1331,7 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
               </p>
             )}
             <p className="text-xs text-text-muted/70 mt-3">
-              Tip: don&apos;t have a cloud instance yet? You can skip this — OmniRoute works
+              Tip: don&apos;t have a cloud instance yet? You can skip this — OmniCode works
               fully local. Sync is optional.
             </p>
           </div>
@@ -2316,7 +2316,7 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
             <p className="text-sm font-medium text-blue-300">
               {translateOrFallback(
                 "tailscaleInstallIntro",
-                "Installs Tailscale on this machine and prepares OmniRoute to enable Funnel."
+                "Installs Tailscale on this machine and prepares OmniCode to enable Funnel."
               )}
             </p>
             <p className="mt-2 text-sm text-blue-200/80">

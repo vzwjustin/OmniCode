@@ -37,8 +37,8 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${docItem.item.title} — OmniRoute Docs`,
-    description: `OmniRoute documentation: ${docItem.item.title}`,
+    title: `${docItem.item.title} — OmniCode Docs`,
+    description: `OmniCode documentation: ${docItem.item.title}`,
   };
 }
 

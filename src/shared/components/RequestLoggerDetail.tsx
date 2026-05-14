@@ -165,7 +165,7 @@ export default function RequestLoggerDetail({
 
   const cacheSource = detail?.cacheSource || log.cacheSource || "upstream";
   const cacheSourceLabel =
-    cacheSource === "semantic" ? "Semantic (OmniRoute)" : "Upstream (Provider)";
+    cacheSource === "semantic" ? "Semantic (OmniCode)" : "Upstream (Provider)";
   const cacheSourceClassName =
     cacheSource === "semantic"
       ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"

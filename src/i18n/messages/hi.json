@@ -1098,8 +1098,8 @@
     "antigravityStep2Prefix": "2. जोड़ें",
     "antigravityStep2Suffix": "आपकी होस्ट फ़ाइल में 127.0.0.1 के रूप में।",
     "antigravityStep3": "3. एंटीग्रेविटी खोलें और अनुरोधों को प्रॉक्सी किया जाएगा।",
-    "mitmHowWorksDesc": "{toolName} sends requests to its provider endpoint. MITM intercepts and redirects them to OmniRoute.",
-    "mitmStep1": "1. Start MITM to route requests through OmniRoute.",
+    "mitmHowWorksDesc": "{toolName} sends requests to its provider endpoint. MITM intercepts and redirects them to OmniCode.",
+    "mitmStep1": "1. Start MITM to route requests through OmniCode.",
     "mitmStep2Prefix": "2. Add",
     "mitmStep2Suffix": "to your hosts file as 127.0.0.1.",
     "mitmStep3": "3. Open {toolName} and requests will be proxied.",
@@ -1190,9 +1190,9 @@
       "kiro": "किरो को एकीकृत करते समय और ओमनीरूट से केंद्रीय रूप से मॉडल रूटिंग को नियंत्रित करते समय उपयोग करें।",
       "antigravity": "इसका उपयोग तब करें जब एंटीग्रेविटी/किरो ट्रैफिक को एमआईटीएम के माध्यम से रोका जाना चाहिए और ओमनीरूट पर भेजा जाना चाहिए।",
       "copilot": "जब आप ओम्निरूट कुंजी और रूटिंग नियमों को लागू करते समय कोपायलट चैट शैली यूएक्स चाहते हैं तो इसका उपयोग करें।",
-      "windsurf": "Use when you want an AI-first IDE with Codeium/Windsurf models routed through OmniRoute.",
-      "amp": "Use when you want Amp CLI routed through OmniRoute with stable shorthand aliases and OpenAI-compatible setup.",
-      "qwen": "Use when you want Qwen Code CLI with OmniRoute-managed provider settings and multi-provider model access."
+      "windsurf": "Use when you want an AI-first IDE with Codeium/Windsurf models routed through OmniCode.",
+      "amp": "Use when you want Amp CLI routed through OmniCode with stable shorthand aliases and OpenAI-compatible setup.",
+      "qwen": "Use when you want Qwen Code CLI with OmniCode-managed provider settings and multi-provider model access."
     },
     "toolDescriptions": {
       "antigravity": "एमआईटीएम के साथ गूगल एंटीग्रेविटी आईडीई",
@@ -1296,7 +1296,7 @@
           },
           "2": {
             "title": "Base URL",
-            "desc": "Paste your OmniRoute endpoint URL"
+            "desc": "Paste your OmniCode endpoint URL"
           },
           "3": {
             "title": "API Key"
@@ -1325,7 +1325,7 @@
           },
           "4": {
             "title": "API Key",
-            "desc": "Select your OmniRoute API key"
+            "desc": "Select your OmniCode API key"
           },
           "5": {
             "title": "Select Model",
@@ -1593,7 +1593,7 @@
     "intelligentPanelTitle": "Intelligent Routing Dashboard",
     "filterEmptyDeterministicDescription": "Only auto and LKGP combos exist right now. Switch back to All or create a deterministic combo.",
     "contextRelayDesc": "Preserves session continuity with handoff summaries when accounts rotate",
-    "contextRelayHandoffThresholdHelp": "When quota usage reaches this threshold, OmniRoute generates a structured handoff summary before the active account is exhausted.",
+    "contextRelayHandoffThresholdHelp": "When quota usage reaches this threshold, OmniCode generates a structured handoff summary before the active account is exhausted.",
     "reviewProviders": "Providers",
     "builderModel": "Model",
     "weightHealth": "Health",
@@ -1751,7 +1751,7 @@
     "moderationsDesc": "सामग्री मॉडरेशन और सुरक्षा वर्गीकरण",
     "responsesDesc": "OpenAI Responses API for Codex and advanced agentic workflows",
     "listModelsDesc": "List all available models across all connected providers",
-    "settingsApiDesc": "Read and modify OmniRoute configuration via API",
+    "settingsApiDesc": "Read and modify OmniCode configuration via API",
     "settingsApi": "Settings API",
     "categoryCore": "कोर API",
     "categoryMedia": "मीडिया और मल्टी-मोडल",
@@ -1853,9 +1853,9 @@
     "videoDesc": "Generate videos using AI models like ComfyUI and Stable Video Diffusion.",
     "tailscaleRequestFailed": "Failed to load Tailscale status",
     "tailscaleEnableFailed": "Failed to enable Tailscale Funnel",
-    "tailscaleWaitingForLogin": "Complete the Tailscale login in the opened browser tab. OmniRoute will retry automatically.",
+    "tailscaleWaitingForLogin": "Complete the Tailscale login in the opened browser tab. OmniCode will retry automatically.",
     "tailscaleLoginTimedOut": "Timed out waiting for Tailscale login",
-    "tailscaleWaitingForFunnel": "Enable Funnel for this device in the opened browser tab. OmniRoute will keep polling.",
+    "tailscaleWaitingForFunnel": "Enable Funnel for this device in the opened browser tab. OmniCode will keep polling.",
     "tailscaleFunnelTimedOut": "Timed out waiting for Tailscale Funnel to be enabled",
     "tailscaleStarted": "Tailscale Funnel enabled",
     "tailscaleDisableFailed": "Failed to disable Tailscale Funnel",
@@ -1879,7 +1879,7 @@
     "tailscaleBinaryPath": "Binary: {path}",
     "tailscaleLastError": "Last error: {error}",
     "tailscaleInstallTitle": "Install Tailscale",
-    "tailscaleInstallIntro": "Installs Tailscale on this machine and prepares OmniRoute to enable Funnel.",
+    "tailscaleInstallIntro": "Installs Tailscale on this machine and prepares OmniCode to enable Funnel.",
     "tailscaleInstallPasswordHint": "On macOS and Linux, sudo may be required for the package install and daemon start.",
     "tailscaleSudoPlaceholder": "Optional sudo password",
     "tailscaleInstalling": "Installing"
@@ -2468,12 +2468,12 @@
     "compatDoNotPreserveDeveloper": "Do not preserve developer role",
     "compatBadgeNoPreserve": "No preserve",
     "compatProtocolLabel": "Client request protocol",
-    "compatProtocolHint": "These options apply when OmniRoute detects this request shape (OpenAI Chat, Responses API, or Anthropic Messages).",
+    "compatProtocolHint": "These options apply when OmniCode detects this request shape (OpenAI Chat, Responses API, or Anthropic Messages).",
     "compatProtocolOpenAI": "OpenAI Chat Completions",
     "compatProtocolOpenAIResponses": "OpenAI Responses API",
     "compatProtocolClaude": "Anthropic Messages",
     "compatUpstreamHeadersLabel": "Extra upstream headers",
-    "compatUpstreamHeadersHint": "High-privilege setting — same trust level as editing provider API credentials; only trusted admins should use it. Merged after OmniRoute adds auth from the provider API key. If a custom header uses the same name as an existing one (e.g. Authorization), your value fully replaces the auto-generated header (including the Bearer token) — the upstream only sees what you typed, not the key from settings. Misconfiguration can cause 401 or broken upstream auth. One row per header (e.g. extra Authentication for some gateways). Hover or focus the value to preview. Saves on blur, outside click, or closing this panel.",
+    "compatUpstreamHeadersHint": "High-privilege setting — same trust level as editing provider API credentials; only trusted admins should use it. Merged after OmniCode adds auth from the provider API key. If a custom header uses the same name as an existing one (e.g. Authorization), your value fully replaces the auto-generated header (including the Bearer token) — the upstream only sees what you typed, not the key from settings. Misconfiguration can cause 401 or broken upstream auth. One row per header (e.g. extra Authentication for some gateways). Hover or focus the value to preview. Saves on blur, outside click, or closing this panel.",
     "compatUpstreamHeaderName": "Header name",
     "compatUpstreamHeaderValue": "Value",
     "compatUpstreamAddRow": "Add header",
@@ -3192,7 +3192,7 @@
     "memoryTitle": "Memory",
     "memoryDesc": "Persistent cross-session conversational memory",
     "memoryEnabled": "Enable Memory",
-    "memoryEnabledDesc": "When enabled, OmniRoute will inject relevant past context.",
+    "memoryEnabledDesc": "When enabled, OmniCode will inject relevant past context.",
     "maxTokens": "Max Tokens",
     "retentionDays": "Retention",
     "recent": "Recent",
@@ -3944,8 +3944,8 @@
     "exchangingCodeForTokens": "Exchanging code for tokens...",
     "nodeIncompatibleTitle": "Incompatible Node.js Version",
     "nodeIncompatibleFixLabel": "Fix: install a patched Node.js 22 LTS release",
-    "nodeIncompatibleDesc": "You are running Node.js {version}, which is outside OmniRoute's supported secure runtime policy. Use a patched Node.js 20.x or 22.x LTS release.",
-    "nodeIncompatibleHint": "OmniRoute requires Node.js 20.20.2+ (20.x LTS), 22.22.2+ (22.x LTS) or 24.0.0+ (24.x LTS). Node 24 LTS is recommended."
+    "nodeIncompatibleDesc": "You are running Node.js {version}, which is outside OmniCode's supported secure runtime policy. Use a patched Node.js 20.x or 22.x LTS release.",
+    "nodeIncompatibleHint": "OmniCode requires Node.js 20.20.2+ (20.x LTS), 22.22.2+ (22.x LTS) or 24.0.0+ (24.x LTS). Node 24 LTS is recommended."
   },
   "landing": {
     "brandName": "ओम्निरूट",
@@ -4113,9 +4113,9 @@
     "clientClaudeBullet1Middle": "(क्लाउड) या",
     "clientClaudeBullet1Suffix": "(एंटीग्रेविटी) उपसर्ग।",
     "protocolsTitle": "Protocols: MCP & A2A",
-    "protocolsDescription": "OmniRoute exposes two operational protocols in addition to OpenAI-compatible APIs: MCP for tool execution and A2A for agent-to-agent workflows.",
+    "protocolsDescription": "OmniCode exposes two operational protocols in addition to OpenAI-compatible APIs: MCP for tool execution and A2A for agent-to-agent workflows.",
     "protocolMcpTitle": "MCP (Model Context Protocol)",
-    "protocolMcpDesc": "Use MCP over stdio to let clients discover and call OmniRoute tools with audit visibility.",
+    "protocolMcpDesc": "Use MCP over stdio to let clients discover and call OmniCode tools with audit visibility.",
     "protocolMcpStep1": "Start MCP transport with `omniroute --mcp`.",
     "protocolMcpStep2": "Point your MCP client to stdio transport.",
     "protocolMcpStep3": "Call `omniroute_get_health` and `omniroute_list_combos` to validate connectivity.",
@@ -4156,7 +4156,7 @@
     "troubleshootingCircuitBreaker": "यदि कोई प्रदाता सर्किट ब्रेकर खुला दिखाता है, तो कूलडाउन की प्रतीक्षा करें या विवरण के लिए स्वास्थ्य पृष्ठ देखें।",
     "troubleshootingOAuth": "OAuth प्रदाताओं के लिए, यदि टोकन समाप्त हो जाते हैं तो पुनः प्रमाणित करें। प्रदाता कार्ड स्थिति संकेतक की जाँच करें।",
     "deployTermuxTitle": "Termux (Android)",
-    "deployTermuxText": "Run OmniRoute headless on Android via Termux. Access the dashboard from your mobile browser."
+    "deployTermuxText": "Run OmniCode headless on Android via Termux. Access the dashboard from your mobile browser."
   },
   "legal": {
     "privacyPolicy": "गोपनीयता नीति",
@@ -4237,13 +4237,13 @@
     "scanning": "Scanning system for CLI agents...",
     "opencodeIntegration": "OpenCode Integration",
     "opencodeDetected": "opencode {version} detected",
-    "opencodeDesc": "Generate a ready-to-use {configFile} with your OmniRoute base URL and all available models — drop it in your project root and run {command}.",
+    "opencodeDesc": "Generate a ready-to-use {configFile} with your OmniCode base URL and all available models — drop it in your project root and run {command}.",
     "downloadConfig": "Download {file}",
     "downloaded": "Downloaded!",
     "setupGuideTitle": "Setup guide",
     "openCliTools": "Open CLI Tools",
     "setupGuideDetectCliTitle": "Detect installed CLIs",
-    "setupGuideDetectCliDesc": "Click Refresh after installing or updating a CLI so OmniRoute can rescan binaries and versions.",
+    "setupGuideDetectCliDesc": "Click Refresh after installing or updating a CLI so OmniCode can rescan binaries and versions.",
     "setupGuideCustomAgentTitle": "Register custom binary",
     "setupGuideCustomAgentDesc": "Use Add Custom Agent when your CLI is not in the built-in list. Provide binary name and version command.",
     "setupGuideCommandMissingTitle": "Fix 'command not found'",
@@ -4379,14 +4379,14 @@
     "totalProcessed": "Total Requests Processed",
     "semanticCache": "Semantic Cache",
     "cachedRequests24h": "Cached Requests (24h)",
-    "semanticCacheDisabledDesc": "Semantic cache is disabled. OmniRoute will skip local response reuse until you turn it back on in Settings.",
+    "semanticCacheDisabledDesc": "Semantic cache is disabled. OmniCode will skip local response reuse until you turn it back on in Settings.",
     "entriesLoadError": "Failed to load semantic cache entries.",
     "peakCacheRate": "Peak Cache Rate",
     "noPromptCacheData": "No provider-side prompt cache activity has been recorded yet.",
     "activityVolume": "Activity",
     "lastUpdated": "Last updated",
     "semanticEntriesDesc": "Persisted semantic cache records currently stored in SQLite. Provider-side prompt cache activity is not listed here.",
-    "semanticCacheSectionDesc": "OmniRoute's own deterministic response cache. When enabled, repeated non-streaming temperature=0 requests can be served locally without hitting the upstream provider.",
+    "semanticCacheSectionDesc": "OmniCode's own deterministic response cache. When enabled, repeated non-streaming temperature=0 requests can be served locally without hitting the upstream provider.",
     "promptTrendDesc": "Hourly request volume, cache coverage, and cache read volume across the last 24 hours.",
     "cacheRate": "Cache Rate",
     "trendHour": "Hour",
@@ -4584,7 +4584,7 @@
     "cacheUp": "UP",
     "semantic": "Semantic",
     "upstream": "Upstream",
-    "semanticCacheHit": "Semantic cache hit (served by OmniRoute)",
+    "semanticCacheHit": "Semantic cache hit (served by OmniCode)",
     "upstreamResponse": "Upstream provider response",
     "noApiKey": "No API key",
     "requestedRoutedTitle": "Requested {requested}, routed as {routed}",

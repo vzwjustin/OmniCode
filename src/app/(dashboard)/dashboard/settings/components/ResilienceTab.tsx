@@ -587,7 +587,7 @@ function WaitForCooldownCard({
           <>
             <BooleanField
               label="Enable server-side waiting"
-              description="When enabled, OmniRoute waits for the earliest cooldown and retries automatically."
+              description="When enabled, OmniCode waits for the earliest cooldown and retries automatically."
               checked={draft.enabled}
               onChange={(enabled) => setDraft((prev) => ({ ...prev, enabled }))}
             />
