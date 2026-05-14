@@ -1,10 +1,10 @@
 ---
-title: "OmniRoute MCP Server Documentation"
+title: "OmniCode MCP Server Documentation"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# OmniRoute MCP Server Documentation
+# OmniCode MCP Server Documentation
 
 > Model Context Protocol server with 37 tools across routing, cache, compression, memory, skills, and proxy operations.
 >
@@ -16,7 +16,7 @@ lastUpdated: 2026-05-13
 
 ## Installation
 
-OmniRoute MCP is built-in. Start it with:
+OmniCode MCP is built-in. Start it with:
 
 ```bash
 omniroute --mcp
@@ -57,7 +57,7 @@ Cursor, Cline, and compatible MCP client setup.
 | `omniroute_get_combo_metrics`   | `read:combos`         | Performance metrics for a specific combo                      |
 | `omniroute_switch_combo`        | `write:combos`        | Activate or deactivate a combo                                |
 | `omniroute_check_quota`         | `read:quota`          | Quota used/total, percent remaining, reset time, token health |
-| `omniroute_route_request`       | `execute:completions` | Send a chat completion through OmniRoute routing              |
+| `omniroute_route_request`       | `execute:completions` | Send a chat completion through OmniCode routing              |
 | `omniroute_cost_report`         | `read:usage`          | Cost report by period (session/day/week/month)                |
 | `omniroute_list_models_catalog` | `read:models`         | Full model catalog with capabilities, status, pricing         |
 
@@ -65,7 +65,7 @@ Cursor, Cline, and compatible MCP client setup.
 
 | Tool                   | Scopes           | Description                                                                                                                        |
 | :--------------------- | :--------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| `omniroute_web_search` | `execute:search` | Web search through OmniRoute search gateway (Serper/Brave/Perplexity/Exa/Tavily/Google PSE/Linkup/SearchAPI/SearXNG) with failover |
+| `omniroute_web_search` | `execute:search` | Web search through OmniCode search gateway (Serper/Brave/Perplexity/Exa/Tavily/Google PSE/Linkup/SearchAPI/SearXNG) with failover |
 
 ## Advanced Tools (11) — Phase 2
 
@@ -146,7 +146,7 @@ frameworks ship alongside the MCP server in v3.8.0 and are documented separately
 ### Cloud Agents
 
 Cloud Agents are out-of-process AI coding agents (codex-cloud, devin, jules) wired into
-OmniRoute through the same connection model used for LLM providers. They are exposed via
+OmniCode through the same connection model used for LLM providers. They are exposed via
 their own REST surface (`/api/v1/agents/*`) and are **not** part of the MCP tool catalog
 — calling a Cloud Agent does not consume an MCP scope.
 
@@ -220,7 +220,7 @@ Memory and Skill tools currently do not declare static scope requirements in the
 
 | Variable                                | Default                            | Purpose                                                                                                                  |
 | :-------------------------------------- | :--------------------------------- | :----------------------------------------------------------------------------------------------------------------------- |
-| `OMNIROUTE_BASE_URL`                    | `http://localhost:20128`           | Base URL the MCP server uses when calling OmniRoute internal APIs                                                        |
+| `OMNIROUTE_BASE_URL`                    | `http://localhost:20128`           | Base URL the MCP server uses when calling OmniCode internal APIs                                                        |
 | `OMNIROUTE_API_KEY`                     | (empty)                            | API key forwarded as `Authorization: Bearer` to internal API calls                                                       |
 | `OMNIROUTE_MCP_ENFORCE_SCOPES`          | `false` (only `"true"` enables it) | When enabled, missing scopes deny tool calls and log `scope_denied:<reason>` in audit log                                |
 | `OMNIROUTE_MCP_SCOPES`                  | (empty)                            | Comma-separated allowlist of scopes considered "available" by default (used when caller does not provide its own scopes) |

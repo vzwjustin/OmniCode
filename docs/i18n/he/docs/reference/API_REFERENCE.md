@@ -4,7 +4,7 @@
 
 ---
 
-Complete reference for all OmniRoute API endpoints.
+Complete reference for all OmniCode API endpoints.
 
 ---
 
@@ -51,7 +51,7 @@ Content-Type: application/json
 | `X-OmniRoute-Cache`      | Response  | `HIT` or `MISS` (non-streaming)                  |
 | `X-OmniRoute-Idempotent` | Response  | `true` if deduplicated                           |
 | `X-OmniRoute-Progress`   | Response  | `enabled` if progress tracking on                |
-| `X-OmniRoute-Session-Id` | Response  | Effective session ID used by OmniRoute           |
+| `X-OmniRoute-Session-Id` | Response  | Effective session ID used by OmniCode           |
 
 > Nginx note: if you rely on underscore headers (for example `x_session_id`), enable `underscores_in_headers on;`.
 

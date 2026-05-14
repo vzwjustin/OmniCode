@@ -10,7 +10,7 @@ lastUpdated: 2026-05-13
 > **Last updated:** 2026-05-13 — v3.8.0
 
 Guardrails enforce safety, policy, and content transformations at the boundary
-between OmniRoute and upstream providers. Each guardrail can inspect (and
+between OmniCode and upstream providers. Each guardrail can inspect (and
 optionally reject, transform, or annotate) request payloads (`preCall`) and
 upstream responses (`postCall`).
 

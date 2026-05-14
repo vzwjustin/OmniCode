@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🚀 OmniRoute — The Free AI Gateway
+# 🚀 OmniCode — The Free AI Gateway
 
 ### Never stop coding. Save 15-95% eligible tokens with RTK+Caveman compression + auto-fallback to **FREE & low-cost AI models**.
 
@@ -62,7 +62,7 @@ _The most complete open-source AI proxy — **one endpoint**, **160+ providers**
 ## 🖼️ Main Dashboard
 
 <div align="center">
-  <img src="./docs/screenshots/MainOmniRoute.png" alt="OmniRoute Dashboard" width="800"/>
+  <img src="./docs/screenshots/MainOmniRoute.png" alt="OmniCode Dashboard" width="800"/>
 </div>
 
 ---
@@ -90,7 +90,7 @@ _The most complete open-source AI proxy — **one endpoint**, **160+ providers**
 
 ### 🤖 Free AI Provider for your favorite coding agents
 
-_Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway for unlimited coding._
+_Connect any AI-powered IDE or CLI tool through OmniCode — free API gateway for unlimited coding._
 
   <table>
     <tr>
@@ -173,7 +173,7 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
 
 ---
 
-## 📺 OmniRoute in Action — Video Guides
+## 📺 OmniCode in Action — Video Guides
 
 <div align="center">
 
@@ -181,35 +181,35 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
   <tr>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=Rxdc36yUyOQ">
-        <img src="https://img.youtube.com/vi/Rxdc36yUyOQ/maxresdefault.jpg" alt="OmniRoute — Guia em Português" width="300"/>
+        <img src="https://img.youtube.com/vi/Rxdc36yUyOQ/maxresdefault.jpg" alt="OmniCode — Guia em Português" width="300"/>
       </a><br/>
       <b>🇧🇷 Português</b><br/>
-      <sub>Guia completo do OmniRoute</sub>
+      <sub>Guia completo do OmniCode</sub>
     </td>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=CMzyOiUyEVc">
-        <img src="https://img.youtube.com/vi/CMzyOiUyEVc/maxresdefault.jpg" alt="OmniRoute — English Guide" width="300"/>
+        <img src="https://img.youtube.com/vi/CMzyOiUyEVc/maxresdefault.jpg" alt="OmniCode — English Guide" width="300"/>
       </a><br/>
       <b>🇺🇸 English</b><br/>
-      <sub>Complete OmniRoute walkthrough</sub>
+      <sub>Complete OmniCode walkthrough</sub>
     </td>
     <td align="center" width="320">
       <a href="https://www.youtube.com/watch?v=il_5Ii6v4-Y">
-        <img src="https://img.youtube.com/vi/il_5Ii6v4-Y/maxresdefault.jpg" alt="OmniRoute — Руководство на русском" width="300"/>
+        <img src="https://img.youtube.com/vi/il_5Ii6v4-Y/maxresdefault.jpg" alt="OmniCode — Руководство на русском" width="300"/>
       </a><br/>
       <b>🇷🇺 Русский</b><br/>
-      <sub>Полное руководство по OmniRoute</sub>
+      <sub>Полное руководство по OmniCode</sub>
     </td>
   </tr>
 </table>
 
 </div>
 
-> 🎬 **Made a video about OmniRoute?** We'd love to feature it here! Open an [issue](https://github.com/diegosouzapw/OmniRoute/issues/new) or [discussion](https://github.com/diegosouzapw/OmniRoute/discussions) with the link and we'll add it to this showcase.
+> 🎬 **Made a video about OmniCode?** We'd love to feature it here! Open an [issue](https://github.com/diegosouzapw/OmniRoute/issues/new) or [discussion](https://github.com/diegosouzapw/OmniRoute/discussions) with the link and we'll add it to this showcase.
 
 ---
 
-## 🤔 Why OmniRoute?
+## 🤔 Why OmniCode?
 
 **Stop wasting money, tokens and hitting limits:**
 
@@ -221,7 +221,7 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
 ❌ Each provider has a different API format
 ❌ AI providers blocked in your country
 
-**OmniRoute solves all of this:**
+**OmniCode solves all of this:**
 
 ✅ **Prompt Compression** — auto-compress prompts & tool outputs, save 15-95% eligible tokens per request with RTK+Caveman stacked mode
 ✅ **Maximize subscriptions** — track quota, use every bit before reset
@@ -254,13 +254,13 @@ When opening an issue, please run the system-info command and attach the generat
 npm run system-info
 ```
 
-This generates a `system-info.txt` with your Node.js version, OmniRoute version, OS details, installed CLI tools (qoder, gemini, claude, codex, antigravity, droid, etc.), Docker/PM2 status, and system packages — everything we need to reproduce your issue quickly. Attach the file directly to your GitHub issue.
+This generates a `system-info.txt` with your Node.js version, OmniCode version, OS details, installed CLI tools (qoder, gemini, claude, codex, antigravity, droid, etc.), Docker/PM2 status, and system packages — everything we need to reproduce your issue quickly. Attach the file directly to your GitHub issue.
 
 ---
 
 ## 🛠️ Supported CLI Tools
 
-OmniRoute works seamlessly with **16+ AI coding tools** — one config, all tools:
+OmniCode works seamlessly with **16+ AI coding tools** — one config, all tools:
 
 <table>
   <tr>
@@ -413,7 +413,7 @@ Alibaba · Amazon Q · AssemblyAI · Baidu Qianfan · Baseten · Black Forest La
        │ http://localhost:20128/v1
        ↓
 ┌──────────────────────────────────────────────────┐
-│              OmniRoute (Smart Router)             │
+│              OmniCode (Smart Router)             │
 │  • 🗜️ Prompt Compression (save 15-95% eligible)  │
 │  • Format translation (OpenAI ↔ Claude ↔ Gemini) │
 │  • Quota tracking + Embeddings + Images          │
@@ -435,7 +435,7 @@ Result: Never stop coding, minimal cost + 15-95% eligible token savings
 
 ## 🗜️ Prompt Compression — Save 15-95% Eligible Tokens Automatically
 
-> **Why use many token when few token do trick?** OmniRoute's built-in compression pipeline reduces token usage before requests reach the provider. It combines ideas from [RTK - Rust Token Killer](https://github.com/rtk-ai/rtk) and [Caveman](https://github.com/JuliusBrussee/caveman) (⭐ 51K+).
+> **Why use many token when few token do trick?** OmniCode's built-in compression pipeline reduces token usage before requests reach the provider. It combines ideas from [RTK - Rust Token Killer](https://github.com/rtk-ai/rtk) and [Caveman](https://github.com/JuliusBrussee/caveman) (⭐ 51K+).
 
 ### How It Works
 
@@ -443,7 +443,7 @@ Every request passes through the compression pipeline **transparently** — no c
 
 ```
 ┌──────────────────┐     ┌─────────────────────────────┐     ┌──────────────┐
-│   Client sends   │────▶│  OmniRoute Compression      │────▶│  Provider    │
+│   Client sends   │────▶│  OmniCode Compression      │────▶│  Provider    │
 │   full prompt    │     │  Pipeline (7 options)        │     │  receives    │
 │   (10,000 tok)   │     │                              │     │  compressed  │
 │                  │     │  🪶 Lite ........... ~15%     │     │  (~1,080 tok)│
@@ -471,12 +471,12 @@ Every request passes through the compression pipeline **transparently** — no c
 
 These numbers are based on the upstream project READMEs under `_references/_outros`:
 
-| Source  | Upstream claim used by OmniRoute docs                                                                               |
+| Source  | Upstream claim used by OmniCode docs                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------- |
 | Caveman | `~75%` fewer output tokens; benchmark average `65%` output savings, range `22-87%`; `~46%` input compression tool   |
 | RTK     | `60-90%` command-output token savings; sample session `~118,000 -> ~23,900` tokens, which is `79.7%` saved (`~80%`) |
 
-For the default stacked compression combo, OmniRoute runs:
+For the default stacked compression combo, OmniCode runs:
 
 ```txt
 RTK -> Caveman
@@ -548,17 +548,17 @@ Auto-trigger: set `autoTriggerTokens` to automatically enable compression when a
 
 Compression combos can also assign a named compression pipeline to routing combos, so a coding combo can use RTK + Caveman while a paid subscription combo stays on lite mode.
 
-> 🪨 **Fun fact:** The standard/caveman mode is inspired by [Caveman](https://github.com/JuliusBrussee/caveman) — the viral project that reports 65% average output-token savings while keeping technical accuracy. OmniRoute takes this further with a **7-option pipeline** and a default `RTK -> Caveman` combo that can reach ~89% average savings on eligible tool/context payloads.
+> 🪨 **Fun fact:** The standard/caveman mode is inspired by [Caveman](https://github.com/JuliusBrussee/caveman) — the viral project that reports 65% average output-token savings while keeping technical accuracy. OmniCode takes this further with a **7-option pipeline** and a default `RTK -> Caveman` combo that can reach ~89% average savings on eligible tool/context payloads.
 
 📖 **Full compression documentation:** [`docs/COMPRESSION_GUIDE.md`](docs/COMPRESSION_GUIDE.md) • [`docs/RTK_COMPRESSION.md`](docs/RTK_COMPRESSION.md) • [`docs/COMPRESSION_ENGINES.md`](docs/COMPRESSION_ENGINES.md) • [`docs/COMPRESSION_RULES_FORMAT.md`](docs/COMPRESSION_RULES_FORMAT.md) • [`docs/COMPRESSION_LANGUAGE_PACKS.md`](docs/COMPRESSION_LANGUAGE_PACKS.md)
 
 ---
 
-## 🎯 What OmniRoute Solves
+## 🎯 What OmniCode Solves
 
-> **Every developer using AI tools faces these problems daily.** OmniRoute solves them all.
+> **Every developer using AI tools faces these problems daily.** OmniCode solves them all.
 
-| #   | Problem                                  | OmniRoute Solution                                                                              |
+| #   | Problem                                  | OmniCode Solution                                                                              |
 | --- | ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | 💸  | Subscription quota expires mid-coding    | **Smart 4-Tier Fallback** — auto-routes Subscription → API Key → Cheap → Free                   |
 | 🔌  | Each provider has a different API format | **Format Translation** — unified endpoint translates OpenAI ↔ Claude ↔ Gemini ↔ Responses       |
@@ -572,7 +572,7 @@ Compression combos can also assign a named compression pipeline to routing combo
 | 🐛  | Can't diagnose errors in AI calls        | **Unified Logs** — 4-tab dashboard (request, proxy, audit, console) + p50/p95/p99 telemetry     |
 
 <details>
-<summary><b>📖 See all 31 problems OmniRoute solves</b></summary>
+<summary><b>📖 See all 31 problems OmniCode solves</b></summary>
 
 | #   | Problem                                       | Solution                                                                                           |
 | --- | --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
@@ -683,7 +683,7 @@ PORT=20128 DASHBOARD_PORT=20129 NEXT_PUBLIC_BASE_URL=http://localhost:20129 npm 
 
 ## 🐳 Docker
 
-OmniRoute is available as a public Docker image on [Docker Hub](https://hub.docker.com/r/diegosouzapw/omniroute).
+OmniCode is available as a public Docker image on [Docker Hub](https://hub.docker.com/r/diegosouzapw/omniroute).
 
 **Quick run:**
 
@@ -728,17 +728,17 @@ Dashboard support for Docker deployments now includes a one-click **Cloudflare Q
 Notes:
 
 - Quick Tunnel URLs are temporary and change after every restart.
-- Quick Tunnels are not auto-restored after an OmniRoute or container restart. Re-enable them from the dashboard when needed.
+- Quick Tunnels are not auto-restored after an OmniCode or container restart. Re-enable them from the dashboard when needed.
 - Managed install currently supports Linux, macOS, and Windows on `x64` / `arm64`.
 - Managed Quick Tunnels default to HTTP/2 transport to avoid noisy QUIC UDP buffer warnings in constrained container environments. Set `CLOUDFLARED_PROTOCOL=quic` or `auto` if you want a different transport.
 - Docker images bundle system CA roots and pass them to managed `cloudflared`, which avoids TLS trust failures when the tunnel bootstraps inside the container.
-- SQLite runs in WAL mode. `docker stop` should be allowed to finish so OmniRoute can checkpoint the latest changes back into `storage.sqlite`.
+- SQLite runs in WAL mode. `docker stop` should be allowed to finish so OmniCode can checkpoint the latest changes back into `storage.sqlite`.
 - The bundled Compose files already set a 40s stop grace period. If you run the image directly, keep `--stop-timeout 40` (or similar) so manual stops do not cut off shutdown cleanup.
-- Set `CLOUDFLARED_BIN=/absolute/path/to/cloudflared` if you want OmniRoute to use an existing binary instead of downloading one.
+- Set `CLOUDFLARED_BIN=/absolute/path/to/cloudflared` if you want OmniCode to use an existing binary instead of downloading one.
 
 **Using Docker Compose with Caddy (HTTPS Auto-TLS):**
 
-OmniRoute can be securely exposed using Caddy's automatic SSL provisioning. Ensure your domain's DNS A record points to your server's IP.
+OmniCode can be securely exposed using Caddy's automatic SSL provisioning. Ensure your domain's DNS A record points to your server's IP.
 
 ```yaml
 services:
@@ -776,7 +776,7 @@ volumes:
 
 ## 📱 Multi-Platform — Run Anywhere
 
-> OmniRoute runs on **Web**, **Desktop (Electron)**, **Android (Termux)**, and as a **Progressive Web App (PWA)**.
+> OmniCode runs on **Web**, **Desktop (Electron)**, **Android (Termux)**, and as a **Progressive Web App (PWA)**.
 
 | Platform       | Install                                      | Highlights                                                                 |
 | -------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
@@ -822,7 +822,7 @@ Access from any device on the same network: `http://PHONE_IP:20128/v1`
 
 ## 🌍 Bypass Geographic Blocks — Use AI From Any Country
 
-> 🇷🇺 🇨🇳 🇮🇷 🇨🇺 🇹🇷 **In Russia, China, Iran, or any blocked region?** OmniRoute's 3-level proxy system solves this completely.
+> 🇷🇺 🇨🇳 🇮🇷 🇨🇺 🇹🇷 **In Russia, China, Iran, or any blocked region?** OmniCode's 3-level proxy system solves this completely.
 
 | Level              | Badge | Configure In       | Use Case                        |
 | ------------------ | ----- | ------------------ | ------------------------------- |
@@ -892,7 +892,7 @@ No proxy? Use the built-in **1proxy** integration for **hundreds of free, valida
 > 💡 **Understanding Dashboard Costs:**
 >
 > The "cost" displayed in the Usage Analytics page is **for tracking and comparison purposes only**.
-> OmniRoute itself **never charges you anything** — it's free, open-source software running on your machine.
+> OmniCode itself **never charges you anything** — it's free, open-source software running on your machine.
 > If your dashboard shows "$290 total cost" while using free models, that's how much you **saved** compared to paid API pricing.
 > Think of it as a **savings tracker**, not a bill.
 
@@ -900,7 +900,7 @@ No proxy? Use the built-in **1proxy** integration for **hundreds of free, valida
 
 ## 🆓 Free Models — 11 Providers, $0 Forever
 
-> Combine all free providers into one unbreakable combo — OmniRoute auto-routes between them when quota runs out.
+> Combine all free providers into one unbreakable combo — OmniCode auto-routes between them when quota runs out.
 
 | Provider          | Prefix      | Free Models                                                   | Quota                |
 | ----------------- | ----------- | ------------------------------------------------------------- | -------------------- |
@@ -936,7 +936,7 @@ ModelScope · Tencent Hunyuan · Volcengine · ChatAnywhere · InternAI · Bigmo
 
 </details>
 
-📖 **Complete free provider directory:** [`docs/FREE_TIERS.md`](docs/FREE_TIERS.md) — 25+ providers, quotas, base URLs, model tables, and OmniRoute combo setup.
+📖 **Complete free provider directory:** [`docs/FREE_TIERS.md`](docs/FREE_TIERS.md) — 25+ providers, quotas, base URLs, model tables, and OmniCode combo setup.
 
 ---
 
@@ -1022,7 +1022,7 @@ Multilingual Intent Detection · Benchmark-Driven Fallbacks · Request Deduplica
 ```txt
 Combo: "my-coding-stack"              Format Translation:
   1. cc/claude-opus-4-7                 CLI → OpenAI format
-  2. nvidia/llama-3.3-70b               OmniRoute → translates
+  2. nvidia/llama-3.3-70b               OmniCode → translates
   3. glm/glm-4.7                        Provider → native format
   4. if/kimi-k2-thinking
 ```
@@ -1053,7 +1053,7 @@ model: "auto/smart"     # Best discovery (10% exploration rate)
 
 1. Add providers in Dashboard → Providers (OAuth or API key)
 2. Use `auto/` prefix in any AI tool — **no combo creation needed**
-3. OmniRoute dynamically builds a virtual combo from your active connections
+3. OmniCode dynamically builds a virtual combo from your active connections
 4. Routes using LKGP (Last Known Good Provider) + 6-factor scoring
 5. Session stickiness ensures consistent provider selection
 
@@ -1142,11 +1142,11 @@ Montly savings: ~$150-300/month in token costs for heavy users
 
 ## 🧪 Evaluations (Evals)
 
-OmniRoute includes a built-in evaluation framework to test LLM response quality against a golden set. Access it via **Analytics → Evals** in the dashboard.
+OmniCode includes a built-in evaluation framework to test LLM response quality against a golden set. Access it via **Analytics → Evals** in the dashboard.
 
 ### Built-in Golden Set
 
-The pre-loaded "OmniRoute Golden Set" contains test cases for:
+The pre-loaded "OmniCode Golden Set" contains test cases for:
 
 - Greetings, math, geography, code generation
 - JSON format compliance, translation, markdown generation
@@ -1167,7 +1167,7 @@ The pre-loaded "OmniRoute Golden Set" contains test cases for:
 
 ### Connect Your Coding Tool
 
-Point any OpenAI-compatible tool to OmniRoute:
+Point any OpenAI-compatible tool to OmniCode:
 
 ```txt
 Base URL: http://localhost:20128/v1
@@ -1181,7 +1181,7 @@ API Key:  [from Dashboard → Endpoints]
 | **Cursor**      | Settings → Models → Add Model → Override Base URL                                         |
 | **Cline**       | Extension settings → Custom API Base URL                                                  |
 | **OpenClaw**    | `OPENAI_BASE_URL=http://localhost:20128/v1 openclaw`                                      |
-| **Gemini CLI**  | Uses native OAuth via OmniRoute — connect in Providers                                    |
+| **Gemini CLI**  | Uses native OAuth via OmniCode — connect in Providers                                    |
 
 ### Protocols (MCP + A2A)
 
@@ -1238,17 +1238,17 @@ The cost display is a "savings tracker" to help you understand your usage patter
 </details>
 
 <details>
-<summary><b>💳 Will I be charged by OmniRoute?</b></summary>
+<summary><b>💳 Will I be charged by OmniCode?</b></summary>
 
-**No.** OmniRoute is free, open-source software that runs on your own computer. It never charges you anything.
+**No.** OmniCode is free, open-source software that runs on your own computer. It never charges you anything.
 
 **You only pay:**
 
 - ✅ **Subscription providers** (Claude Code $20/mo, Codex $20-200/mo) → Pay them directly on their websites
-- ✅ **API key providers** (DeepSeek, xAI, etc.) → Pay them directly, OmniRoute just routes your requests
-- ❌ **OmniRoute itself** → **Never charges anything, ever**
+- ✅ **API key providers** (DeepSeek, xAI, etc.) → Pay them directly, OmniCode just routes your requests
+- ❌ **OmniCode itself** → **Never charges anything, ever**
 
-OmniRoute is a local proxy/router. It doesn't have your credit card, can't send invoices, and has no billing system. It's completely free software.
+OmniCode is a local proxy/router. It doesn't have your credit card, can't send invoices, and has no billing system. It's completely free software.
 
 </details>
 
@@ -1263,7 +1263,7 @@ OmniRoute is a local proxy/router. It doesn't have your credit card, can't send 
 - **LongCat Flash-Lite**: 50M tokens/day — largest free quota available
 - **Cloudflare Workers AI**: 10K Neurons/day — 50+ models at the edge
 
-OmniRoute just routes your requests to them — there's no "catch" or future billing.
+OmniCode just routes your requests to them — there's no "catch" or future billing.
 
 </details>
 
@@ -1292,7 +1292,7 @@ OmniRoute just routes your requests to them — there's no "catch" or future bil
 
    **Additional cost: Only pay for what you actually use**
 
-4. **Use subscription providers last** — only if you already have them. OmniRoute helps maximize their value through quota tracking.
+4. **Use subscription providers last** — only if you already have them. OmniCode helps maximize their value through quota tracking.
 
 **Result:** Most users can operate at **$0/month** using only free tiers!
 
@@ -1313,15 +1313,15 @@ Code blocks, URLs, JSON, and structured data are **always protected** from compr
 </details>
 
 <details>
-<summary><b>🌍 Does OmniRoute work in countries where AI is blocked?</b></summary>
+<summary><b>🌍 Does OmniCode work in countries where AI is blocked?</b></summary>
 
-**Yes!** OmniRoute has a 3-level proxy system:
+**Yes!** OmniCode has a 3-level proxy system:
 
 1. **Global proxy** — all requests go through your proxy
 2. **Per-provider proxy** — different proxy per provider
 3. **Per-API-key proxy** — different proxy per key
 
-Plus the **1proxy free marketplace** for community-shared proxies. Users in Russia, China, Iran, and other restricted regions can access all 160+ providers through OmniRoute's proxy infrastructure.
+Plus the **1proxy free marketplace** for community-shared proxies. Users in Russia, China, Iran, and other restricted regions can access all 160+ providers through OmniCode's proxy infrastructure.
 
 See the [Proxy Guide](docs/PROXY_GUIDE.md) for setup instructions.
 
@@ -1335,7 +1335,7 @@ See the [Proxy Guide](docs/PROXY_GUIDE.md) for setup instructions.
 | --------------------------------------------- | ------------------------------------------------------------------------------------ |
 | **"Language model did not provide messages"** | Provider quota exhausted → check quota tracker, use combo fallback                   |
 | **Rate limiting (429)**                       | Add fallback combo: `cc/claude → glm/glm-4.7 → if/kimi-k2-thinking`                  |
-| **OAuth token expired**                       | Auto-refreshed by OmniRoute. If stuck: delete + re-auth in Providers                 |
+| **OAuth token expired**                       | Auto-refreshed by OmniCode. If stuck: delete + re-auth in Providers                 |
 | **`unsupported_country_region_territory`**    | Configure proxy in Settings → Proxy (see [Proxy Guide](docs/PROXY_GUIDE.md))         |
 | **Docker SQLite locks**                       | Use `--stop-timeout 40` for clean WAL checkpoint on shutdown                         |
 | **Node.js runtime errors**                    | Use Node.js `>=20.20.2 <21`, `>=22.22.2 <23`, or `>=24.0.0 <25` (24 LTS recommended) |
@@ -1386,7 +1386,7 @@ See the [Proxy Guide](docs/PROXY_GUIDE.md) for setup instructions.
 | [Docker Guide](docs/DOCKER_GUIDE.md)                 | Docker run, Compose profiles, Caddy HTTPS, tunnels, image tags |
 | [VM Deployment](docs/VM_DEPLOYMENT_GUIDE.md)         | Complete guide: VM + nginx + Cloudflare setup                  |
 | [Fly.io Deployment](docs/FLY_IO_DEPLOYMENT_GUIDE.md) | Deploy to Fly.io with persistent storage                       |
-| [Termux Guide](docs/TERMUX_GUIDE.md)                 | Run OmniRoute on Android via Termux                            |
+| [Termux Guide](docs/TERMUX_GUIDE.md)                 | Run OmniCode on Android via Termux                            |
 | [PWA Guide](docs/PWA_GUIDE.md)                       | Progressive Web App install, caching, architecture             |
 | [Uninstall Guide](docs/UNINSTALL.md)                 | Clean removal for all install methods                          |
 | [Environment Config](docs/ENVIRONMENT.md)            | Complete `.env` variables and references                       |
@@ -1433,7 +1433,7 @@ See the [Proxy Guide](docs/PROXY_GUIDE.md) for setup instructions.
 
 ## ⭐ Top Contributors
 
-> OmniRoute is shaped by a passionate open-source community. These individuals have made exceptional contributions that directly impact the quality, stability, and reach of the project. **Thank you.**
+> OmniCode is shaped by a passionate open-source community. These individuals have made exceptional contributions that directly impact the quality, stability, and reach of the project. **Thank you.**
 
 <table>
   <tr>
@@ -1480,7 +1480,7 @@ See the [Proxy Guide](docs/PROXY_GUIDE.md) for setup instructions.
   </tr>
 </table>
 
-> 🙏 These contributors' features, bug fixes, and infrastructure improvements are a **core part** of what makes OmniRoute reliable and feature-rich. Every pull request, every test case, and every i18n translation file matters. Open source is built by people like them.
+> 🙏 These contributors' features, bug fixes, and infrastructure improvements are a **core part** of what makes OmniCode reliable and feature-rich. Every pull request, every test case, and every i18n translation file matters. Open source is built by people like them.
 
 ---
 
@@ -1529,13 +1529,13 @@ gh release create v2.0.0 --title "v2.0.0" --generate-notes
 
 ## 🙏 Acknowledgments
 
-Special thanks to **[9router](https://github.com/decolua/9router)** by **[decolua](https://github.com/decolua)** — the original project that inspired this fork. OmniRoute builds upon that incredible foundation with additional features, multi-modal APIs, and a full TypeScript rewrite.
+Special thanks to **[9router](https://github.com/decolua/9router)** by **[decolua](https://github.com/decolua)** — the original project that inspired this fork. OmniCode builds upon that incredible foundation with additional features, multi-modal APIs, and a full TypeScript rewrite.
 
 Special thanks to **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** by **[router-for-me](https://github.com/router-for-me)** — the original Go implementation that inspired this JavaScript port.
 
-Special thanks to **[Caveman](https://github.com/JuliusBrussee/caveman)** by **[JuliusBrussee](https://github.com/JuliusBrussee)** (⭐ 51K+) — the viral "why use many token when few token do trick" project whose caveman-speak compression philosophy inspired OmniRoute's standard compression mode and 30+ filler/condensation regex rules.
+Special thanks to **[Caveman](https://github.com/JuliusBrussee/caveman)** by **[JuliusBrussee](https://github.com/JuliusBrussee)** (⭐ 51K+) — the viral "why use many token when few token do trick" project whose caveman-speak compression philosophy inspired OmniCode's standard compression mode and 30+ filler/condensation regex rules.
 
-Special thanks to **[RTK - Rust Token Killer](https://github.com/rtk-ai/rtk)** by **[RTK AI](https://github.com/rtk-ai)** — the high-performance command-output compression project whose terminal, build, test, git, and tool-output filtering model inspired OmniRoute's RTK engine, JSON filter DSL, raw-output recovery, and stacked RTK → Caveman compression pipeline.
+Special thanks to **[RTK - Rust Token Killer](https://github.com/rtk-ai/rtk)** by **[RTK AI](https://github.com/rtk-ai)** — the high-performance command-output compression project whose terminal, build, test, git, and tool-output filtering model inspired OmniCode's RTK engine, JSON filter DSL, raw-output recovery, and stacked RTK → Caveman compression pipeline.
 
 ---
 
@@ -1549,7 +1549,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **[⬆ Back to top](#-omniroute)** · Built with ❤️ for the open-source AI community.
 
-<sub>OmniRoute v3.8.0 · Node ≥22.22.2 · MIT License · <a href="https://omniroute.online">omniroute.online</a></sub>
+<sub>OmniCode v3.8.0 · Node ≥22.22.2 · MIT License · <a href="https://omniroute.online">omniroute.online</a></sub>
 
 </div>
 <!-- GitHub Discussions enabled for community Q&A -->

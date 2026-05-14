@@ -8,7 +8,7 @@ lastUpdated: 2026-05-13
 
 🌐 **Languages:** 🇺🇸 [English](./API_REFERENCE.md) | 🇧🇷 [Português (Brasil)](../i18n/pt-BR/docs/reference/API_REFERENCE.md) | 🇪🇸 [Español](../i18n/es/docs/reference/API_REFERENCE.md) | 🇫🇷 [Français](../i18n/fr/docs/reference/API_REFERENCE.md) | 🇮🇹 [Italiano](../i18n/it/docs/reference/API_REFERENCE.md) | 🇷🇺 [Русский](../i18n/ru/docs/reference/API_REFERENCE.md) | 🇨🇳 [中文 (简体)](../i18n/zh-CN/docs/reference/API_REFERENCE.md) | 🇩🇪 [Deutsch](../i18n/de/docs/reference/API_REFERENCE.md) | 🇮🇳 [हिन्दी](../i18n/in/docs/reference/API_REFERENCE.md) | 🇹🇭 [ไทย](../i18n/th/docs/reference/API_REFERENCE.md) | 🇺🇦 [Українська](../i18n/uk-UA/docs/reference/API_REFERENCE.md) | 🇸🇦 [العربية](../i18n/ar/docs/reference/API_REFERENCE.md) | 🇯🇵 [日本語](../i18n/ja/docs/reference/API_REFERENCE.md) | 🇻🇳 [Tiếng Việt](../i18n/vi/docs/reference/API_REFERENCE.md) | 🇧🇬 [Български](../i18n/bg/docs/reference/API_REFERENCE.md) | 🇩🇰 [Dansk](../i18n/da/docs/reference/API_REFERENCE.md) | 🇫🇮 [Suomi](../i18n/fi/docs/reference/API_REFERENCE.md) | 🇮🇱 [עברית](../i18n/he/docs/reference/API_REFERENCE.md) | 🇭🇺 [Magyar](../i18n/hu/docs/reference/API_REFERENCE.md) | 🇮🇩 [Bahasa Indonesia](../i18n/id/docs/reference/API_REFERENCE.md) | 🇰🇷 [한국어](../i18n/ko/docs/reference/API_REFERENCE.md) | 🇲🇾 [Bahasa Melayu](../i18n/ms/docs/reference/API_REFERENCE.md) | 🇳🇱 [Nederlands](../i18n/nl/docs/reference/API_REFERENCE.md) | 🇳🇴 [Norsk](../i18n/no/docs/reference/API_REFERENCE.md) | 🇵🇹 [Português (Portugal)](../i18n/pt/docs/reference/API_REFERENCE.md) | 🇷🇴 [Română](../i18n/ro/docs/reference/API_REFERENCE.md) | 🇵🇱 [Polski](../i18n/pl/docs/reference/API_REFERENCE.md) | 🇸🇰 [Slovenčina](../i18n/sk/docs/reference/API_REFERENCE.md) | 🇸🇪 [Svenska](../i18n/sv/docs/reference/API_REFERENCE.md) | 🇵🇭 [Filipino](../i18n/phi/docs/reference/API_REFERENCE.md) | 🇨🇿 [Čeština](../i18n/cs/docs/reference/API_REFERENCE.md)
 
-Complete reference for all OmniRoute API endpoints.
+Complete reference for all OmniCode API endpoints.
 
 ---
 
@@ -71,7 +71,7 @@ Content-Type: application/json
 | `X-OmniRoute-Cache`      | Response  | `HIT` or `MISS` (non-streaming)                  |
 | `X-OmniRoute-Idempotent` | Response  | `true` if deduplicated                           |
 | `X-OmniRoute-Progress`   | Response  | `enabled` if progress tracking on                |
-| `X-OmniRoute-Session-Id` | Response  | Effective session ID used by OmniRoute           |
+| `X-OmniRoute-Session-Id` | Response  | Effective session ID used by OmniCode           |
 
 > Nginx note: if you rely on underscore headers (for example `x_session_id`), enable `underscores_in_headers on;`.
 
@@ -625,7 +625,7 @@ Higher-level routing combos (already summarized under `/api/combos*`) can also b
 
 ## Webhooks
 
-Outbound webhook subscriptions for OmniRoute events (request completion, quota exhaustion, key rotation, etc.).
+Outbound webhook subscriptions for OmniCode events (request completion, quota exhaustion, key rotation, etc.).
 
 | Method | Path                      | Description                                                           |
 | ------ | ------------------------- | --------------------------------------------------------------------- |
@@ -658,7 +658,7 @@ Used by the auto-key management subsystem to issue and rotate API keys against a
 
 ## Agents Protocol
 
-Cloud agent tasks (Claude Code, Codex Cloud, OpenHands, etc.) executed remotely on behalf of OmniRoute users.
+Cloud agent tasks (Claude Code, Codex Cloud, OpenHands, etc.) executed remotely on behalf of OmniCode users.
 
 | Method | Path                          | Description                                                                                                                                   |
 | ------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -704,7 +704,7 @@ Outbound HTTP(S)/SOCKS proxies that can be assigned to providers, accounts, or g
 
 ## Resilience (extended)
 
-OmniRoute exposes three independent temporary-failure mechanisms; the management endpoints below let operators read and override them:
+OmniCode exposes three independent temporary-failure mechanisms; the management endpoints below let operators read and override them:
 
 | Scope               | State storage                              | Read                                      | Reset / clear                               |
 | ------------------- | ------------------------------------------ | ----------------------------------------- | ------------------------------------------- |
@@ -731,7 +731,7 @@ Full conceptual reference and breaker defaults: see [`CLAUDE.md`](../../CLAUDE.m
 
 ## Skills
 
-Skill framework for extending OmniRoute with custom executable handlers, plus marketplace integrations.
+Skill framework for extending OmniCode with custom executable handlers, plus marketplace integrations.
 
 | Method | Path                              | Description                                                                                                                |
 | ------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -768,7 +768,7 @@ Persistent conversational/factual memory store, scoped per API key / session.
 
 ## MCP Server
 
-OmniRoute ships an embedded Model Context Protocol server with 3 transports (stdio, SSE, streamable-http) and scoped tools. The dashboard endpoints below read status/audit data and proxy the HTTP transports.
+OmniCode ships an embedded Model Context Protocol server with 3 transports (stdio, SSE, streamable-http) and scoped tools. The dashboard endpoints below read status/audit data and proxy the HTTP transports.
 
 | Method | Path                   | Description                                                                                      |
 | ------ | ---------------------- | ------------------------------------------------------------------------------------------------ | -------------------- |
@@ -790,7 +790,7 @@ OmniRoute ships an embedded Model Context Protocol server with 3 transports (std
 
 ## A2A Server
 
-OmniRoute exposes an A2A (Agent-to-Agent) JSON-RPC 2.0 endpoint plus a REST wrapper for inspection/dashboard use.
+OmniCode exposes an A2A (Agent-to-Agent) JSON-RPC 2.0 endpoint plus a REST wrapper for inspection/dashboard use.
 
 ### JSON-RPC
 

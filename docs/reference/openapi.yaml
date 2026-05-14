@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: OmniRoute API
+  title: OmniCode API
   version: 3.8.0
   description: |
-    OmniRoute is a local-first AI API proxy router. It provides an OpenAI-compatible
+    OmniCode is a local-first AI API proxy router. It provides an OpenAI-compatible
     endpoint that routes requests to multiple AI providers with load balancing,
     failover, and usage tracking.
 
@@ -14,7 +14,7 @@ info:
     All proxy endpoints require a Bearer token (API key managed via the dashboard).
     Management endpoints are protected when `requireLogin` is enabled.
   contact:
-    name: OmniRoute
+    name: OmniCode
   license:
     name: MIT
 
@@ -1830,7 +1830,7 @@ paths:
     post:
       tags: [Cloud]
       summary: Authenticate with cloud worker
-      description: Authenticates with the OmniRoute cloud worker for remote access.
+      description: Authenticates with the OmniCode cloud worker for remote access.
       requestBody:
         required: true
         content:
@@ -2325,7 +2325,7 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
-      description: API key obtained from the OmniRoute dashboard
+      description: API key obtained from the OmniCode dashboard
     ManagementSessionAuth:
       type: apiKey
       in: cookie

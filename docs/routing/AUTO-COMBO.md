@@ -1,10 +1,10 @@
 ---
-title: "OmniRoute Auto-Combo Engine"
+title: "OmniCode Auto-Combo Engine"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# OmniRoute Auto-Combo Engine
+# OmniCode Auto-Combo Engine
 
 > Self-managing model chains with adaptive scoring + zero-config auto-routing
 
@@ -40,7 +40,7 @@ model: "auto/cheap"           # cheapest per token
 
 **What happens:**
 
-1. OmniRoute detects `auto/` prefix in `src/sse/handlers/chat.ts`
+1. OmniCode detects `auto/` prefix in `src/sse/handlers/chat.ts`
 2. Queries all **active provider connections** from the database
 3. Filters to those with valid credentials (API key or OAuth token)
 4. Determines the model per connection (`connection.defaultModel` or provider's first model)
@@ -126,7 +126,7 @@ Notes:
 
 ## All Routing Strategies
 
-OmniRoute's combo engine supports **14 routing strategies** (declared in `src/shared/constants/routingStrategies.ts` → `ROUTING_STRATEGY_VALUES`). The Auto Combo engine itself is exposed under the `auto` strategy; the others are available for persisted combos.
+OmniCode's combo engine supports **14 routing strategies** (declared in `src/shared/constants/routingStrategies.ts` → `ROUTING_STRATEGY_VALUES`). The Auto Combo engine itself is exposed under the `auto` strategy; the others are available for persisted combos.
 
 | Strategy            | Description                                                        |
 | :------------------ | :----------------------------------------------------------------- |

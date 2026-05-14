@@ -1,10 +1,10 @@
-# OmniRoute
+# OmniCode
 
-> OmniRoute is a free, open-source AI Gateway that acts as a universal API proxy for multi-provider LLMs. It provides smart routing, automatic fallback, load balancing, and format translation across 177 AI providers — all through a single OpenAI-compatible endpoint. Includes a built-in MCP Server (37 tools), A2A v0.3 protocol, Memory/Skills systems, Cloud Agents (codex-cloud, devin, jules), Guardrails framework, and an Electron desktop app.
+> OmniCode is a free, open-source AI Gateway that acts as a universal API proxy for multi-provider LLMs. It provides smart routing, automatic fallback, load balancing, and format translation across 177 AI providers — all through a single OpenAI-compatible endpoint. Includes a built-in MCP Server (37 tools), A2A v0.3 protocol, Memory/Skills systems, Cloud Agents (codex-cloud, devin, jules), Guardrails framework, and an Electron desktop app.
 
 ## Overview
 
-OmniRoute solves the problem of managing multiple AI provider subscriptions, quotas, and rate limits. It sits between your AI-powered tools (IDE agents, CLI tools) and AI providers, routing requests intelligently through a 4-tier fallback system: Subscription → API Key → Cheap → Free.
+OmniCode solves the problem of managing multiple AI provider subscriptions, quotas, and rate limits. It sits between your AI-powered tools (IDE agents, CLI tools) and AI providers, routing requests intelligently through a 4-tier fallback system: Subscription → API Key → Cheap → Free.
 
 **Key value:** One endpoint (`http://localhost:20128/v1`), unlimited models, zero downtime, minimal cost.
 
@@ -376,7 +376,7 @@ OmniRoute solves the problem of managing multiple AI provider subscriptions, quo
 
 ## Key Architectural Decisions
 
-1. **OpenAI-compatible API surface:** All incoming requests follow the OpenAI API format. This makes OmniRoute a drop-in replacement for any tool that supports custom OpenAI endpoints.
+1. **OpenAI-compatible API surface:** All incoming requests follow the OpenAI API format. This makes OmniCode a drop-in replacement for any tool that supports custom OpenAI endpoints.
 
 2. **Provider abstraction via format translators:** Each AI provider has a translator in `open-sse/translator/` that converts between OpenAI format and the provider's native format transparently.
 

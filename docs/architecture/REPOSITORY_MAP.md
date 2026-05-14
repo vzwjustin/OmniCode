@@ -7,14 +7,14 @@ lastUpdated: 2026-05-13
 # Repository Map
 
 > **One-line description for every directory and root file.**
-> Last updated: 2026-05-13 — OmniRoute v3.8.0
+> Last updated: 2026-05-13 — OmniCode v3.8.0
 >
 > Use this map to navigate the codebase quickly. For deep dives, follow links to dedicated docs.
 
 ## Top-level tree
 
 ```
-OmniRoute/
+OmniCode/
 ├── src/                  # Next.js 16 application (UI + API routes + libs + domain + server)
 ├── open-sse/             # Streaming engine workspace (handlers, executors, translator, MCP server)
 ├── electron/             # Desktop wrapper (Electron 41 + electron-builder 26.10)
@@ -340,7 +340,7 @@ open-sse/
 | `RELEASE_CHECKLIST.md`      | Full release flow (skills, husky, conventional commits, deploy)                       |
 | `COVERAGE_PLAN.md`          | Coverage goals and current state                                                      |
 | `FREE_TIERS.md`             | Curated free-tier providers (48+ free + 11 OAuth)                                     |
-| `CLI-TOOLS.md`              | External CLI integrations + Internal OmniRoute CLI                                    |
+| `CLI-TOOLS.md`              | External CLI integrations + Internal OmniCode CLI                                    |
 | `I18N.md`                   | i18n architecture, adding a language, 30 locales                                      |
 | `UNINSTALL.md`              | Clean uninstall steps                                                                 |
 | `PROVIDER_REFERENCE.md`     | **Auto-generated** catalog of 177 providers (regen: `npm run gen:provider-reference`) |

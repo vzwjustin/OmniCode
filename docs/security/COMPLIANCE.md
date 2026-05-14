@@ -9,7 +9,7 @@ lastUpdated: 2026-05-13
 > **Source of truth:** `src/lib/compliance/`, `src/app/api/compliance/`
 > **Last updated:** 2026-05-13 — v3.8.0
 
-OmniRoute records administrative actions, authentication events, provider
+OmniCode records administrative actions, authentication events, provider
 credential lifecycle changes, and MCP tool invocations to SQLite-backed audit
 tables. This page covers what gets logged, where it lives, how long it is
 retained, how API keys can opt out, and how to query the data.

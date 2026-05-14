@@ -6,7 +6,7 @@ lastUpdated: 2026-05-13
 
 # Termux Headless Setup
 
-OmniRoute can run as a headless server on Android through Termux. The Electron desktop app is not supported in Termux, but the web dashboard and OpenAI-compatible API work from the local browser or from other devices on the same network.
+OmniCode can run as a headless server on Android through Termux. The Electron desktop app is not supported in Termux, but the web dashboard and OpenAI-compatible API work from the local browser or from other devices on the same network.
 
 ## Prerequisites
 
@@ -18,9 +18,9 @@ pkg upgrade
 pkg install nodejs-lts python build-essential git
 ```
 
-> **Node.js version:** OmniRoute requires Node `>=20.20.2 <21 || >=22.22.2 <23 || >=24.0.0 <27` (per `engines` in `package.json`). Termux's `nodejs-lts` typically ships Node 20 LTS, which is compatible. If `node --version` reports an older line, install `pkg install nodejs` (current) and verify the major matches a supported range.
+> **Node.js version:** OmniCode requires Node `>=20.20.2 <21 || >=22.22.2 <23 || >=24.0.0 <27` (per `engines` in `package.json`). Termux's `nodejs-lts` typically ships Node 20 LTS, which is compatible. If `node --version` reports an older line, install `pkg install nodejs` (current) and verify the major matches a supported range.
 
-If native package compilation fails, rerun the `pkg install` command above and then retry the OmniRoute install.
+If native package compilation fails, rerun the `pkg install` command above and then retry the OmniCode install.
 
 ## Install
 
@@ -39,7 +39,7 @@ omniroute
 
 ## Run
 
-Start OmniRoute in headless server mode:
+Start OmniCode in headless server mode:
 
 ```bash
 omniroute
@@ -107,11 +107,11 @@ For example:
 http://192.168.1.50:20128
 ```
 
-Keep the phone and client on the same trusted network. If you expose OmniRoute outside the phone, enable API keys and dashboard authentication.
+Keep the phone and client on the same trusted network. If you expose OmniCode outside the phone, enable API keys and dashboard authentication.
 
 ## Data Directory
 
-By default OmniRoute stores data under the Termux home directory, following the same server-side data path behavior used on Linux. To place the database somewhere explicit:
+By default OmniCode stores data under the Termux home directory, following the same server-side data path behavior used on Linux. To place the database somewhere explicit:
 
 ```bash
 export DATA_DIR="$HOME/.omniroute"

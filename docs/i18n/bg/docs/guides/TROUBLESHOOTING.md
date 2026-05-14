@@ -4,7 +4,7 @@
 
 ---
 
-Common problems and solutions for OmniRoute.
+Common problems and solutions for OmniCode.
 
 ---
 
@@ -29,7 +29,7 @@ Common problems and solutions for OmniRoute.
 
 ### Login page crashes or shows "Module self-registration" error
 
-**Cause:** You are running a Node.js version outside OmniRoute's approved secure runtime floor. The most common case is running an older Node 20, 22, or 24 patch level that falls below the patched security floor OmniRoute requires.
+**Cause:** You are running a Node.js version outside OmniCode's approved secure runtime floor. The most common case is running an older Node 20, 22, or 24 patch level that falls below the patched security floor OmniCode requires.
 
 **Symptoms:**
 
@@ -45,7 +45,7 @@ Common problems and solutions for OmniRoute.
    nvm use 24
    ```
 2. Verify your version: `node --version` should show `v24.0.0` or newer on the 24.x LTS line
-3. Reinstall OmniRoute: `npm install -g omniroute`
+3. Reinstall OmniCode: `npm install -g omniroute`
 4. Restart: `omniroute`
 
 > **Supported secure versions:** `>=20.20.2 <21`, `>=22.22.2 <23`, or `>=24.0.0 <25`. Node.js 24.x LTS (Krypton) is fully supported.
@@ -98,7 +98,7 @@ omniroute
 
 **Cause:** On Node.js 22, the undici@8 dispatcher is incompatible with Node's built-in `fetch()` implementation.
 
-**Fix (v3.5.5+):** OmniRoute now uses undici's own `fetch()` function when a proxy dispatcher is active, ensuring consistent behavior. Update to v3.5.5+.
+**Fix (v3.5.5+):** OmniCode now uses undici's own `fetch()` function when a proxy dispatcher is active, ensuring consistent behavior. Update to v3.5.5+.
 
 ---
 
@@ -125,7 +125,7 @@ omniroute
 
 ### OAuth Token Expired
 
-OmniRoute auto-refreshes tokens. If issues persist:
+OmniCode auto-refreshes tokens. If issues persist:
 
 1. Dashboard → Provider → Reconnect
 2. Delete and re-add the provider connection
@@ -293,13 +293,13 @@ Provider profiles support these settings:
 
 ### Anti-thundering herd
 
-When many concurrent requests hit a rate-limited provider, OmniRoute uses mutex + auto rate-limiting to serialize requests and prevent cascading failures. This is automatic for API key providers.
+When many concurrent requests hit a rate-limited provider, OmniCode uses mutex + auto rate-limiting to serialize requests and prevent cascading failures. This is automatic for API key providers.
 
 ---
 
 ## Optional RAG / LLM failure taxonomy (16 problems)
 
-Some OmniRoute users place the gateway in front of RAG or agent stacks. In those setups it is common to see a strange pattern: OmniRoute looks healthy (providers up, routing profiles ok, no rate limit alerts) but the final answer is still wrong.
+Some OmniCode users place the gateway in front of RAG or agent stacks. In those setups it is common to see a strange pattern: OmniCode looks healthy (providers up, routing profiles ok, no rate limit alerts) but the final answer is still wrong.
 
 In practice these incidents usually come from the downstream RAG pipeline, not from the gateway itself.
 
@@ -318,17 +318,17 @@ The idea is simple:
 
 1. When you investigate a bad response, capture:
    - user task and request
-   - route or provider combo in OmniRoute
+   - route or provider combo in OmniCode
    - any RAG context used downstream (retrieved documents, tool calls, etc)
 2. Map the incident to one or two WFGY ProblemMap numbers (`No.1` … `No.16`).
-3. Store the number in your own dashboard, runbook, or incident tracker next to the OmniRoute logs.
+3. Store the number in your own dashboard, runbook, or incident tracker next to the OmniCode logs.
 4. Use the corresponding WFGY page to decide whether you need to change your RAG stack, retriever, or routing strategy.
 
 Full text and concrete recipes live here (MIT license, text only):
 
 [WFGY ProblemMap README](https://github.com/onestardao/WFGY/blob/main/ProblemMap/README.md)
 
-You can ignore this section if you do not run RAG or agent pipelines behind OmniRoute.
+You can ignore this section if you do not run RAG or agent pipelines behind OmniCode.
 
 ---
 

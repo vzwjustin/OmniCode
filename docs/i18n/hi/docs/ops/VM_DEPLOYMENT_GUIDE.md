@@ -1,10 +1,10 @@
-# OmniRoute — Deployment Guide on VM with Cloudflare (हिन्दी)
+# OmniCode — Deployment Guide on VM with Cloudflare (हिन्दी)
 
 🌐 **Languages:** 🇺🇸 [English](../../../../docs/VM_DEPLOYMENT_GUIDE.md) · 🇸🇦 [ar](../../ar/docs/VM_DEPLOYMENT_GUIDE.md) · 🇧🇬 [bg](../../bg/docs/VM_DEPLOYMENT_GUIDE.md) · 🇧🇩 [bn](../../bn/docs/VM_DEPLOYMENT_GUIDE.md) · 🇨🇿 [cs](../../cs/docs/VM_DEPLOYMENT_GUIDE.md) · 🇩🇰 [da](../../da/docs/VM_DEPLOYMENT_GUIDE.md) · 🇩🇪 [de](../../de/docs/VM_DEPLOYMENT_GUIDE.md) · 🇪🇸 [es](../../es/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇷 [fa](../../fa/docs/VM_DEPLOYMENT_GUIDE.md) · 🇫🇮 [fi](../../fi/docs/VM_DEPLOYMENT_GUIDE.md) · 🇫🇷 [fr](../../fr/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇳 [gu](../../gu/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇱 [he](../../he/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇳 [hi](../../hi/docs/VM_DEPLOYMENT_GUIDE.md) · 🇭🇺 [hu](../../hu/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇩 [id](../../id/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇹 [it](../../it/docs/VM_DEPLOYMENT_GUIDE.md) · 🇯🇵 [ja](../../ja/docs/VM_DEPLOYMENT_GUIDE.md) · 🇰🇷 [ko](../../ko/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇳 [mr](../../mr/docs/VM_DEPLOYMENT_GUIDE.md) · 🇲🇾 [ms](../../ms/docs/VM_DEPLOYMENT_GUIDE.md) · 🇳🇱 [nl](../../nl/docs/VM_DEPLOYMENT_GUIDE.md) · 🇳🇴 [no](../../no/docs/VM_DEPLOYMENT_GUIDE.md) · 🇵🇭 [phi](../../phi/docs/VM_DEPLOYMENT_GUIDE.md) · 🇵🇱 [pl](../../pl/docs/VM_DEPLOYMENT_GUIDE.md) · 🇵🇹 [pt](../../pt/docs/VM_DEPLOYMENT_GUIDE.md) · 🇧🇷 [pt-BR](../../pt-BR/docs/VM_DEPLOYMENT_GUIDE.md) · 🇷🇴 [ro](../../ro/docs/VM_DEPLOYMENT_GUIDE.md) · 🇷🇺 [ru](../../ru/docs/VM_DEPLOYMENT_GUIDE.md) · 🇸🇰 [sk](../../sk/docs/VM_DEPLOYMENT_GUIDE.md) · 🇸🇪 [sv](../../sv/docs/VM_DEPLOYMENT_GUIDE.md) · 🇰🇪 [sw](../../sw/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇳 [ta](../../ta/docs/VM_DEPLOYMENT_GUIDE.md) · 🇮🇳 [te](../../te/docs/VM_DEPLOYMENT_GUIDE.md) · 🇹🇭 [th](../../th/docs/VM_DEPLOYMENT_GUIDE.md) · 🇹🇷 [tr](../../tr/docs/VM_DEPLOYMENT_GUIDE.md) · 🇺🇦 [uk-UA](../../uk-UA/docs/VM_DEPLOYMENT_GUIDE.md) · 🇵🇰 [ur](../../ur/docs/VM_DEPLOYMENT_GUIDE.md) · 🇻🇳 [vi](../../vi/docs/VM_DEPLOYMENT_GUIDE.md) · 🇨🇳 [zh-CN](../../zh-CN/docs/VM_DEPLOYMENT_GUIDE.md)
 
 ---
 
-Complete guide to install and configure OmniRoute on a VM (VPS) with domain managed via Cloudflare.
+Complete guide to install and configure OmniCode on a VM (VPS) with domain managed via Cloudflare.
 
 ---
 
@@ -82,7 +82,7 @@ ufw enable
 
 ---
 
-## 2. Install OmniRoute
+## 2. Install OmniCode
 
 ### 2.1 Create configuration directory
 
@@ -188,7 +188,7 @@ server {
     return 444;
 }
 
-# OmniRoute — HTTPS
+# OmniCode — HTTPS
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
@@ -230,7 +230,7 @@ server {
 NGINX
 ```
 
-Keep reverse-proxy stream timeouts aligned with your OmniRoute timeout env vars. If you raise
+Keep reverse-proxy stream timeouts aligned with your OmniCode timeout env vars. If you raise
 `FETCH_TIMEOUT_MS` / `STREAM_IDLE_TIMEOUT_MS`, raise `proxy_read_timeout` / `proxy_send_timeout`
 above the same threshold.
 
@@ -240,7 +240,7 @@ above the same threshold.
 # Remove default configuration
 rm -f /etc/nginx/sites-enabled/default
 
-# Enable OmniRoute
+# Enable OmniCode
 ln -sf /etc/nginx/sites-available/omniroute /etc/nginx/sites-enabled/omniroute
 
 # Test and reload
@@ -404,4 +404,4 @@ See the full documentation at [omnirouteCloud/README.md](../omnirouteCloud/READM
 | 22    | SSH         | Public (with fail2ban)     |
 | 80    | nginx HTTP  | Redirect → HTTPS           |
 | 443   | nginx HTTPS | Via Cloudflare Proxy       |
-| 20128 | OmniRoute   | Localhost only (via nginx) |
+| 20128 | OmniCode   | Localhost only (via nginx) |

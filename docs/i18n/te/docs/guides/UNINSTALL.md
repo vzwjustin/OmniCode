@@ -1,16 +1,16 @@
-# OmniRoute — Uninstall Guide (తెలుగు)
+# OmniCode — Uninstall Guide (తెలుగు)
 
 🌐 **Languages:** 🇺🇸 [English](../../../../docs/UNINSTALL.md) · 🇸🇦 [ar](../../ar/docs/UNINSTALL.md) · 🇧🇬 [bg](../../bg/docs/UNINSTALL.md) · 🇧🇩 [bn](../../bn/docs/UNINSTALL.md) · 🇨🇿 [cs](../../cs/docs/UNINSTALL.md) · 🇩🇰 [da](../../da/docs/UNINSTALL.md) · 🇩🇪 [de](../../de/docs/UNINSTALL.md) · 🇪🇸 [es](../../es/docs/UNINSTALL.md) · 🇮🇷 [fa](../../fa/docs/UNINSTALL.md) · 🇫🇮 [fi](../../fi/docs/UNINSTALL.md) · 🇫🇷 [fr](../../fr/docs/UNINSTALL.md) · 🇮🇳 [gu](../../gu/docs/UNINSTALL.md) · 🇮🇱 [he](../../he/docs/UNINSTALL.md) · 🇮🇳 [hi](../../hi/docs/UNINSTALL.md) · 🇭🇺 [hu](../../hu/docs/UNINSTALL.md) · 🇮🇩 [id](../../id/docs/UNINSTALL.md) · 🇮🇹 [it](../../it/docs/UNINSTALL.md) · 🇯🇵 [ja](../../ja/docs/UNINSTALL.md) · 🇰🇷 [ko](../../ko/docs/UNINSTALL.md) · 🇮🇳 [mr](../../mr/docs/UNINSTALL.md) · 🇲🇾 [ms](../../ms/docs/UNINSTALL.md) · 🇳🇱 [nl](../../nl/docs/UNINSTALL.md) · 🇳🇴 [no](../../no/docs/UNINSTALL.md) · 🇵🇭 [phi](../../phi/docs/UNINSTALL.md) · 🇵🇱 [pl](../../pl/docs/UNINSTALL.md) · 🇵🇹 [pt](../../pt/docs/UNINSTALL.md) · 🇧🇷 [pt-BR](../../pt-BR/docs/UNINSTALL.md) · 🇷🇴 [ro](../../ro/docs/UNINSTALL.md) · 🇷🇺 [ru](../../ru/docs/UNINSTALL.md) · 🇸🇰 [sk](../../sk/docs/UNINSTALL.md) · 🇸🇪 [sv](../../sv/docs/UNINSTALL.md) · 🇰🇪 [sw](../../sw/docs/UNINSTALL.md) · 🇮🇳 [ta](../../ta/docs/UNINSTALL.md) · 🇮🇳 [te](../../te/docs/UNINSTALL.md) · 🇹🇭 [th](../../th/docs/UNINSTALL.md) · 🇹🇷 [tr](../../tr/docs/UNINSTALL.md) · 🇺🇦 [uk-UA](../../uk-UA/docs/UNINSTALL.md) · 🇵🇰 [ur](../../ur/docs/UNINSTALL.md) · 🇻🇳 [vi](../../vi/docs/UNINSTALL.md) · 🇨🇳 [zh-CN](../../zh-CN/docs/UNINSTALL.md)
 
 ---
 
-This guide covers how to cleanly remove OmniRoute from your system.
+This guide covers how to cleanly remove OmniCode from your system.
 
 ---
 
 ## Quick Uninstall (v3.6.2+)
 
-OmniRoute provides two built-in scripts for clean removal:
+OmniCode provides two built-in scripts for clean removal:
 
 ### Keep Your Data
 
@@ -18,7 +18,7 @@ OmniRoute provides two built-in scripts for clean removal:
 npm run uninstall
 ```
 
-This removes the OmniRoute application but **preserves** your database, configurations, API keys, and provider settings in `~/.omniroute/`. Use this if you plan to reinstall later and want to keep your setup.
+This removes the OmniCode application but **preserves** your database, configurations, API keys, and provider settings in `~/.omniroute/`. Use this if you plan to reinstall later and want to keep your setup.
 
 ### Full Removal
 
@@ -85,12 +85,12 @@ docker compose down -v
 
 **Windows:**
 
-- Open `Settings → Apps → OmniRoute → Uninstall`
+- Open `Settings → Apps → OmniCode → Uninstall`
 - Or run the NSIS uninstaller from the install directory
 
 **macOS:**
 
-- Drag `OmniRoute.app` from `/Applications` to Trash
+- Drag `OmniCode.app` from `/Applications` to Trash
 - Remove data: `rm -rf ~/Library/Application Support/omniroute`
 
 **Linux:**
@@ -112,7 +112,7 @@ rm -rf ~/.omniroute
 
 ## Data Directories
 
-OmniRoute stores data in the following locations by default:
+OmniCode stores data in the following locations by default:
 
 | Platform      | Default Path                  | Override                  |
 | ------------- | ----------------------------- | ------------------------- |

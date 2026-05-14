@@ -9,7 +9,7 @@ lastUpdated: 2026-05-13
 > **Source of truth:** `src/lib/memory/` and `src/app/api/memory/`
 > **Last updated:** 2026-05-13 — v3.8.0
 
-OmniRoute provides persistent conversational memory keyed by API key (and
+OmniCode provides persistent conversational memory keyed by API key (and
 optionally session id). Memories are extracted automatically from LLM responses
 via lightweight regex pattern matching and injected back into subsequent
 requests as a leading system message (or first user message for providers that

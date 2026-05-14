@@ -9,7 +9,7 @@ lastUpdated: 2026-05-13
 > **Source of truth:** `src/lib/webhookDispatcher.ts`, `src/lib/db/webhooks.ts`, `src/app/api/webhooks/`
 > **Last updated:** 2026-05-13 — v3.8.0
 
-OmniRoute can fire HTTP webhooks on platform events. Use them to integrate with
+OmniCode can fire HTTP webhooks on platform events. Use them to integrate with
 Slack, PagerDuty, Datadog, internal alerting services, or any HTTP receiver.
 
 The dispatcher signs each delivery with HMAC-SHA256, retries on transient
@@ -59,7 +59,7 @@ per-webhook errors so one bad receiver cannot block the others.
 
 ## HMAC Signing
 
-When a webhook has a `secret`, OmniRoute signs the JSON body and sends:
+When a webhook has a `secret`, OmniCode signs the JSON body and sends:
 
 ```
 Content-Type: application/json
@@ -225,7 +225,7 @@ The dashboard page at `/dashboard/webhooks` (see
   "event": "test.ping",
   "timestamp": "2026-05-13T20:32:00.000Z",
   "data": {
-    "message": "Test webhook delivery from OmniRoute",
+    "message": "Test webhook delivery from OmniCode",
     "webhookId": "<uuid>"
   }
 }

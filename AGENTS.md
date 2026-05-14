@@ -414,7 +414,7 @@ custom skill support, interception, and injection.
   Receives skill name + input, looks up the skill, runs it in the sandbox.
 - **`sandbox.ts`**: Isolation layer for custom (user-provided) skills. Limits resource
   access and execution time.
-- **Built-in skills**: Ship with OmniRoute (e.g., quota management, routing). Located
+- **Built-in skills**: Ship with OmniCode (e.g., quota management, routing). Located
   alongside the registry.
 - **Interception/Injection**: Skills can intercept requests in the pipeline (pre/post
   processing) or inject context into prompts.

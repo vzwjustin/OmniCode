@@ -33,7 +33,7 @@ npm run test:vitest
 
 ## अवलोकन
 
-**OmniRoute** — unified AI proxy/router. One endpoint, 100+ LLM providers, auto-fallback.
+**OmniCode** — unified AI proxy/router. One endpoint, 100+ LLM providers, auto-fallback.
 
 | Layer           | Location                 | Purpose                                    |
 | --------------- | ------------------------ | ------------------------------------------ |
@@ -56,7 +56,7 @@ npm run test:vitest
 ### Monorepo Layout
 
 ```
-OmniRoute/              # Root package
+OmniCode/              # Root package
 ├── src/                # Next.js 16 app (TypeScript)
 ├── open-sse/           # @omniroute/open-sse workspace (streaming engine)
 ├── electron/           # Desktop app (Electron)

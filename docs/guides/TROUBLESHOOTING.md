@@ -8,7 +8,7 @@ lastUpdated: 2026-05-13
 
 🌐 **Languages:** 🇺🇸 [English](./TROUBLESHOOTING.md) | 🇧🇷 [Português (Brasil)](../i18n/pt-BR/docs/guides/TROUBLESHOOTING.md) | 🇪🇸 [Español](../i18n/es/docs/guides/TROUBLESHOOTING.md) | 🇫🇷 [Français](../i18n/fr/docs/guides/TROUBLESHOOTING.md) | 🇮🇹 [Italiano](../i18n/it/docs/guides/TROUBLESHOOTING.md) | 🇷🇺 [Русский](../i18n/ru/docs/guides/TROUBLESHOOTING.md) | 🇨🇳 [中文 (简体)](../i18n/zh-CN/docs/guides/TROUBLESHOOTING.md) | 🇩🇪 [Deutsch](../i18n/de/docs/guides/TROUBLESHOOTING.md) | 🇮🇳 [हिन्दी](../i18n/in/docs/guides/TROUBLESHOOTING.md) | 🇹🇭 [ไทย](../i18n/th/docs/guides/TROUBLESHOOTING.md) | 🇺🇦 [Українська](../i18n/uk-UA/docs/guides/TROUBLESHOOTING.md) | 🇸🇦 [العربية](../i18n/ar/docs/guides/TROUBLESHOOTING.md) | 🇯🇵 [日本語](../i18n/ja/docs/guides/TROUBLESHOOTING.md) | 🇻🇳 [Tiếng Việt](../i18n/vi/docs/guides/TROUBLESHOOTING.md) | 🇧🇬 [Български](../i18n/bg/docs/guides/TROUBLESHOOTING.md) | 🇩🇰 [Dansk](../i18n/da/docs/guides/TROUBLESHOOTING.md) | 🇫🇮 [Suomi](../i18n/fi/docs/guides/TROUBLESHOOTING.md) | 🇮🇱 [עברית](../i18n/he/docs/guides/TROUBLESHOOTING.md) | 🇭🇺 [Magyar](../i18n/hu/docs/guides/TROUBLESHOOTING.md) | 🇮🇩 [Bahasa Indonesia](../i18n/id/docs/guides/TROUBLESHOOTING.md) | 🇰🇷 [한국어](../i18n/ko/docs/guides/TROUBLESHOOTING.md) | 🇲🇾 [Bahasa Melayu](../i18n/ms/docs/guides/TROUBLESHOOTING.md) | 🇳🇱 [Nederlands](../i18n/nl/docs/guides/TROUBLESHOOTING.md) | 🇳🇴 [Norsk](../i18n/no/docs/guides/TROUBLESHOOTING.md) | 🇵🇹 [Português (Portugal)](../i18n/pt/docs/guides/TROUBLESHOOTING.md) | 🇷🇴 [Română](../i18n/ro/docs/guides/TROUBLESHOOTING.md) | 🇵🇱 [Polski](../i18n/pl/docs/guides/TROUBLESHOOTING.md) | 🇸🇰 [Slovenčina](../i18n/sk/docs/guides/TROUBLESHOOTING.md) | 🇸🇪 [Svenska](../i18n/sv/docs/guides/TROUBLESHOOTING.md) | 🇵🇭 [Filipino](../i18n/phi/docs/guides/TROUBLESHOOTING.md) | 🇨🇿 [Čeština](../i18n/cs/docs/guides/TROUBLESHOOTING.md)
 
-Common problems and solutions for OmniRoute.
+Common problems and solutions for OmniCode.
 
 ---
 
@@ -33,7 +33,7 @@ Common problems and solutions for OmniRoute.
 
 ### Login page crashes or shows "Module self-registration" error
 
-**Cause:** You are running a Node.js version outside OmniRoute's approved secure runtime floor. The most common case is running an older Node 20, 22, or 24 patch level that falls below the patched security floor OmniRoute requires.
+**Cause:** You are running a Node.js version outside OmniCode's approved secure runtime floor. The most common case is running an older Node 20, 22, or 24 patch level that falls below the patched security floor OmniCode requires.
 
 **Symptoms:**
 
@@ -49,7 +49,7 @@ Common problems and solutions for OmniRoute.
    nvm use 24
    ```
 2. Verify your version: `node --version` should show `v24.0.0` or newer on the 24.x LTS line
-3. Reinstall OmniRoute: `npm install -g omniroute`
+3. Reinstall OmniCode: `npm install -g omniroute`
 4. Restart: `omniroute`
 
 > **Supported secure versions:** `>=20.20.2 <21`, `>=22.22.2 <23`, or `>=24.0.0 <27`. Node.js 24.x LTS (Krypton) and Node.js 26 are fully supported.
@@ -102,7 +102,7 @@ omniroute
 
 **Cause:** On Node.js 22, the undici@8 dispatcher is incompatible with Node's built-in `fetch()` implementation.
 
-**Fix (v3.5.5+):** OmniRoute now uses undici's own `fetch()` function when a proxy dispatcher is active, ensuring consistent behavior. Update to v3.5.5+.
+**Fix (v3.5.5+):** OmniCode now uses undici's own `fetch()` function when a proxy dispatcher is active, ensuring consistent behavior. Update to v3.5.5+.
 
 ---
 
@@ -129,7 +129,7 @@ omniroute
 
 ### OAuth Token Expired
 
-OmniRoute auto-refreshes tokens. If issues persist:
+OmniCode auto-refreshes tokens. If issues persist:
 
 1. Dashboard → Provider → Reconnect
 2. Delete and re-add the provider connection
@@ -299,13 +299,13 @@ Provider profiles support these settings:
 
 ### Anti-thundering herd
 
-When many concurrent requests hit a rate-limited provider, OmniRoute uses mutex + auto rate-limiting to serialize requests and prevent cascading failures. This is automatic for API key providers.
+When many concurrent requests hit a rate-limited provider, OmniCode uses mutex + auto rate-limiting to serialize requests and prevent cascading failures. This is automatic for API key providers.
 
 ---
 
 ## Optional RAG / LLM failure taxonomy (16 problems)
 
-Some OmniRoute users place the gateway in front of RAG or agent stacks. In those setups it is common to see a strange pattern: OmniRoute looks healthy (providers up, routing profiles ok, no rate limit alerts) but the final answer is still wrong.
+Some OmniCode users place the gateway in front of RAG or agent stacks. In those setups it is common to see a strange pattern: OmniCode looks healthy (providers up, routing profiles ok, no rate limit alerts) but the final answer is still wrong.
 
 In practice these incidents usually come from the downstream RAG pipeline, not from the gateway itself.
 
@@ -324,17 +324,17 @@ The idea is simple:
 
 1. When you investigate a bad response, capture:
    - user task and request
-   - route or provider combo in OmniRoute
+   - route or provider combo in OmniCode
    - any RAG context used downstream (retrieved documents, tool calls, etc)
 2. Map the incident to one or two WFGY ProblemMap numbers (`No.1` … `No.16`).
-3. Store the number in your own dashboard, runbook, or incident tracker next to the OmniRoute logs.
+3. Store the number in your own dashboard, runbook, or incident tracker next to the OmniCode logs.
 4. Use the corresponding WFGY page to decide whether you need to change your RAG stack, retriever, or routing strategy.
 
 Full text and concrete recipes live here (MIT license, text only):
 
 [WFGY ProblemMap README](https://github.com/onestardao/WFGY/blob/main/ProblemMap/README.md)
 
-You can ignore this section if you do not run RAG or agent pipelines behind OmniRoute.
+You can ignore this section if you do not run RAG or agent pipelines behind OmniCode.
 
 ---
 
@@ -358,7 +358,7 @@ Issues specific to the v3.8.0 release and their current workarounds. If a fix la
 **Fix:**
 
 1. Verify both `WINDSURF_FIREBASE_API_KEY` and `WINDSURF_API_KEY` are set in `.env`
-2. Restart OmniRoute so the new env values are picked up
+2. Restart OmniCode so the new env values are picked up
 3. Re-run the OAuth flow from **Dashboard → Providers → Windsurf → Reconnect**
 
 ### Devin CLI auth failures
@@ -377,7 +377,7 @@ Issues specific to the v3.8.0 release and their current workarounds. If a fix la
 
 1. Install the Devin CLI for your platform
 2. Set `CLI_DEVIN_BIN=/usr/local/bin/devin` (or the real path) in `.env`
-3. Restart OmniRoute and re-test from **Dashboard → CLI Tools**
+3. Restart OmniCode and re-test from **Dashboard → CLI Tools**
 
 ### Model cooldown stuck (manual reset)
 
@@ -432,7 +432,7 @@ Issues specific to the v3.8.0 release and their current workarounds. If a fix la
 
 1. Generate a random secret: `openssl rand -hex 32`
 2. Set `OMNIROUTE_WS_BRIDGE_SECRET=<random-secret>` in the production server env (and any client that talks to the bridge)
-3. Restart OmniRoute
+3. Restart OmniCode
 
 ### Responses API: background mode degraded to synchronous
 

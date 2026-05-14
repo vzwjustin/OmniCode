@@ -1,14 +1,14 @@
 ---
-title: "OmniRoute Codebase Documentation"
+title: "OmniCode Codebase Documentation"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# OmniRoute Codebase Documentation
+# OmniCode Codebase Documentation
 
 > **Version:** v3.8.0
 > **Last updated:** 2026-05-13
-> **Audience:** Engineers contributing to OmniRoute or building integrations on top of it.
+> **Audience:** Engineers contributing to OmniCode or building integrations on top of it.
 >
 > For high-level architecture diagrams and the reasoning behind each subsystem, read
 > [ARCHITECTURE.md](./ARCHITECTURE.md). For deep dives on individual subsystems
@@ -50,7 +50,7 @@ directory is `DATA_DIR` env var, defaulting to `~/.omniroute/`.
 ## 2. Repository Layout
 
 ```
-OmniRoute/
+OmniCode/
 ├── src/                  Next.js application (App Router, libs, domain, server, shared)
 ├── open-sse/             Streaming engine workspace (@omniroute/open-sse)
 ├── electron/             Desktop wrapper (Electron 41 main + preload)

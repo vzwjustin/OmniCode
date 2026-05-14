@@ -1,4 +1,4 @@
-# 🌐 Multilingual Documentation — OmniRoute
+# 🌐 Multilingual Documentation — OmniCode
 
 Translations of documentation into 39 languages. Code blocks remain in English.
 
