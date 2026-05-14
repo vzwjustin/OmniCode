@@ -1,11 +1,11 @@
 {
-  "name": "omniroute",
+  "name": "omnicoder",
   "version": "3.8.0",
-  "description": "Unified AI router with 160+ providers, RTK+Caveman compression, auto fallback, MCP/A2A, desktop, PWA, and OpenAI-compatible APIs.",
+  "description": "Lean, hardened AI proxy purpose-built for coding tools. 150+ chat providers, auto-fallback, format translation, prompt compression, MCP server. No media bloat, no Redis.",
   "type": "module",
   "bin": {
-    "omniroute": "bin/omniroute.mjs",
-    "omniroute-reset-password": "bin/reset-password.mjs"
+    "omnicoder": "bin/omnicoder.mjs",
+    "omnicoder-reset-password": "bin/reset-password.mjs"
   },
   "files": [
     "bin/",
@@ -42,8 +42,9 @@
   },
   "keywords": [
     "ai",
-    "router",
+    "coding",
     "proxy",
+    "router",
     "openai",
     "claude",
     "anthropic",
@@ -52,16 +53,20 @@
     "cursor",
     "cline",
     "codex",
+    "copilot",
     "llm",
-    "auto-fallback"
+    "auto-fallback",
+    "mcp",
+    "a2a",
+    "prompt-compression"
   ],
   "license": "MIT",
-  "author": "diegosouzapw",
+  "author": "vzwjustin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/diegosouzapw/OmniRoute"
+    "url": "https://github.com/vzwjustin/OmniRoute"
   },
-  "homepage": "https://omniroute.online",
+  "homepage": "https://github.com/vzwjustin/OmniRoute",
   "scripts": {
     "dev": "node scripts/dev/run-next.mjs dev",
     "prebuild:docs": "node scripts/docs/generate-docs-index.mjs && node scripts/docs/gen-openapi-module.mjs",
@@ -223,7 +228,7 @@
       "@swc/core",
       "better-sqlite3",
       "esbuild",
-      "omniroute",
+      "omnicoder",
       "sharp"
     ]
   },
