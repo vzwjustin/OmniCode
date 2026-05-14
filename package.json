@@ -146,7 +146,6 @@
     "gray-matter": "^4.0.3",
     "http-proxy-middleware": "^4.0.0",
     "https-proxy-agent": "^9.0.0",
-    "ioredis": "^5.10.1",
     "isomorphic-dompurify": "^3.12.0",
     "jose": "^6.2.3",
     "js-yaml": "^4.1.1",

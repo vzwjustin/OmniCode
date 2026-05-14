@@ -77,8 +77,8 @@ OmniCode/
 | **vitest.mcp.config.ts**                    | Vitest config for MCP server / autoCombo / cache suites                                                                                         |
 | **sonar-project.properties**                | SonarQube/SonarCloud config (code quality)                                                                                                      |
 | **Dockerfile**                              | Multi-stage Docker build (builder → runner-base → runner-cli)                                                                                   |
-| **docker-compose.yml**                      | Dev compose with 4 profiles (base, cli, host, cliproxyapi) + redis sidecar                                                                      |
-| **docker-compose.prod.yml**                 | Production compose (port 20130, redis, named volumes)                                                                                           |
+| **docker-compose.yml**                      | Dev compose with 4 profiles (base, cli, host, cliproxyapi)                                                                                      |
+| **docker-compose.prod.yml**                 | Production compose (port 20130, named volumes)                                                                                                  |
 | **.dockerignore**                           | Files excluded from Docker context                                                                                                              |
 | **fly.toml**                                | Fly.io deployment config (region `sin`, port 20128, /data volume)                                                                               |
 | **.env.example**                            | Template env file (815 lines, auto-copied to `.env` on first install)                                                                           |
@@ -340,7 +340,7 @@ open-sse/
 | `RELEASE_CHECKLIST.md`      | Full release flow (skills, husky, conventional commits, deploy)                       |
 | `COVERAGE_PLAN.md`          | Coverage goals and current state                                                      |
 | `FREE_TIERS.md`             | Curated free-tier providers (48+ free + 11 OAuth)                                     |
-| `CLI-TOOLS.md`              | External CLI integrations + Internal OmniCode CLI                                    |
+| `CLI-TOOLS.md`              | External CLI integrations + Internal OmniCode CLI                                     |
 | `I18N.md`                   | i18n architecture, adding a language, 30 locales                                      |
 | `UNINSTALL.md`              | Clean uninstall steps                                                                 |
 | `PROVIDER_REFERENCE.md`     | **Auto-generated** catalog of 177 providers (regen: `npm run gen:provider-reference`) |
@@ -377,16 +377,16 @@ open-sse/
 
 ### Deployment
 
-| Doc                          | Purpose                                                           |
-| ---------------------------- | ----------------------------------------------------------------- |
-| `DOCKER_GUIDE.md`            | Docker build, profiles (base/cli/host/cliproxyapi), Redis sidecar |
-| `VM_DEPLOYMENT_GUIDE.md`     | Generic VM/VPS deployment (Ubuntu/Debian + nginx + systemd)       |
-| `FLY_IO_DEPLOYMENT_GUIDE.md` | Fly.io deployment (currently Chinese-only)                        |
-| `TERMUX_GUIDE.md`            | Android headless via Termux                                       |
-| `PWA_GUIDE.md`               | Progressive Web App install + service worker                      |
-| `ELECTRON_GUIDE.md`          | Desktop app build + sign + distribute                             |
-| `TUNNELS_GUIDE.md`           | Cloudflared + ngrok + Tailscale Funnel                            |
-| `PROXY_GUIDE.md`             | 4-level outbound proxy + 1proxy marketplace                       |
+| Doc                          | Purpose                                                     |
+| ---------------------------- | ----------------------------------------------------------- |
+| `DOCKER_GUIDE.md`            | Docker build, profiles (base/cli/host/cliproxyapi)          |
+| `VM_DEPLOYMENT_GUIDE.md`     | Generic VM/VPS deployment (Ubuntu/Debian + nginx + systemd) |
+| `FLY_IO_DEPLOYMENT_GUIDE.md` | Fly.io deployment (currently Chinese-only)                  |
+| `TERMUX_GUIDE.md`            | Android headless via Termux                                 |
+| `PWA_GUIDE.md`               | Progressive Web App install + service worker                |
+| `ELECTRON_GUIDE.md`          | Desktop app build + sign + distribute                       |
+| `TUNNELS_GUIDE.md`           | Cloudflared + ngrok + Tailscale Funnel                      |
+| `PROXY_GUIDE.md`             | 4-level outbound proxy + 1proxy marketplace                 |
 
 ### Subdirectories
 

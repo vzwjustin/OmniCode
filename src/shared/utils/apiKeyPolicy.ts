@@ -116,7 +116,7 @@ function isWithinSchedule(schedule: AccessSchedule): boolean {
   return localMinutes >= fromMinutes && localMinutes < untilMinutes;
 }
 
-// Legacy in-memory request counter has been replaced by Redis-backed multi-window rate limiter
+// Multi-window rate limiting is handled by the in-memory rateLimiter (src/shared/utils/rateLimiter.ts).
 
 export interface ApiKeyPolicyResult {
   /** API key string (null if no key provided) */

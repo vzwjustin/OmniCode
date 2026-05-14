@@ -14,7 +14,6 @@ lastUpdated: 2026-05-13
 - [With Environment File](#with-environment-file)
 - [Docker Compose](#docker-compose)
 - [Available Profiles](#available-profiles)
-- [Redis Sidecar](#redis-sidecar)
 - [Production Compose](#production-compose)
 - [Dockerfile Stages](#dockerfile-stages)
 - [Critical Environment Variables](#critical-environment-variables)
@@ -82,43 +81,18 @@ OmniCode ships four Compose profiles. Pick the one that matches your environment
 
 > Multiple profiles can be combined: `docker compose --profile cli --profile cliproxyapi up -d`.
 
-## Redis Sidecar
-
-OmniCode relies on Redis to back the distributed rate limiter and shared cache. The `redis` service is **always defined** in `docker-compose.yml` (it has no profile gate) and starts alongside any other profile.
-
-| Detail               | Value                             |
-| -------------------- | --------------------------------- |
-| Image                | `redis:7-alpine`                  |
-| Container name       | `omniroute-redis`                 |
-| Internal port        | `6379`                            |
-| Host port (override) | `REDIS_PORT` (defaults to `6379`) |
-| Volume               | `omniroute-redis-data` → `/data`  |
-| Healthcheck          | `redis-cli ping` (10s interval)   |
-
-Related environment variables:
-
-- `REDIS_URL` — connection string injected into the app (`redis://redis:6379` by default).
-- `REDIS_PORT` — host-side port mapping for the Redis container.
-
-**Disabling Redis** is not recommended (rate limiter will degrade to in-memory fallback). If you must, either remove/comment the `redis:` service block in `docker-compose.yml` or scale it to zero:
-
-```bash
-docker compose up -d --scale redis=0
-```
-
 ## Production Compose
 
 For an isolated production snapshot running alongside dev, use `docker-compose.prod.yml`.
 
-| Detail                 | Value                                                                              |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| File                   | `docker-compose.prod.yml`                                                          |
-| Default dashboard port | `PROD_DASHBOARD_PORT=20130` (mapped to internal `${DASHBOARD_PORT:-20128}`)        |
-| Default API port       | `PROD_API_PORT=20131`                                                              |
-| Image                  | `omniroute:prod` (built from `runner-cli` target)                                  |
-| Redis container        | `omniroute-redis-prod` (`redis:8.6.2`, dedicated `redis-prod-data` volume)         |
-| Data volume            | `omniroute-prod-data` (named, persisted across rebuilds)                           |
-| Healthchecks           | `node healthcheck.mjs` + `redis-cli ping`, with `depends_on` gated on Redis health |
+| Detail                 | Value                                                                       |
+| ---------------------- | --------------------------------------------------------------------------- |
+| File                   | `docker-compose.prod.yml`                                                   |
+| Default dashboard port | `PROD_DASHBOARD_PORT=20130` (mapped to internal `${DASHBOARD_PORT:-20128}`) |
+| Default API port       | `PROD_API_PORT=20131`                                                       |
+| Image                  | `omniroute:prod` (built from `runner-cli` target)                           |
+| Data volume            | `omniroute-prod-data` (named, persisted across rebuilds)                    |
+| Healthchecks           | `node healthcheck.mjs`                                                      |
 
 How to use:
 
@@ -161,8 +135,6 @@ Beyond the defaults documented in [ENVIRONMENT.md](../reference/ENVIRONMENT.md),
 | Variable                      | Purpose                                                                                             | Default                   |
 | ----------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------- |
 | `OMNIROUTE_WS_BRIDGE_SECRET`  | Shared secret for the WebSocket bridge. **Required in production** — set to a strong random string. | unset (must be provided)  |
-| `REDIS_URL`                   | Connection string for the rate limiter / cache backend                                              | `redis://redis:6379`      |
-| `REDIS_PORT`                  | Host-side port for the bundled Redis container                                                      | `6379`                    |
 | `AUTO_UPDATE_HOST_REPO_DIR`   | Host path mounted into `cli` profile at `/workspace/omniroute` for self-update workflows            | `.` (current directory)   |
 | `OMNIROUTE_MEMORY_MB`         | Node heap ceiling (`NODE_OPTIONS=--max-old-space-size`) baked into the image                        | `256` (set in Dockerfile) |
 | `DASHBOARD_PORT` / `API_PORT` | Override exposed ports for dashboard (20128) and API (20129)                                        | `20128` / `20129`         |
