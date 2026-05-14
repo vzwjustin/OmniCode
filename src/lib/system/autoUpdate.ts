@@ -166,7 +166,7 @@ export async function validateAutoUpdateRuntime(
   if (!(await existsImpl("/var/run/docker.sock"))) {
     return {
       supported: false,
-      reason: "Docker socket is not mounted into the OmniCode container.",
+      reason: "Docker socket is not mounted into the OmniCoder container.",
       composeCommand: null,
     };
   }
@@ -176,7 +176,7 @@ export async function validateAutoUpdateRuntime(
   } catch {
     return {
       supported: false,
-      reason: "git is not available inside the OmniCode container.",
+      reason: "git is not available inside the OmniCoder container.",
       composeCommand: null,
     };
   }
@@ -186,7 +186,7 @@ export async function validateAutoUpdateRuntime(
     return {
       supported: false,
       reason:
-        "Neither docker compose nor docker-compose is available inside the OmniCode container.",
+        "Neither docker compose nor docker-compose is available inside the OmniCoder container.",
       composeCommand: null,
     };
   }

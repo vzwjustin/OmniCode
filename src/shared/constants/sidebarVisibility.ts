@@ -120,7 +120,7 @@ const HELP_SIDEBAR_ITEMS: readonly SidebarItemDefinition[] = [
   { id: "docs", href: "/docs", i18nKey: "docs", icon: "menu_book", external: true },
   {
     id: "issues",
-    href: "https://github.com/diegosouzapw/OmniRoute/issues",
+    href: "https://github.com/vzwjustin/OmniCode/issues",
     i18nKey: "issues",
     icon: "bug_report",
     external: true,

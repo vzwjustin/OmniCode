@@ -263,7 +263,7 @@ export function resetSuites() {
 
 const goldenSet = {
   id: "golden-set",
-  name: "OmniCode Golden Set",
+  name: "OmniCoder Golden Set",
   description: "Baseline evaluation cases for LLM response quality across multiple models",
   cases: [
     {

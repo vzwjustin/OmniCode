@@ -15,7 +15,7 @@ Thank you for your interest in contributing! This guide covers everything you ne
 ### Clone & Install
 
 ```bash
-git clone https://github.com/diegosouzapw/OmniRoute.git
+git clone https://github.com/vzwjustin/OmniCode.git
 cd OmniRoute
 npm install
 ```

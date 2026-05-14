@@ -1,14 +1,14 @@
 {
-  "name": "omniroute-desktop",
+  "name": "omnicoder-desktop",
   "version": "3.8.0",
-  "description": "OmniRoute Desktop Application",
+  "description": "OmniCoder Desktop Application",
   "main": "main.js",
   "author": {
-    "name": "OmniRoute Team",
-    "email": "support@omniroute.online"
+    "name": "OmniCoder Team",
+    "email": "support@omnicoder.dev"
   },
   "license": "MIT",
-  "homepage": "https://omniroute.online",
+  "homepage": "https://github.com/vzwjustin/OmniCode",
   "engines": {
     "node": ">=22.22.2 <23 || >=24.0.0 <27"
   },
@@ -37,17 +37,17 @@
     "plist": "^4.0.0"
   },
   "build": {
-    "appId": "online.omniroute.desktop",
-    "productName": "OmniRoute",
-    "copyright": "Copyright © 2025 OmniRoute",
+    "appId": "dev.omnicoder.desktop",
+    "productName": "OmniCoder",
+    "copyright": "Copyright © 2025 OmniCoder",
     "directories": {
       "output": "dist-electron",
       "buildResources": "assets"
     },
     "publish": {
       "provider": "github",
-      "owner": "diegosouzapw",
-      "repo": "OmniRoute"
+      "owner": "vzwjustin",
+      "repo": "OmniCode"
     },
     "files": [
       "main.js",

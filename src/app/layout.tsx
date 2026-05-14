@@ -20,13 +20,13 @@ export const viewport: Viewport = {
 
 export async function generateMetadata() {
   const settings = await getSettings();
-  const instanceName = settings?.instanceName || "OmniCode";
+  const instanceName = settings?.instanceName || "OmniCoder";
   const customFaviconUrl = settings?.customFaviconUrl || settings?.customFaviconBase64;
 
   return {
     title: `${instanceName} — AI Gateway for Multi-Provider LLMs`,
     description:
-      "OmniCode is an AI gateway for multi-provider LLMs. One endpoint for all your AI providers.",
+      "OmniCoder is an AI gateway for multi-provider LLMs. One endpoint for all your AI providers.",
     manifest: "/manifest.webmanifest",
     applicationName: instanceName,
     appleWebApp: {

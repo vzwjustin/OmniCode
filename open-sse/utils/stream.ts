@@ -18,7 +18,7 @@ import {
   unwrapGeminiChunk,
 } from "./streamHelpers.ts";
 import { calculateCost } from "@/lib/usage/costCalculator";
-import { buildOmniCodeSseMetadataComment } from "@/domain/omnirouteResponseMeta";
+import { buildOmniCoderSseMetadataComment } from "@/domain/omnirouteResponseMeta";
 import {
   createStructuredSSECollector,
   buildStreamSummaryFromEvents,
@@ -755,7 +755,7 @@ export function createSSEStream(options: StreamOptions = {}) {
     finalUsage: UsageTokenRecord | Record<string, unknown> | null | undefined
   ) => {
     const costUsd = finalUsage ? await calculateCost(provider, model, finalUsage) : 0;
-    const comment = buildOmniCodeSseMetadataComment({
+    const comment = buildOmniCoderSseMetadataComment({
       provider,
       model,
       cacheHit: false,

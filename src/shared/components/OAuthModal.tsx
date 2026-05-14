@@ -827,7 +827,7 @@ export default function OAuthModal({
                           code: (c) => <code className="font-mono">{c}</code>,
                           a: (c) => (
                             <a
-                              href="https://github.com/diegosouzapw/OmniRoute#oauth-on-a-remote-server"
+                              href="https://github.com/vzwjustin/OmniCode#oauth-on-a-remote-server"
                               target="_blank"
                               rel="noreferrer"
                               className="underline"

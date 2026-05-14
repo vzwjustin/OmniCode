@@ -34,7 +34,7 @@ docker run -d \
   --stop-timeout 40 \
   -p 20128:20128 \
   -v omniroute-data:/app/data \
-  diegosouzapw/omniroute:latest
+  vzwjustin/omnicoder:latest
 ```
 
 ## With Environment File
@@ -50,7 +50,7 @@ docker run -d \
   --env-file .env \
   -p 20128:20128 \
   -v omniroute-data:/app/data \
-  diegosouzapw/omniroute:latest
+  vzwjustin/omnicoder:latest
 ```
 
 ## Docker Compose
@@ -176,7 +176,7 @@ OmniCode can be securely exposed using Caddy's automatic SSL provisioning. Ensur
 ```yaml
 services:
   omniroute:
-    image: diegosouzapw/omniroute:latest
+    image: vzwjustin/omnicoder:latest
     container_name: omniroute
     restart: unless-stopped
     volumes:
@@ -217,8 +217,8 @@ Endpoint tunnel panels (Cloudflare, Tailscale, ngrok) can be shown or hidden fro
 
 | Image                    | Tag      | Size   | Description           |
 | ------------------------ | -------- | ------ | --------------------- |
-| `diegosouzapw/omniroute` | `latest` | ~250MB | Latest stable release |
-| `diegosouzapw/omniroute` | `3.8.0`  | ~250MB | Current version       |
+| `vzwjustin/omnicoder` | `latest` | ~250MB | Latest stable release |
+| `vzwjustin/omnicoder` | `3.8.0`  | ~250MB | Current version       |
 
 Multi-platform manifest: `linux/amd64` + `linux/arm64` native (Apple Silicon, AWS Graviton, Raspberry Pi). Docker selects the matching architecture automatically; pass `--platform linux/amd64` if you need to force AMD64 emulation on ARM hosts.
 

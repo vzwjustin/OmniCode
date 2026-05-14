@@ -143,8 +143,8 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${docItem.item.title} — OmniCode Docs`,
-    description: `OmniCode documentation: ${docItem.item.title}`,
+    title: `${docItem.item.title} — OmniCoder Docs`,
+    description: `OmniCoder documentation: ${docItem.item.title}`,
   };
 }
 
@@ -222,13 +222,13 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
         "@type": "ListItem",
         position: 1,
         name: "Docs",
-        item: `https://omniroute.online/docs`,
+        item: `https://github.com/vzwjustin/OmniCode/docs`,
       },
       {
         "@type": "ListItem",
         position: 2,
         name: sectionTitle,
-        item: `https://omniroute.online/docs/${slug}`,
+        item: `https://github.com/vzwjustin/OmniCode/docs/${slug}`,
       },
       {
         "@type": "ListItem",

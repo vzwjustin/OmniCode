@@ -58,7 +58,7 @@ export function buildCustomCliEnvScript({
   const mappings = getValidMappings(aliasMappings);
 
   const lines = [
-    `# ${resolvedName} -> OmniCode (OpenAI-compatible)`,
+    `# ${resolvedName} -> OmniCoder (OpenAI-compatible)`,
     `export OPENAI_BASE_URL="${normalizedBaseUrl}"`,
     `export OPENAI_API_KEY="${apiKey}"`,
   ];

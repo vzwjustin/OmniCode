@@ -117,8 +117,8 @@ BASE_URL=https://llms.seudominio.com
 NEXT_PUBLIC_BASE_URL=https://llms.seudominio.com
 
 # === Cloud Sync (optional) ===
-# CLOUD_URL=https://cloud.omniroute.online
-# NEXT_PUBLIC_CLOUD_URL=https://cloud.omniroute.online
+# CLOUD_URL=https://cloud.github.com/vzwjustin/OmniCode
+# NEXT_PUBLIC_CLOUD_URL=https://cloud.github.com/vzwjustin/OmniCode
 EOF
 ```
 
@@ -127,7 +127,7 @@ EOF
 ### 2.3 Start the container
 
 ```bash
-docker pull diegosouzapw/omniroute:latest
+docker pull vzwjustin/omnicoder:latest
 
 docker run -d \
   --name omniroute \
@@ -135,7 +135,7 @@ docker run -d \
   --env-file /opt/omniroute/.env \
   -p 20128:20128 \
   -v omniroute-data:/app/data \
-  diegosouzapw/omniroute:latest
+  vzwjustin/omnicoder:latest
 ```
 
 ### 2.4 Verify that it is running
@@ -285,13 +285,13 @@ curl -sI https://llms.seudominio.com/health
 ### Upgrade to a new version
 
 ```bash
-docker pull diegosouzapw/omniroute:latest
+docker pull vzwjustin/omnicoder:latest
 docker stop omniroute && docker rm omniroute
 docker run -d --name omniroute --restart unless-stopped \
   --env-file /opt/omniroute/.env \
   -p 20128:20128 \
   -v omniroute-data:/app/data \
-  diegosouzapw/omniroute:latest
+  vzwjustin/omnicoder:latest
 ```
 
 ### View logs

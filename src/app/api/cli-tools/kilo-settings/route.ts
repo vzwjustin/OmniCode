@@ -194,7 +194,7 @@ export async function POST(request) {
 
       // Set custom provider config for the extension
       vscodeSettings["kilocode.customProvider"] = {
-        name: "OmniCode",
+        name: "OmniCoder",
         baseURL: normalizedBaseUrl,
         apiKey: apiKey || "sk_omniroute",
       };
@@ -282,7 +282,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "OmniCode settings removed from Kilo Code",
+      message: "OmniCoder settings removed from Kilo Code",
     });
   } catch (error) {
     console.log("Error resetting kilo settings:", error);

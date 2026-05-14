@@ -188,7 +188,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
     { label: ts("cliTools"), href: "/dashboard/cli-tools", icon: "terminal" },
     {
       label: t("reportIssue"),
-      href: "https://github.com/diegosouzapw/OmniRoute/issues",
+      href: "https://github.com/vzwjustin/OmniCode/issues",
       external: true,
       icon: "bug_report",
     },
@@ -221,7 +221,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               {
                 step: "restart",
                 status: "pending",
-                message: "Waiting for OmniCode to restart with the new version.",
+                message: "Waiting for OmniCoder to restart with the new version.",
               },
             ]
           : [
@@ -233,7 +233,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               {
                 step: "restart",
                 status: "pending",
-                message: "Waiting for OmniCode to restart with the new version.",
+                message: "Waiting for OmniCoder to restart with the new version.",
               },
             ];
 
@@ -265,14 +265,14 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               next = mergeUpdateStep(next, {
                 step: "complete",
                 status: "done",
-                message: `OmniCode is now running v${targetVersion}.`,
+                message: `OmniCoder is now running v${targetVersion}.`,
               });
 
               return next;
             });
             setUpdating(false);
             setUpdatePhase("done");
-            notify.success(`OmniCode updated to v${targetVersion}.`);
+            notify.success(`OmniCoder updated to v${targetVersion}.`);
             await fetchData();
             return;
           }
@@ -296,7 +296,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
             next = mergeUpdateStep(next, {
               step: "restart",
               status: "pending",
-              message: `Waiting for OmniCode to come back on v${targetVersion}.`,
+              message: `Waiting for OmniCoder to come back on v${targetVersion}.`,
             });
 
             return next;
@@ -321,7 +321,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
             next = mergeUpdateStep(next, {
               step: "restart",
               status: "running",
-              message: "Service restart in progress. Waiting for OmniCode to come back online...",
+              message: "Service restart in progress. Waiting for OmniCoder to come back online...",
             });
 
             return next;
@@ -481,7 +481,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
                     ? "All updated!"
                     : updatePhase === "failed"
                       ? "Update didn't go through"
-                      : "Updating OmniCode..."}
+                      : "Updating OmniCoder..."}
                 </h3>
                 <p className="text-xs text-text-muted mt-0.5">
                   {updatePhase === "done"
