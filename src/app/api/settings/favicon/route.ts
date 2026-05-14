@@ -52,7 +52,7 @@ export async function GET() {
     } else if (customFaviconUrl) {
       // SSRF protection: resolve DNS and reject private/loopback/IMDS targets.
       const urlCheck = await validateOutboundUrl(customFaviconUrl, "public-only");
-      if (urlCheck.ok !== true) {
+      if (urlCheck.ok === false) {
         console.error("Blocked invalid favicon URL:", customFaviconUrl, "reason:", urlCheck.reason);
         return NextResponse.json(
           { error: "blocked_favicon_url", reason: urlCheck.reason },
