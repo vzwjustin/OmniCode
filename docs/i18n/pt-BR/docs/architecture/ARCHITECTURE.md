@@ -6,13 +6,13 @@
 
 ---
 
-title: "Arquitetura do OmniCode"
+title: "Arquitetura do OmniRoute"
 version: 3.8.0
 lastUpdated: 2026-05-13
 
 ---
 
-# Arquitetura do OmniCode
+# Arquitetura do OmniRoute
 
 🌐 **Idiomas:** 🇺🇸 [English](./ARCHITECTURE.md) | 🇧🇷 [Português (Brasil)](../i18n/pt-BR/docs/architecture/ARCHITECTURE.md) | 🇪🇸 [Español](../i18n/es/docs/architecture/ARCHITECTURE.md) | 🇫🇷 [Français](../i18n/fr/docs/architecture/ARCHITECTURE.md) | 🇮🇹 [Italiano](../i18n/it/docs/architecture/ARCHITECTURE.md) | 🇷🇺 [Русский](../i18n/ru/docs/architecture/ARCHITECTURE.md) | 🇨🇳 [中文 (简体)](../i18n/zh-CN/docs/architecture/ARCHITECTURE.md) | 🇩🇪 [Deutsch](../i18n/de/docs/architecture/ARCHITECTURE.md) | 🇮🇳 [हिन्दी](../i18n/in/docs/architecture/ARCHITECTURE.md) | 🇹🇭 [ไทย](../i18n/th/docs/architecture/ARCHITECTURE.md) | 🇺🇦 [Українська](../i18n/uk-UA/docs/architecture/ARCHITECTURE.md) | 🇸🇦 [العربية](../i18n/ar/docs/architecture/ARCHITECTURE.md) | 🇯🇵 [日本語](../i18n/ja/docs/architecture/ARCHITECTURE.md) | 🇻🇳 [Tiếng Việt](../i18n/vi/docs/architecture/ARCHITECTURE.md) | 🇧🇬 [Български](../i18n/bg/docs/architecture/ARCHITECTURE.md) | 🇩🇰 [Dansk](../i18n/da/docs/architecture/ARCHITECTURE.md) | 🇫🇮 [Suomi](../i18n/fi/docs/architecture/ARCHITECTURE.md) | 🇮🇱 [עברית](../i18n/he/docs/architecture/ARCHITECTURE.md) | 🇭🇺 [Magyar](../i18n/hu/docs/architecture/ARCHITECTURE.md) | 🇮🇩 [Bahasa Indonesia](../i18n/id/docs/architecture/ARCHITECTURE.md) | 🇰🇷 [한국어](../i18n/ko/docs/architecture/ARCHITECTURE.md) | 🇲🇾 [Bahasa Melayu](../i18n/ms/docs/architecture/ARCHITECTURE.md) | 🇳🇱 [Nederlands](../i18n/nl/docs/architecture/ARCHITECTURE.md) | 🇳🇴 [Norsk](../i18n/no/docs/architecture/ARCHITECTURE.md) | 🇵🇹 [Português (Portugal)](../i18n/pt/docs/architecture/ARCHITECTURE.md) | 🇷🇴 [Română](../i18n/ro/docs/architecture/ARCHITECTURE.md) | 🇵🇱 [Polski](../i18n/pl/docs/architecture/ARCHITECTURE.md) | 🇸🇰 [Slovenčina](../i18n/sk/docs/architecture/ARCHITECTURE.md) | 🇸🇪 [Svenska](../i18n/sv/docs/architecture/ARCHITECTURE.md) | 🇵🇭 [Filipino](../i18n/phi/docs/architecture/ARCHITECTURE.md) | 🇨🇿 [Čeština](../i18n/cs/docs/architecture/ARCHITECTURE.md)
 
@@ -20,7 +20,7 @@ _Última atualização: 2026-05-13_
 
 ## Resumo Executivo
 
-OmniCode é um gateway de roteamento de IA local e um painel construído sobre Next.js.
+OmniRoute é um gateway de roteamento de IA local e um painel construído sobre Next.js.
 Ele fornece um único endpoint compatível com OpenAI (`/v1/*`) e roteia o tráfego entre vários provedores upstream com tradução, fallback, atualização de token e rastreamento de uso.
 
 Principais capacidades:
@@ -174,7 +174,7 @@ flowchart LR
         BROWSER[Dashboard do Navegador]
     end
 
-    subgraph Router[Processo Local OmniCode]
+    subgraph Router[Processo Local OmniRoute]
         API[V1 API de Compatibilidade\n/v1/*]
         DASH[Dashboard + API de Gerenciamento\n/api/*]
         CORE[Núcleo SSE + Tradução\nopen-sse + src/sse]
@@ -416,7 +416,7 @@ precisem montar a lógica de bloqueio/orçamento/fallback por conta própria.
 - Cache de cota: `src/domain/quotaCache.ts`
 - Estado de degradação: `src/domain/degradation.ts`
 - Auditoria de configuração: `src/domain/configAudit.ts`
-- Construtor de metadados de resposta OmniCode: `src/domain/omnirouteResponseMeta.ts`
+- Construtor de metadados de resposta OmniRoute: `src/domain/omnirouteResponseMeta.ts`
 - Subsistema de avaliação: `src/domain/assessment/` — trabalhos de avaliação periódica
 
 ### E. Pipeline de Autorização
@@ -795,7 +795,7 @@ flowchart LR
         Browser[Navegador do Dashboard]
     end
 
-    subgraph ContainerOrProcess[Runtime OmniCode]
+    subgraph ContainerOrProcess[Runtime OmniRoute]
         Next[Servidor Next.js\nPORT=20128]
         Core[Núcleo SSE + Executores]
         MainDB[(storage.sqlite)]
@@ -916,7 +916,7 @@ Todos os outros provedores (incluindo nós compatíveis personalizados) usam o `
 ## Matriz de Compatibilidade de Provedores
 
 > **Nota:** A matriz abaixo é uma amostra representativa dos 177 provedores registrados no
-> OmniCode v3.8.0. Para a lista canônica e continuamente atualizada, consulte
+> OmniRoute v3.8.0. Para a lista canônica e continuamente atualizada, consulte
 > [`docs/reference/PROVIDER_REFERENCE.md`](../reference/PROVIDER_REFERENCE.md) (gerada automaticamente) ou a fonte
 > de verdade em `src/shared/constants/providers.ts` (validada pelo Zod no carregamento).
 
@@ -1100,7 +1100,7 @@ A captura detalhada do payload da solicitação armazena até quatro estágios d
 - solicitação bruta recebida do cliente
 - solicitação traduzida realmente enviada para upstream
 - resposta do provedor reconstruída como JSON; respostas transmitidas são compactadas para o resumo final mais metadados do stream
-- resposta final do cliente retornada pelo OmniCode; respostas transmitidas são armazenadas na mesma forma de resumo compactado
+- resposta final do cliente retornada pelo OmniRoute; respostas transmitidas são armazenadas na mesma forma de resumo compactado
 
 ## Limites Sensíveis à Segurança
 

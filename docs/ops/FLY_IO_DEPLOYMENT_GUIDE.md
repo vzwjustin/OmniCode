@@ -92,7 +92,7 @@ flyctl version
 
 ```powershell
 git clone https://github.com/diegosouzapw/OmniRoute.git
-cd OmniCode
+cd OmniRoute
 ```
 
 ### 4.2 确认应用名

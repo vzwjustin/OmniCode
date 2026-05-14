@@ -378,7 +378,7 @@ When you no longer need OmniCode, we provide two quick scripts for a clean remov
 
 ```bash
 git clone https://github.com/diegosouzapw/OmniRoute.git
-cd OmniCode && npm install && npm run build
+cd OmniRoute && npm install && npm run build
 
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
@@ -713,9 +713,9 @@ Returns models grouped by provider with types (`chat`, `embedding`, `image`).
 
 ### LLM Gateway Intelligence (Phase 9)
 
-- **Semantic Cache** — Auto-caches non-streaming, temperature=0 responses (bypass with `X-OmniCode-No-Cache: true`)
+- **Semantic Cache** — Auto-caches non-streaming, temperature=0 responses (bypass with `X-OmniRoute-No-Cache: true`)
 - **Request Idempotency** — Deduplicates requests within 5s via `Idempotency-Key` or `X-Request-Id` header
-- **Progress Tracking** — Opt-in SSE `event: progress` events via `X-OmniCode-Progress: true` header
+- **Progress Tracking** — Opt-in SSE `event: progress` events via `X-OmniRoute-Progress: true` header
 
 ---
 
@@ -774,7 +774,7 @@ For external session affinity (for example, Claude Code/Codex agents behind reve
 X-Session-Id: your-session-key
 ```
 
-OmniCode also accepts `x_session_id` and returns the effective session key in `X-OmniCode-Session-Id`.
+OmniCode also accepts `x_session_id` and returns the effective session key in `X-OmniRoute-Session-Id`.
 
 If you use Nginx and send underscore-form headers, enable:
 
@@ -1090,7 +1090,7 @@ Subscribe to OmniCode events for real-time monitoring and automation.
 
 - Create a webhook in **Dashboard → Webhooks** with target URL and HMAC signing secret
 - Available events: `request.completed`, `request.failed`, `provider.unavailable`, `budget.exceeded`, `combo.switched`, `circuit_breaker.opened`, `circuit_breaker.closed`
-- Every payload includes `X-OmniCode-Signature` (HMAC-SHA256) for verification
+- Every payload includes `X-OmniRoute-Signature` (HMAC-SHA256) for verification
 - Retries: 3 attempts with exponential backoff, then dead-letter queue
 
 Full schema in [WEBHOOKS.md](../frameworks/WEBHOOKS.md).

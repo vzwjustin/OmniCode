@@ -20,7 +20,7 @@ Thank you for your interest in contributing! This guide covers everything you ne
 
 ```bash
 git clone https://github.com/diegosouzapw/OmniRoute.git
-cd OmniCode
+cd OmniRoute
 npm install
 ```
 

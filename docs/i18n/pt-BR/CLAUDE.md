@@ -39,7 +39,7 @@ Para a matriz completa de testes, veja `CONTRIBUTING.md` → "Executando Testes"
 
 ## Projeto em Resumo
 
-**OmniCode** — proxy/router de IA unificado. Um endpoint, 160+ provedores de LLM, fallback automático.
+**OmniRoute** — proxy/router de IA unificado. Um endpoint, 160+ provedores de LLM, fallback automático.
 
 | Camada           | Localização             | Propósito                                                                        |
 | ---------------- | ----------------------- | -------------------------------------------------------------------------------- |
@@ -82,7 +82,7 @@ As rotas da API seguem um padrão consistente: `Rota → pré-vôo CORS → vali
 
 ## Estado de Execução de Resiliência
 
-OmniCode possui três mecanismos de falha temporária relacionados, mas distintos. Mantenha seu
+OmniRoute possui três mecanismos de falha temporária relacionados, mas distintos. Mantenha seu
 escopo separado ao depurar o comportamento de roteamento. Veja o
 [diagrama de resiliência de 3 camadas](./docs/diagrams/exported/resilience-3layers.svg)
 (fonte: [docs/diagrams/resilience-3layers.mmd](./docs/diagrams/resilience-3layers.mmd))

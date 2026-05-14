@@ -63,13 +63,13 @@ When a webhook has a `secret`, OmniCode signs the JSON body and sends:
 
 ```
 Content-Type: application/json
-User-Agent: OmniCode-Webhook/1.0
+User-Agent: OmniRoute-Webhook/1.0
 X-Webhook-Event: <event>
 X-Webhook-Timestamp: <ISO-8601>
 X-Webhook-Signature: sha256=<hex HMAC-SHA256(secret, body)>
 ```
 
-> Header names use the `X-Webhook-*` prefix (not `X-OmniCode-*`). The signature
+> Header names use the `X-Webhook-*` prefix (not `X-OmniRoute-*`). The signature
 > value is `sha256=<hex>` — verify the full prefix.
 
 If `createWebhook` is called without a secret, the DB module generates one
