@@ -15,46 +15,16 @@ _A hardened, coding-only fork of OmniRoute — **one endpoint**, **150+ chat/emb
 
 <br/>
 
-<a href="https://agentrouter.org/register?aff=70LM">
-  <img src="https://img.shields.io/badge/🎁_GET_$100_FREE_AI_CREDITS-AgentRouter_(no_card_needed)-ff6600?style=for-the-badge&labelColor=1a1a2e&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyTDIgNy41bDEwIDUuNSAxMC01LjVMMTIgMnpNMiAxNy41bDEwIDUuNSAxMC01LjVMMTIgMTIgMiAxNy41eiIvPjwvc3ZnPg==" alt="Get $100 Free AI Credits" height="40"/>
-</a>
-
-<sub>🔥 <b>Limited offer:</b> Sign up at <a href="https://agentrouter.org/register?aff=70LM"><b>AgentRouter</b></a> and get <b>$100 in free AI credits</b></br> Access GPT-5, Claude, Gemini, DeepSeek & 100+ models. No credit card required. <a href="https://agentrouter.org/register?aff=70LM"><b>Claim your credits →</b></a></sub>
-
-<br/>
-
-<a href="https://trendshift.io/repositories/23589" target="_blank"><img src="https://trendshift.io/api/badge/repositories/23589" alt="diegosouzapw%2FOmniRoute | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-[🚀 Quick Start](#-quick-start) • [💡 Features](#-key-features) • [🗜️ Compression](#%EF%B8%8F-prompt-compression--save-15-95-eligible-tokens-automatically) • [💰 Pricing](#-pricing-at-a-glance) • [🎯 Use Cases](#-use-cases--ready-made-combo-playbooks) • [🌍 Proxy](#-bypass-geographic-blocks--use-ai-from-any-country) • [❓ FAQ](#-frequently-asked-questions) • [📖 Docs](#-documentation) • [💬 WhatsApp](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)
-
-</div>
-
----
-
-<div align="">
-
-🌐 **Available in:** 🇺🇸 [English](README.md) | 🇧🇷 [Português (Brasil)](docs/i18n/pt-BR/README.md) | 🇪🇸 [Español](docs/i18n/es/README.md) | 🇫🇷 [Français](docs/i18n/fr/README.md) | 🇮🇹 [Italiano](docs/i18n/it/README.md) | 🇷🇺 [Русский](docs/i18n/ru/README.md) | 🇨🇳 [中文 (简体)](docs/i18n/zh-CN/README.md) | 🇩🇪 [Deutsch](docs/i18n/de/README.md) | 🇮🇳 [हिन्दी](docs/i18n/in/README.md) | 🇹🇭 [ไทย](docs/i18n/th/README.md) | 🇺🇦 [Українська](docs/i18n/uk-UA/README.md) | 🇸🇦 [العربية](docs/i18n/ar/README.md) | 🇯🇵 [日本語](docs/i18n/ja/README.md) | 🇻🇳 [Tiếng Việt](docs/i18n/vi/README.md) | 🇧🇬 [Български](docs/i18n/bg/README.md) | 🇩🇰 [Dansk](docs/i18n/da/README.md) | 🇫🇮 [Suomi](docs/i18n/fi/README.md) | 🇮🇱 [עברית](docs/i18n/he/README.md) | 🇭🇺 [Magyar](docs/i18n/hu/README.md) | 🇮🇩 [Bahasa Indonesia](docs/i18n/id/README.md) | 🇰🇷 [한국어](docs/i18n/ko/README.md) | 🇲🇾 [Bahasa Melayu](docs/i18n/ms/README.md) | 🇳🇱 [Nederlands](docs/i18n/nl/README.md) | 🇳🇴 [Norsk](docs/i18n/no/README.md) | 🇵🇹 [Português (Portugal)](docs/i18n/pt/README.md) | 🇷🇴 [Română](docs/i18n/ro/README.md) | 🇵🇱 [Polski](docs/i18n/pl/README.md) | 🇸🇰 [Slovenčina](docs/i18n/sk/README.md) | 🇸🇪 [Svenska](docs/i18n/sv/README.md) | 🇵🇭 [Filipino](docs/i18n/phi/README.md) | 🇨🇿 [Čeština](docs/i18n/cs/README.md)
+[🚀 Quick Start](#-quick-start) • [💡 Features](#-key-features) • [🗜️ Compression](#%EF%B8%8F-prompt-compression--save-15-95-eligible-tokens-automatically) • [🍴 Fork Notes](#-fork-notes--whats-different-here) • [🌐 Providers](#-supported-providers--150-coding-only) • [🎯 Use Cases](#-use-cases--ready-made-combo-playbooks) • [❓ FAQ](#-frequently-asked-questions) • [📖 Docs](#-documentation)
 
 </div>
 
 <div align="center">
 
-[![npm version](https://img.shields.io/npm/v/omniroute?color=cb3837&logo=npm)](https://www.npmjs.com/package/omniroute)
-![NPM Weekly](https://img.shields.io/npm/dw/omniroute?label=npm/week&color=cb3837&logo=npm)
-![NPM Monthly](https://img.shields.io/npm/dm/omniroute?label=npm/month&color=cb3837&logo=npm)
-![NPM Yearly](https://img.shields.io/npm/d18m/omniroute?label=npm/year&color=cb3837&logo=npm)
-
-[![Docker Hub](https://img.shields.io/docker/v/diegosouzapw/omniroute?label=Docker%20Hub&logo=docker&color=2496ED)](https://hub.docker.com/r/diegosouzapw/omniroute)
-![Docker Pulls](https://img.shields.io/docker/pulls/diegosouzapw/omniroute?label=docker%20pulls&logo=docker&color=2496ED)
-![Electron Downloads](https://img.shields.io/github/downloads/diegosouzapw/omniroute/total?style=flat&label=electron%20downloads&logo=electron&color=47848F)
+[![Fork of](https://img.shields.io/badge/fork_of-diegosouzapw%2FOmniRoute-blue?logo=github)](https://github.com/diegosouzapw/OmniRoute)
 [![license](https://custom-icon-badges.demolab.com/github/license/diegosouzapw/OmniRoute?logo=law)](https://github.com/diegosouzapw/OmniRoute/blob/main/LICENSE)
-
-<!-- Community & Social -->
-
-[![total contributions](https://custom-icon-badges.demolab.com/badge/dynamic/json?logo=graph&logoColor=fff&color=blue&label=total%20contributions&query=%24.totalContributions&url=https%3A%2F%2Fstreak-stats.demolab.com%2F%3Fuser%3Ddiegosouzapw%26type%3Djson)](https://github.com/diegosouzapw)
-[![github streak](https://custom-icon-badges.demolab.com/badge/dynamic/json?logo=fire&logoColor=fff&color=orange&label=github%20streak&query=%24.currentStreak.length&suffix=%20days&url=https%3A%2F%2Fstreak-stats.demolab.com%2F%3Fuser%3Ddiegosouzapw%26type%3Djson)](https://github.com/diegosouzapw)
-[![Website](https://img.shields.io/badge/Website-omniroute.online-blue?logo=google-chrome&logoColor=white)](https://omniroute.online)
-[![WhatsApp](https://img.shields.io/badge/WhatsApp-Community-25D366?logo=whatsapp&logoColor=white)](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)
+[![Node](https://img.shields.io/badge/node-%3E%3D20.20.2-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/100%25-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
 </div>
 
@@ -86,8 +56,6 @@ _A hardened, coding-only fork of OmniRoute — **one endpoint**, **150+ chat/emb
 | **Endpoints**  | ![Endpoints](docs/screenshots/09-endpoint.png)    |
 
 </details>
-
----
 
 ---
 
@@ -254,43 +222,7 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
     </tr>
   </table>
 
-<sub>📡 All agents connect via <code>http://localhost:20128/v1</code> or <code>http://cloud.omniroute.online/v1</code> — one config, unlimited models and quota</sub>
-
----
-
-## 📺 OmniRoute in Action — Video Guides
-
-<div align="center">
-
-<table>
-  <tr>
-    <td align="center" width="320">
-      <a href="https://www.youtube.com/watch?v=Rxdc36yUyOQ">
-        <img src="https://img.youtube.com/vi/Rxdc36yUyOQ/maxresdefault.jpg" alt="OmniRoute — Guia em Português" width="300"/>
-      </a><br/>
-      <b>🇧🇷 Português</b><br/>
-      <sub>Guia completo do OmniRoute</sub>
-    </td>
-    <td align="center" width="320">
-      <a href="https://www.youtube.com/watch?v=CMzyOiUyEVc">
-        <img src="https://img.youtube.com/vi/CMzyOiUyEVc/maxresdefault.jpg" alt="OmniRoute — English Guide" width="300"/>
-      </a><br/>
-      <b>🇺🇸 English</b><br/>
-      <sub>Complete OmniRoute walkthrough</sub>
-    </td>
-    <td align="center" width="320">
-      <a href="https://www.youtube.com/watch?v=il_5Ii6v4-Y">
-        <img src="https://img.youtube.com/vi/il_5Ii6v4-Y/maxresdefault.jpg" alt="OmniRoute — Руководство на русском" width="300"/>
-      </a><br/>
-      <b>🇷🇺 Русский</b><br/>
-      <sub>Полное руководство по OmniRoute</sub>
-    </td>
-  </tr>
-</table>
-
-</div>
-
-> 🎬 **Made a video about OmniRoute?** We'd love to feature it here! Open an [issue](https://github.com/diegosouzapw/OmniRoute/issues/new) or [discussion](https://github.com/diegosouzapw/OmniRoute/discussions) with the link and we'll add it to this showcase.
+<sub>📡 All agents connect via <code>http://localhost:20128/v1</code> — one config, unlimited models and quota</sub>
 
 ---
 
@@ -320,24 +252,22 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
 
 ## 📧 Support
 
-> 💬 **Join our community!** [WhatsApp Group](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t) — Get help, share tips, and stay updated.
+> This is a **personal fork** maintained by [@vzwjustin](https://github.com/vzwjustin). For general OmniRoute help, the upstream project's community is your best resource.
 
-- **Website**: [omniroute.online](https://omniroute.online)
-- **GitHub**: [github.com/diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute)
-- **Issues**: [github.com/diegosouzapw/OmniRoute/issues](https://github.com/diegosouzapw/OmniRoute/issues)
-- **WhatsApp**: [Community Group](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)
-- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md), open a PR, or pick a `good first issue`
-- **Original Project**: [9router by decolua](https://github.com/decolua/9router)
+- **This fork (issues, PRs)**: [github.com/vzwjustin/OmniRoute](https://github.com/vzwjustin/OmniRoute)
+- **Upstream project**: [github.com/diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute)
+- **Upstream community (WhatsApp)**: [Community Group](https://chat.whatsapp.com/JI7cDQ1GyaiDHhVBpLxf8b?mode=gi_t)
+- **Original project**: [9router by decolua](https://github.com/decolua/9router)
 
 ### 🐛 Reporting a Bug?
 
-When opening an issue, please run the system-info command and attach the generated file:
+When opening an issue on the fork, run the system-info command and attach the generated file:
 
 ```bash
 npm run system-info
 ```
 
-This generates a `system-info.txt` with your Node.js version, OmniRoute version, OS details, installed CLI tools (qoder, gemini, claude, codex, antigravity, droid, etc.), Docker/PM2 status, and system packages — everything we need to reproduce your issue quickly. Attach the file directly to your GitHub issue.
+This generates a `system-info.txt` with your Node.js version, OmniRoute version, OS details, installed CLI tools, Docker/PM2 status, and system packages — everything needed to reproduce the issue.
 
 ---
 
@@ -376,7 +306,7 @@ OmniRoute works seamlessly with **16+ AI coding tools** — one config, all tool
 
 ---
 
-## 🌐 Supported Providers — 160+
+## 🌐 Supported Providers — 150+ (coding-only)
 
 ### 🔐 OAuth Providers
 
@@ -479,8 +409,7 @@ Alibaba · Amazon Q · Baidu Qianfan · Baseten · Blackbox · Brave Search · B
     <td align="center" width="130"><b>NVIDIA Triton</b></td>
     <td align="center" width="130"><b>XInference</b></td>
     <td align="center" width="130"><b>oobabooga</b></td>
-    <td align="center" width="130"><b>ComfyUI</b></td>
-    <td align="center" width="130"><b>SD WebUI</b></td>
+    <td align="center" colspan="2"></td>
   </tr>
 </table>
 
@@ -499,7 +428,7 @@ Alibaba · Amazon Q · Baidu Qianfan · Baseten · Blackbox · Brave Search · B
 │              OmniRoute (Smart Router)             │
 │  • 🗜️ Prompt Compression (save 15-95% eligible)  │
 │  • Format translation (OpenAI ↔ Claude ↔ Gemini) │
-│  • Quota tracking + Embeddings + Images          │
+│  • Quota tracking + Embeddings + Web Search      │
 │  • Auto token refresh + Rate limit management    │
 └──────┬───────────────────────────────────────────┘
        │
@@ -995,7 +924,7 @@ No proxy? Use the built-in **1proxy** integration for **hundreds of free, valida
 | **Pollinations**  | `pol/`      | GPT-5, Claude, Gemini, DeepSeek, Llama 4, Mistral             | No key needed        |
 | **LongCat**       | `lc/`       | LongCat-Flash-Lite                                            | 50M tokens/day 🔥    |
 | **Gemini CLI**    | `gc/`       | gemini-3-flash, gemini-2.5-pro                                | 180K tok/mo          |
-| **Cloudflare AI** | `cf/`       | 50+ models (Llama, Gemma, Mistral, Whisper)                   | 10K Neurons/day      |
+| **Cloudflare AI** | `cf/`       | 50+ chat models (Llama, Gemma, Mistral, Qwen)                 | 10K Neurons/day      |
 | **Groq**          | `groq/`     | Llama 3.3 70B, Qwen3 32B, Kimi K2                             | 14.4K RPD            |
 | **NVIDIA NIM**    | `nvidia/`   | 129 models (DeepSeek, Llama, GLM, Kimi)                       | ~40 RPM              |
 | **Cerebras**      | `cerebras/` | Qwen3 235B, GPT-OSS 120B, Llama 3.1                           | 1M tok/day           |
@@ -1446,7 +1375,7 @@ See the [Proxy Guide](docs/PROXY_GUIDE.md) for setup instructions.
 | ------------------------------------------- | --------------------------------------------------- |
 | [API Reference](docs/API_REFERENCE.md)      | All endpoints with examples                         |
 | [OpenAPI Spec](docs/openapi.yaml)           | OpenAPI 3.0 specification                           |
-| [MCP Server](open-sse/mcp-server/README.md) | 30 MCP tools, IDE configs, Python/TS/Go clients     |
+| [MCP Server](open-sse/mcp-server/README.md) | 37 MCP tools, IDE configs, Python/TS/Go clients     |
 | [MCP Server Guide](docs/MCP-SERVER.md)      | MCP installation, transports, and tool reference    |
 | [A2A Server](src/lib/a2a/README.md)         | JSON-RPC 2.0 protocol, skills, streaming, task mgmt |
 | [A2A Server Guide](docs/A2A-SERVER.md)      | A2A agent card, tasks, skills, and streaming        |
@@ -1463,123 +1392,19 @@ See the [Proxy Guide](docs/PROXY_GUIDE.md) for setup instructions.
 
 ---
 
-## ⭐ Top Contributors
-
-> OmniRoute is shaped by a passionate open-source community. These individuals have made exceptional contributions that directly impact the quality, stability, and reach of the project. **Thank you.**
-
-<table>
-  <tr>
-    <td align="center" width="160">
-      <a href="https://github.com/oyi77">
-        <img src="https://github.com/oyi77.png" width="80" style="border-radius:50%" alt="oyi77"/><br/>
-        <b>oyi77</b>
-      </a><br/>
-      <sub>🥇 190 commits • +72K lines</sub><br/>
-      <sub>Analytics engine, SQL aggregations,<br/>proxy marketplace, test coverage</sub>
-    </td>
-    <td align="center" width="160">
-      <a href="https://github.com/christopher-s">
-        <img src="https://github.com/christopher-s.png" width="80" style="border-radius:50%" alt="Chris Staley"/><br/>
-        <b>Chris Staley</b>
-      </a><br/>
-      <sub>🥈 72 commits • +5.7K lines</sub><br/>
-      <sub>SSE stream hardening, Responses API,<br/>Gemini pagination, test regression fixes</sub>
-    </td>
-    <td align="center" width="160">
-      <a href="https://github.com/zenobit">
-        <img src="https://github.com/zenobit.png" width="80" style="border-radius:50%" alt="zenobit"/><br/>
-        <b>zenobit</b>
-      </a><br/>
-      <sub>🥉 62 commits • +24K lines</sub><br/>
-      <sub>CI/CD pipeline, i18n for 33 languages,<br/>Void Linux package, platform fixes</sub>
-    </td>
-    <td align="center" width="160">
-      <a href="https://github.com/rdself">
-        <img src="https://github.com/rdself.png" width="80" style="border-radius:50%" alt="R.D. & Randi"/><br/>
-        <b>R.D. & Randi</b>
-      </a><br/>
-      <sub>🏅 107 commits • +28K lines</sub><br/>
-      <sub>Endpoints page, tunnel integrations,<br/>Docker workflows, A2A status, compression UI</sub>
-    </td>
-    <td align="center" width="160">
-      <a href="https://github.com/benzntech">
-        <img src="https://github.com/benzntech.png" width="80" style="border-radius:50%" alt="benzntech"/><br/>
-        <b>benzntech</b>
-      </a><br/>
-      <sub>🏅 20 commits • +7.5K lines</sub><br/>
-      <sub>Electron desktop app, auto-updater,<br/>release build workflows, cross-platform CI</sub>
-    </td>
-  </tr>
-</table>
-
-> 🙏 These contributors' features, bug fixes, and infrastructure improvements are a **core part** of what makes OmniRoute reliable and feature-rich. Every pull request, every test case, and every i18n translation file matters. Open source is built by people like them.
-
----
-
-## 👥 Contributors
-
-[![Contributors](https://contrib.rocks/image?repo=diegosouzapw/OmniRoute&max=100&columns=20&anon=1)](https://github.com/diegosouzapw/OmniRoute/graphs/contributors)
-
-### How to Contribute
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-### Releasing a New Version
-
-```bash
-# Create a release — npm publish happens automatically
-gh release create v2.0.0 --title "v2.0.0" --generate-notes
-```
-
----
-
-## 📊 Star History
-
-<a href="https://www.star-history.com/?repos=diegosouzapw%2Fomniroute&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=diegosouzapw/omniroute&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=diegosouzapw/omniroute&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=diegosouzapw/omniroute&type=date&legend=top-left" />
- </picture>
-</a>
-
-## 🌍 StarMapper
-
-<a href="https://starmapper.bruniaux.com/diegosouzapw/omniroute">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://starmapper.bruniaux.com/api/map-image/diegosouzapw/omniroute?theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://starmapper.bruniaux.com/api/map-image/diegosouzapw/omniroute?theme=light" />
-    <img alt="StarMapper" src="https://starmapper.bruniaux.com/api/map-image/diegosouzapw/omniroute" />
-  </picture>
-</a>
-
 ## 🙏 Acknowledgments
 
-Special thanks to **[9router](https://github.com/decolua/9router)** by **[decolua](https://github.com/decolua)** — the original project that inspired this fork. OmniRoute builds upon that incredible foundation with additional features, multi-modal APIs, and a full TypeScript rewrite.
+This fork is built on top of the excellent work in **[diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute)** — credit for the original project, architecture, and the contributors who built it goes to that team. This fork strips the parts I don't use (media generation, vision bridge, Redis) and hardens what's left for coding-only workflows.
 
-Special thanks to **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** by **[router-for-me](https://github.com/router-for-me)** — the original Go implementation that inspired this JavaScript port.
+Upstream acknowledgments (preserved):
 
-Special thanks to **[Caveman](https://github.com/JuliusBrussee/caveman)** by **[JuliusBrussee](https://github.com/JuliusBrussee)** (⭐ 51K+) — the viral "why use many token when few token do trick" project whose caveman-speak compression philosophy inspired OmniRoute's standard compression mode and 30+ filler/condensation regex rules.
-
-Special thanks to **[RTK - Rust Token Killer](https://github.com/rtk-ai/rtk)** by **[RTK AI](https://github.com/rtk-ai)** — the high-performance command-output compression project whose terminal, build, test, git, and tool-output filtering model inspired OmniRoute's RTK engine, JSON filter DSL, raw-output recovery, and stacked RTK → Caveman compression pipeline.
+- **[9router](https://github.com/decolua/9router)** by **[decolua](https://github.com/decolua)** — the original project that inspired OmniRoute.
+- **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)** by **[router-for-me](https://github.com/router-for-me)** — the original Go implementation that inspired the JavaScript port.
+- **[Caveman](https://github.com/JuliusBrussee/caveman)** by **[JuliusBrussee](https://github.com/JuliusBrussee)** — caveman-speak compression philosophy used by the standard compression mode.
+- **[RTK - Rust Token Killer](https://github.com/rtk-ai/rtk)** by **[RTK AI](https://github.com/rtk-ai)** — command-output compression model used by the RTK engine.
 
 ---
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-  <sub>Built with ❤️ for developers who code 24/7</sub>
-  <br/>
-  <sub><a href="https://omniroute.online">omniroute.online</a></sub>
-</div>
-<!-- GitHub Discussions enabled for community Q&A -->
+MIT — see [LICENSE](LICENSE).
