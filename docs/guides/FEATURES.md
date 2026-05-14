@@ -1,14 +1,14 @@
 ---
-title: "OmniRoute — Dashboard Features Gallery"
+title: "OmniCode — Dashboard Features Gallery"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# OmniRoute — Dashboard Features Gallery
+# OmniCode — Dashboard Features Gallery
 
 🌐 **Main README translations:** 🇺🇸 [English](../README.md) | 🇧🇷 [Português (Brasil)](../i18n/pt-BR/README.md) | 🇪🇸 [Español](../i18n/es/README.md) | 🇫🇷 [Français](../i18n/fr/README.md) | 🇮🇹 [Italiano](../i18n/it/README.md) | 🇷🇺 [Русский](../i18n/ru/README.md) | 🇨🇳 [中文 (简体)](../i18n/zh-CN/README.md) | 🇩🇪 [Deutsch](../i18n/de/README.md) | 🇮🇳 [हिन्दी](../i18n/in/README.md) | 🇹🇭 [ไทย](../i18n/th/README.md) | 🇺🇦 [Українська](../i18n/uk-UA/README.md) | 🇸🇦 [العربية](../i18n/ar/README.md) | 🇯🇵 [日本語](../i18n/ja/README.md) | 🇻🇳 [Tiếng Việt](../i18n/vi/README.md) | 🇧🇬 [Български](../i18n/bg/README.md) | 🇩🇰 [Dansk](../i18n/da/README.md) | 🇫🇮 [Suomi](../i18n/fi/README.md) | 🇮🇱 [עברית](../i18n/he/README.md) | 🇭🇺 [Magyar](../i18n/hu/README.md) | 🇮🇩 [Bahasa Indonesia](../i18n/id/README.md) | 🇰🇷 [한국어](../i18n/ko/README.md) | 🇲🇾 [Bahasa Melayu](../i18n/ms/README.md) | 🇳🇱 [Nederlands](../i18n/nl/README.md) | 🇳🇴 [Norsk](../i18n/no/README.md) | 🇵🇹 [Português (Portugal)](../i18n/pt/README.md) | 🇷🇴 [Română](../i18n/ro/README.md) | 🇵🇱 [Polski](../i18n/pl/README.md) | 🇸🇰 [Slovenčina](../i18n/sk/README.md) | 🇸🇪 [Svenska](../i18n/sv/README.md) | 🇵🇭 [Filipino](../i18n/phi/README.md) | 🇨🇿 [Čeština](../i18n/cs/README.md)
 
-Visual guide to every section of the OmniRoute dashboard.
+Visual guide to every section of the OmniCode dashboard.
 
 > 📅 **Last updated:** 2026-05-13 — **v3.8.0**
 
@@ -146,7 +146,7 @@ Dashboard for discovering and managing CLI agents. Shows a grid of 18 built-in a
 
 ## 🔗 Context Relay _(v3.5.5+)_
 
-A combo strategy that preserves session continuity when account rotation happens mid-conversation. Before the active account is exhausted, OmniRoute generates a structured handoff summary in the background. After the next request resolves to a different account, the summary is injected as a system message so the new account continues with full context.
+A combo strategy that preserves session continuity when account rotation happens mid-conversation. Before the active account is exhausted, OmniCode generates a structured handoff summary in the background. After the next request resolves to a different account, the summary is injected as a system message so the new account continues with full context.
 
 Configurable via combo-level or global settings:
 
@@ -256,7 +256,7 @@ Administrative action tracking with filtering by action type, actor, target, IP 
 
 ## 🖥️ Desktop Application
 
-Native Electron desktop app for Windows, macOS, and Linux. Run OmniRoute as a standalone application with system tray integration, offline support, auto-update, and one-click install.
+Native Electron desktop app for Windows, macOS, and Linux. Run OmniCode as a standalone application with system tray integration, offline support, auto-update, and one-click install.
 
 Key features:
 
@@ -275,7 +275,7 @@ Key features:
 
 ## 🌐 V1 WebSocket Bridge _(v3.6.6+)_
 
-OmniRoute now supports **OpenAI-compatible WebSocket clients** via the `/v1/ws` upgrade endpoint. The custom `scripts/dev/v1-ws-bridge.mjs` server wraps Next.js and upgrades WS connections to full bidirectional streaming sessions. Authentication uses the same API key or session cookie as HTTP requests.
+OmniCode now supports **OpenAI-compatible WebSocket clients** via the `/v1/ws` upgrade endpoint. The custom `scripts/dev/v1-ws-bridge.mjs` server wraps Next.js and upgrades WS connections to full bidirectional streaming sessions. Authentication uses the same API key or session cookie as HTTP requests.
 
 Key behaviours:
 
@@ -301,7 +301,7 @@ The config bundle is built by `src/lib/sync/bundle.ts`. Consumers compare the `E
 
 **GLM Thinking (`glmt`)** is now a registered first-class provider: 65 536 max output tokens, 24 576 thinking budget, 900 s default timeout, Claude-compatible API format, and shared usage sync with the GLM family.
 
-**Hybrid token counting** also lands in v3.6.6: when a Claude-compatible provider exposes `/messages/count_tokens`, OmniRoute calls it before large requests with graceful estimation fallback.
+**Hybrid token counting** also lands in v3.6.6: when a Claude-compatible provider exposes `/messages/count_tokens`, OmniCode calls it before large requests with graceful estimation fallback.
 
 ---
 

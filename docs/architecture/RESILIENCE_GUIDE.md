@@ -6,7 +6,7 @@ lastUpdated: 2026-05-13
 
 # Resilience Guide
 
-OmniRoute has three distinct but related resilience mechanisms. Each has a different scope and purpose. Keep them separate when debugging routing behavior.
+OmniCode has three distinct but related resilience mechanisms. Each has a different scope and purpose. Keep them separate when debugging routing behavior.
 
 ![3-layer resilience model](../diagrams/exported/resilience-3layers.svg)
 

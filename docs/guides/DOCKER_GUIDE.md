@@ -1,10 +1,10 @@
 ---
-title: "🐳 Docker Guide — OmniRoute"
+title: "🐳 Docker Guide — OmniCode"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# 🐳 Docker Guide — OmniRoute
+# 🐳 Docker Guide — OmniCode
 
 > Complete Docker deployment reference. For a quick start, see the [README Docker section](../README.md#-docker).
 
@@ -71,7 +71,7 @@ docker compose --profile cli --profile cliproxyapi up -d
 
 ## Available Profiles
 
-OmniRoute ships four Compose profiles. Pick the one that matches your environment.
+OmniCode ships four Compose profiles. Pick the one that matches your environment.
 
 | Profile          | Service          | When to use                                                                                                                       | Command                                      |
 | ---------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -84,7 +84,7 @@ OmniRoute ships four Compose profiles. Pick the one that matches your environmen
 
 ## Redis Sidecar
 
-OmniRoute relies on Redis to back the distributed rate limiter and shared cache. The `redis` service is **always defined** in `docker-compose.yml` (it has no profile gate) and starts alongside any other profile.
+OmniCode relies on Redis to back the distributed rate limiter and shared cache. The `redis` service is **always defined** in `docker-compose.yml` (it has no profile gate) and starts alongside any other profile.
 
 | Detail               | Value                             |
 | -------------------- | --------------------------------- |
@@ -171,7 +171,7 @@ Beyond the defaults documented in [ENVIRONMENT.md](../reference/ENVIRONMENT.md),
 
 ## Docker Compose with Caddy (HTTPS Auto-TLS)
 
-OmniRoute can be securely exposed using Caddy's automatic SSL provisioning. Ensure your domain's DNS A record points to your server's IP.
+OmniCode can be securely exposed using Caddy's automatic SSL provisioning. Ensure your domain's DNS A record points to your server's IP.
 
 ```yaml
 services:
@@ -207,11 +207,11 @@ Endpoint tunnel panels (Cloudflare, Tailscale, ngrok) can be shown or hidden fro
 ### Tunnel Notes
 
 - Quick Tunnel URLs are temporary and change after every restart.
-- Quick Tunnels are not auto-restored after an OmniRoute or container restart. Re-enable them from the dashboard when needed.
+- Quick Tunnels are not auto-restored after an OmniCode or container restart. Re-enable them from the dashboard when needed.
 - Managed install currently supports Linux, macOS, and Windows on `x64` / `arm64`.
 - Managed Quick Tunnels default to HTTP/2 transport to avoid noisy QUIC UDP buffer warnings in constrained container environments. Set `CLOUDFLARED_PROTOCOL=quic` or `auto` if you want a different transport.
 - Docker images bundle system CA roots and pass them to managed `cloudflared`, which avoids TLS trust failures when the tunnel bootstraps inside the container.
-- Set `CLOUDFLARED_BIN=/absolute/path/to/cloudflared` if you want OmniRoute to use an existing binary instead of downloading one.
+- Set `CLOUDFLARED_BIN=/absolute/path/to/cloudflared` if you want OmniCode to use an existing binary instead of downloading one.
 
 ## Image Tags
 
@@ -224,7 +224,7 @@ Multi-platform manifest: `linux/amd64` + `linux/arm64` native (Apple Silicon, AW
 
 ## Important Notes
 
-- **SQLite WAL Mode:** `docker stop` should be allowed to finish so OmniRoute can checkpoint the latest changes back into `storage.sqlite`. The bundled Compose files already set a 40s stop grace period. If you run the image directly, keep `--stop-timeout 40`.
+- **SQLite WAL Mode:** `docker stop` should be allowed to finish so OmniCode can checkpoint the latest changes back into `storage.sqlite`. The bundled Compose files already set a 40s stop grace period. If you run the image directly, keep `--stop-timeout 40`.
 - **`DISABLE_SQLITE_AUTO_BACKUP`:** Set to `true` if backups are managed externally.
 - **Data Persistence:** Always mount a volume to `/app/data` to persist your database, keys, and configurations across container restarts.
 - **Port Configuration:** Override `PORT` environment variable to change the default `20128` port.

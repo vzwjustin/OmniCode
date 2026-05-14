@@ -4,7 +4,7 @@
 
 ---
 
-> Complete reference for every environment variable recognized by OmniRoute.
+> Complete reference for every environment variable recognized by OmniCode.
 > For a quick-start template, see [`.env.example`](../.env.example).
 
 ---
@@ -65,7 +65,7 @@ echo "INITIAL_PASSWORD=$(openssl rand -base64 16)"
 
 ## 2. Storage & Database
 
-OmniRoute uses **SQLite** (via `better-sqlite3`) for all persistence. These variables control data location, encryption, and lifecycle.
+OmniCode uses **SQLite** (via `better-sqlite3`) for all persistence. These variables control data location, encryption, and lifecycle.
 
 | Variable                         | Default              | Source File                                     | Description                                                                                                        |
 | -------------------------------- | -------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -154,7 +154,7 @@ MAX_BODY_SIZE_BYTES=5242880    # 5 MB limit
 
 ## 5. Input Sanitization & PII Protection
 
-OmniRoute provides a two-layer defense: request-side injection scanning and response-side PII stripping.
+OmniCode provides a two-layer defense: request-side injection scanning and response-side PII stripping.
 
 ### Request-Side: Prompt Injection Guard
 
@@ -232,14 +232,14 @@ Route upstream LLM provider calls through an HTTP or SOCKS5 proxy for egress con
 
 ## 9. CLI Tool Integration
 
-Controls how OmniRoute discovers and launches CLI sidecars (Claude Code, Codex, etc.).
+Controls how OmniCode discovers and launches CLI sidecars (Claude Code, Codex, etc.).
 
 | Variable                  | Default    | Source File                         | Description                                                                |
 | ------------------------- | ---------- | ----------------------------------- | -------------------------------------------------------------------------- |
 | `CLI_MODE`                | `auto`     | `src/shared/services/cliRuntime.ts` | `auto` = search system PATH; `manual` = use explicit paths only.           |
 | `CLI_EXTRA_PATHS`         | _(unset)_  | `src/shared/services/cliRuntime.ts` | Additional PATH entries for CLI binary discovery (colon-separated).        |
 | `CLI_CONFIG_HOME`         | _(unset)_  | `src/shared/services/cliRuntime.ts` | Override home directory for reading CLI configs (`~/.claude`, `~/.codex`). |
-| `CLI_ALLOW_CONFIG_WRITES` | `false`    | `src/shared/services/cliRuntime.ts` | Allow OmniRoute to write CLI config files (token refresh, session data).   |
+| `CLI_ALLOW_CONFIG_WRITES` | `false`    | `src/shared/services/cliRuntime.ts` | Allow OmniCode to write CLI config files (token refresh, session data).   |
 | `CLI_CLAUDE_BIN`          | `claude`   | `src/shared/services/cliRuntime.ts` | Custom path to Claude CLI binary.                                          |
 | `CLI_CODEX_BIN`           | `codex`    | `src/shared/services/cliRuntime.ts` | Custom path to Codex CLI binary.                                           |
 | `CLI_DROID_BIN`           | `droid`    | `src/shared/services/cliRuntime.ts` | Custom path to Droid CLI binary.                                           |
@@ -252,7 +252,7 @@ Controls how OmniRoute discovers and launches CLI sidecars (Claude Code, Codex, 
 ### Docker Example
 
 ```bash
-# Mount host binaries into the container and tell OmniRoute where they are:
+# Mount host binaries into the container and tell OmniCode where they are:
 CLI_EXTRA_PATHS=/host-cli/bin
 CLI_CONFIG_HOME=/root
 CLI_ALLOW_CONFIG_WRITES=true
@@ -265,7 +265,7 @@ CLI_CLAUDE_BIN=/host-cli/bin/claude
 
 | Variable                                | Default     | Source File                                 | Description                                                                                                                   |
 | --------------------------------------- | ----------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `OMNIROUTE_BASE_URL`                    | auto-detect | `open-sse/mcp-server/server.ts`             | Explicit URL for MCP/A2A tools to reach OmniRoute. Overrides localhost auto-detection.                                        |
+| `OMNIROUTE_BASE_URL`                    | auto-detect | `open-sse/mcp-server/server.ts`             | Explicit URL for MCP/A2A tools to reach OmniCode. Overrides localhost auto-detection.                                        |
 | `OMNIROUTE_API_KEY`                     | _(unset)_   | MCP/A2A modules                             | API key for internal MCP tool and A2A skill calls.                                                                            |
 | `OMNIROUTE_API_KEY_ID`                  | _(unset)_   | `open-sse/mcp-server/audit.ts`              | Key ID for MCP audit log attribution.                                                                                         |
 | `ROUTER_API_KEY`                        | _(unset)_   | Legacy                                      | Legacy alias for `OMNIROUTE_API_KEY`.                                                                                         |
@@ -281,7 +281,7 @@ CLI_CLAUDE_BIN=/host-cli/bin/claude
 
 | Variable            | Default     | Source File                     | Description                               |
 | ------------------- | ----------- | ------------------------------- | ----------------------------------------- |
-| `OMNIROUTE_SERVER`  | auto-detect | `src/lib/oauth/config/index.ts` | Server URL for CLI↔OmniRoute auth bridge. |
+| `OMNIROUTE_SERVER`  | auto-detect | `src/lib/oauth/config/index.ts` | Server URL for CLI↔OmniCode auth bridge. |
 | `OMNIROUTE_TOKEN`   | _(unset)_   | `src/lib/oauth/config/index.ts` | Auth token for CLI bridge.                |
 | `OMNIROUTE_USER_ID` | `cli`       | `src/lib/oauth/config/index.ts` | User ID for CLI bridge sessions.          |
 | `SERVER_URL`        | _(unset)_   | `src/lib/oauth/config/index.ts` | Legacy alias for `OMNIROUTE_SERVER`.      |
@@ -357,7 +357,7 @@ process.env[`${PROVIDER_ID}_USER_AGENT`]
 
 ## 13. CLI Fingerprint Compatibility
 
-When enabled, OmniRoute reorders HTTP headers and JSON body fields to match the exact signature of official CLI tools. This reduces the risk of account flagging while preserving your proxy IP.
+When enabled, OmniCode reorders HTTP headers and JSON body fields to match the exact signature of official CLI tools. This reduces the risk of account flagging while preserving your proxy IP.
 
 **Source:** `open-sse/config/cliFingerprints.ts`, `open-sse/executors/base.ts`
 

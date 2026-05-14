@@ -6,7 +6,7 @@ lastUpdated: 2026-05-13
 
 # RTK Compression
 
-RTK compression is OmniRoute's command-aware compression engine for terminal and tool output. It is
+RTK compression is OmniCode's command-aware compression engine for terminal and tool output. It is
 designed for coding-agent sessions where most context growth comes from test logs, build output,
 package manager noise, shell transcripts, Docker output, git output, and stack traces.
 
@@ -19,7 +19,7 @@ rtk -> caveman
 That order compresses noisy machine output first, then lets Caveman condense remaining prose.
 
 Upstream RTK reports `60-90%` command-output savings. Its README sample session goes from
-`~118,000` standard tokens to `~23,900` RTK tokens, which is `79.7%` saved (`~80%`). OmniRoute uses
+`~118,000` standard tokens to `~23,900` RTK tokens, which is `79.7%` saved (`~80%`). OmniCode uses
 that upstream average for the stacked savings calculation with Caveman input compression:
 
 ```txt

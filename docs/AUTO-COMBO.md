@@ -1,4 +1,4 @@
-# OmniRoute Auto-Combo Engine
+# OmniCode Auto-Combo Engine
 
 > Self-managing model chains with adaptive scoring + zero-config auto-routing
 
@@ -34,7 +34,7 @@ model: "auto/cheap"           # cheapest per token
 
 **What happens:**
 
-1. OmniRoute detects `auto/` prefix in `src/sse/handlers/chat.ts`
+1. OmniCode detects `auto/` prefix in `src/sse/handlers/chat.ts`
 2. Queries all **active provider connections** from the database
 3. Filters to those with valid credentials (API key or OAuth token)
 4. Determines the model per connection (`connection.defaultModel` or provider's first model)

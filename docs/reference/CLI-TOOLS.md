@@ -1,17 +1,17 @@
 ---
-title: "CLI Tools — OmniRoute v3.8.0"
+title: "CLI Tools — OmniCode v3.8.0"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# CLI Tools — OmniRoute v3.8.0
+# CLI Tools — OmniCode v3.8.0
 
 Last updated: 2026-05-13
 
-OmniRoute integrates with two categories of CLI tools:
+OmniCode integrates with two categories of CLI tools:
 
-1. **External CLI integrations** — third-party CLIs (Cursor, Cline, Codex, Claude Code, Qwen Code, Windsurf, Hermes, Amp, etc.) that you point at OmniRoute's local OpenAI-compatible endpoint.
-2. **Internal OmniRoute CLI** — commands bundled with the `omniroute` binary for server lifecycle, setup, diagnostics, and provider management.
+1. **External CLI integrations** — third-party CLIs (Cursor, Cline, Codex, Claude Code, Qwen Code, Windsurf, Hermes, Amp, etc.) that you point at OmniCode's local OpenAI-compatible endpoint.
+2. **Internal OmniCode CLI** — commands bundled with the `omniroute` binary for server lifecycle, setup, diagnostics, and provider management.
 
 ---
 
@@ -20,10 +20,10 @@ OmniRoute integrates with two categories of CLI tools:
 ```
 Claude / Codex / OpenCode / Cline / KiloCode / Continue / Cursor / Windsurf / Hermes / Amp / Qwen
            │
-           ▼  (all point to OmniRoute)
+           ▼  (all point to OmniCode)
     http://YOUR_SERVER:20128/v1
            │
-           ▼  (OmniRoute routes to the right provider)
+           ▼  (OmniCode routes to the right provider)
     Anthropic / OpenAI / Gemini / DeepSeek / Groq / Mistral / ...
 ```
 
@@ -58,7 +58,7 @@ config files for automatically.
 | **Cline**          | `cline`       | custom / VS Code    | `npm i -g cline` + VS Code ext       | API key                             |
 | **Kilo Code**      | `kilo`        | custom / VS Code    | `npm i -g kilocode` + VS Code ext    | API key                             |
 | **Continue**       | `continue`    | guide (config.yaml) | VS Code extension                    | API key                             |
-| **Antigravity**    | `antigravity` | MITM                | OmniRoute built-in                   | API key (MITM proxy)                |
+| **Antigravity**    | `antigravity` | MITM                | OmniCode built-in                   | API key (MITM proxy)                |
 | **GitHub Copilot** | `copilot`     | custom / VS Code    | VS Code extension                    | API key (CLI fingerprint: `github`) |
 | **OpenCode**       | `opencode`    | guide (json)        | `npm i -g opencode-ai`               | API key (OpenAI-compatible)         |
 | **Hermes**         | `hermes`      | guide (json)        | install per docs                     | API key (OpenAI-compatible)         |
@@ -70,7 +70,7 @@ config files for automatically.
 > Notes:
 >
 > - "Web wrappers" like ChatGPT/Claude/Grok/Perplexity browser sessions are not
->   listed here. OmniRoute can proxy them through the `chatgpt-web`,
+>   listed here. OmniCode can proxy them through the `chatgpt-web`,
 >   `claude-web`, `grok-web`, `perplexity-web`, `blackbox-web`,
 >   `muse-spark-web` provider connections, but those are **provider connections**
 >   (configured under `/dashboard/providers`), not CLI tools. They do not surface
@@ -95,9 +95,9 @@ Legacy IDs still accepted for compatibility: `copilot`, `kimi-coding`, `qwen`.
 
 ---
 
-### Step 1 — Get an OmniRoute API Key
+### Step 1 — Get an OmniCode API Key
 
-1. Open the OmniRoute dashboard → **API Manager** (`/dashboard/api-manager`)
+1. Open the OmniCode dashboard → **API Manager** (`/dashboard/api-manager`)
 2. Click **Create API Key**
 3. Give it a name (e.g. `cli-tools`) and select all permissions
 4. Copy the key — you'll need it for every CLI below
@@ -154,7 +154,7 @@ kiro-cli --version   # 1.x.x
 Add to `~/.bashrc` (or `~/.zshrc`), then run `source ~/.bashrc`:
 
 ```bash
-# OmniRoute Universal Endpoint
+# OmniCode Universal Endpoint
 export OPENAI_BASE_URL="http://localhost:20128/v1"
 export OPENAI_API_KEY="sk-your-omniroute-key"
 export ANTHROPIC_BASE_URL="http://localhost:20128"
@@ -213,7 +213,7 @@ mkdir -p ~/.config/opencode && cat > ~/.config/opencode/opencode.json << EOF
   "provider": {
     "omniroute": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "OmniRoute",
+      "name": "OmniCode",
       "options": {
         "baseURL": "http://localhost:20128/v1",
         "apiKey": "sk-your-omniroute-key"
@@ -253,7 +253,7 @@ EOF
 **VS Code mode:**
 Cline extension settings → API Provider: `OpenAI Compatible` → Base URL: `http://localhost:20128/v1`
 
-Or use the OmniRoute dashboard → **CLI Tools → Cline → Apply Config**.
+Or use the OmniCode dashboard → **CLI Tools → Cline → Apply Config**.
 
 ---
 
@@ -274,7 +274,7 @@ kilocode --api-base http://localhost:20128/v1 --api-key sk-your-omniroute-key
 }
 ```
 
-Or use the OmniRoute dashboard → **CLI Tools → KiloCode → Apply Config**.
+Or use the OmniCode dashboard → **CLI Tools → KiloCode → Apply Config**.
 
 ---
 
@@ -284,7 +284,7 @@ Edit `~/.continue/config.yaml`:
 
 ```yaml
 models:
-  - name: OmniRoute
+  - name: OmniCode
     provider: openai
     model: auto
     apiBase: http://localhost:20128/v1
@@ -302,12 +302,12 @@ Restart VS Code after editing.
 # Login to your AWS/Kiro account:
 kiro-cli login
 
-# The CLI uses its own auth — OmniRoute is not needed as backend for Kiro CLI itself.
-# Use kiro-cli alongside OmniRoute for other tools.
+# The CLI uses its own auth — OmniCode is not needed as backend for Kiro CLI itself.
+# Use kiro-cli alongside OmniCode for other tools.
 kiro-cli status
 ```
 
-For the **Kiro IDE** desktop app, use the MITM endpoint exposed by OmniRoute
+For the **Kiro IDE** desktop app, use the MITM endpoint exposed by OmniCode
 under `/dashboard/cli-tools → Kiro`.
 
 ---
@@ -316,7 +316,7 @@ under `/dashboard/cli-tools → Kiro`.
 
 Qwen Code supports OpenAI-compatible API endpoints via environment variables or `settings.json`.
 
-> Qwen OAuth free tier was discontinued on 2026-04-15. Use OmniRoute with
+> Qwen OAuth free tier was discontinued on 2026-04-15. Use OmniCode with
 > `alicode` / `openrouter` / `anthropic` / `gemini` providers instead.
 
 **Option 1: Environment variables (`~/.qwen/.env`)**
@@ -364,13 +364,13 @@ qwen
 
 #### Cursor (Desktop App)
 
-> **Note:** Cursor routes requests through its cloud. For OmniRoute integration,
-> enable **Cloud Endpoint** in OmniRoute Settings and use your public domain URL.
+> **Note:** Cursor routes requests through its cloud. For OmniCode integration,
+> enable **Cloud Endpoint** in OmniCode Settings and use your public domain URL.
 
 Via GUI: **Settings → Models → OpenAI API Key**
 
 - Base URL: `https://your-domain.com/v1`
-- API Key: your OmniRoute key
+- API Key: your OmniCode key
 
 ---
 
@@ -383,8 +383,8 @@ Via GUI: **Settings → Models → OpenAI API Key**
 1. Open AI Settings inside Windsurf.
 2. Select **Add custom provider** (OpenAI-compatible).
 3. Base URL: `http://localhost:20128/v1`
-4. API Key: your OmniRoute key
-5. Pick a model from the OmniRoute catalog.
+4. API Key: your OmniCode key
+5. Pick a model from the OmniCode catalog.
 
 ---
 
@@ -422,7 +422,7 @@ amp --model "claude-sonnet-4-6"
 
 ### Dashboard Auto-Configuration
 
-The OmniRoute dashboard automates configuration for most tools:
+The OmniCode dashboard automates configuration for most tools:
 
 1. Go to `http://localhost:20128/dashboard/cli-tools`
 2. Expand any tool card
@@ -434,8 +434,8 @@ The OmniRoute dashboard automates configuration for most tools:
 
 ### Built-in Agents: Droid & Open Claw
 
-**Droid** and **Open Claw** are AI agents built directly into OmniRoute — no
-installation needed. They run as internal routes and use OmniRoute's model
+**Droid** and **Open Claw** are AI agents built directly into OmniCode — no
+installation needed. They run as internal routes and use OmniCode's model
 routing automatically.
 
 - Access: `http://localhost:20128/dashboard/agents`
@@ -444,7 +444,7 @@ routing automatically.
 
 ---
 
-## 2. Internal OmniRoute CLI
+## 2. Internal OmniCode CLI
 
 The `omniroute` binary (installed via `npm install -g omniroute` or bundled
 with the desktop app) provides commands beyond running the server. The full
@@ -498,7 +498,7 @@ Recognized environment variables for non-interactive setup:
 | `OMNIROUTE_PROVIDER_BASE_URL` | Optional OpenAI-compatible base URL override |
 | `OMNIROUTE_API_KEY`           | Provider API key                             |
 | `OMNIROUTE_DEFAULT_MODEL`     | Optional default model                       |
-| `DATA_DIR`                    | Override the OmniRoute data directory        |
+| `DATA_DIR`                    | Override the OmniCode data directory        |
 
 ### Diagnostics
 
@@ -517,7 +517,7 @@ The doctor runs these checks: `Config`, `Database`, `Storage/encryption`,
 ### Provider Management
 
 ```bash
-omniroute providers available                       # OmniRoute provider catalog
+omniroute providers available                       # OmniCode provider catalog
 omniroute providers available --search openai       # Filter catalog by id/name/alias/category
 omniroute providers available --category api-key    # Filter by category (api-key, oauth, free, ...)
 omniroute providers available --json                # Machine-readable JSON
@@ -530,7 +530,7 @@ omniroute providers test-all                        # Test every active connecti
 omniroute providers validate                        # Local-only structural validation
 ```
 
-> `providers available` reads the OmniRoute catalog; `providers list/test/test-all/validate`
+> `providers available` reads the OmniCode catalog; `providers list/test/test-all/validate`
 > read the local SQLite database directly and do not require the server to be running.
 
 ### Recovery & Reset
@@ -543,7 +543,7 @@ omniroute reset-encrypted-columns --force  # Actually null out encrypted credent
 
 ### Other subcommands (via `cli-commands.mjs`)
 
-These are dispatched in `bin/cli-commands.mjs` and assume a running OmniRoute
+These are dispatched in `bin/cli-commands.mjs` and assume a running OmniCode
 server, unless noted otherwise:
 
 ```bash
@@ -552,7 +552,7 @@ omniroute logs                         # Stream request logs (--json, --search, 
 omniroute config show                  # Display current configuration
 
 omniroute provider list                # List available providers (alias of providers list)
-omniroute provider add                 # Register OmniRoute as a provider on a tool
+omniroute provider add                 # Register OmniCode as a provider on a tool
 omniroute keys add | list | remove     # Manage API keys
 omniroute models [provider]            # List models (--json, --search)
 omniroute combo list | switch | create | delete
@@ -608,7 +608,7 @@ omniroute completion                   # Generate shell completion
 
 | Error                                             | Cause                       | Fix                                                                         |
 | ------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------- |
-| `Connection refused`                              | OmniRoute not running       | `omniroute serve` or `pm2 start omniroute`                                  |
+| `Connection refused`                              | OmniCode not running       | `omniroute serve` or `pm2 start omniroute`                                  |
 | `401 Unauthorized`                                | Wrong API key               | Check in `/dashboard/api-manager`                                           |
 | `No combo configured`                             | No active routing combo     | Set up in `/dashboard/combos`                                               |
 | `invalid model`                                   | Model not in catalog        | Use `auto` or check `/dashboard/providers`                                  |
@@ -672,10 +672,10 @@ OPENAI_MODEL="auto"
 ENV
 
 # 4. Append global env vars (idempotent guard)
-if ! grep -q "OmniRoute Universal Endpoint" ~/.bashrc 2>/dev/null; then
+if ! grep -q "OmniCode Universal Endpoint" ~/.bashrc 2>/dev/null; then
   cat >> ~/.bashrc <<ENV
 
-# OmniRoute Universal Endpoint
+# OmniCode Universal Endpoint
 export OPENAI_BASE_URL="${OMNIROUTE_URL}"
 export OPENAI_API_KEY="${OMNIROUTE_KEY}"
 export ANTHROPIC_BASE_URL="${OMNIROUTE_ANTHROPIC_URL}"
@@ -687,7 +687,7 @@ fi
 omniroute doctor || true
 omniroute providers list || true
 
-echo "All CLIs installed and configured for OmniRoute"
+echo "All CLIs installed and configured for OmniCode"
 EOF
 chmod +x my-setup.sh
 ./my-setup.sh

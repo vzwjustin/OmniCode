@@ -1,12 +1,12 @@
 ---
-title: "📖 Setup Guide — OmniRoute"
+title: "📖 Setup Guide — OmniCode"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# 📖 Setup Guide — OmniRoute
+# 📖 Setup Guide — OmniCode
 
-> Complete setup reference for OmniRoute. For the quick version, see the [Quick Start in README](../README.md#-quick-start).
+> Complete setup reference for OmniCode. For the quick version, see the [Quick Start in README](../README.md#-quick-start).
 
 ## Table of Contents
 
@@ -48,7 +48,7 @@ yay -S omniroute-bin
 systemctl --user enable --now omniroute.service
 ```
 
-The [AUR package](https://aur.archlinux.org/packages/omniroute-bin) installs OmniRoute and provides a systemd user service.
+The [AUR package](https://aur.archlinux.org/packages/omniroute-bin) installs OmniCode and provides a systemd user service.
 
 ### From Source
 
@@ -65,7 +65,7 @@ See the [Docker Guide](./DOCKER_GUIDE.md) for complete Docker setup including Co
 
 ### Desktop App (Electron)
 
-OmniRoute ships a desktop wrapper built on Electron 41 + electron-builder 26.10. Available scripts (workspace root):
+OmniCode ships a desktop wrapper built on Electron 41 + electron-builder 26.10. Available scripts (workspace root):
 
 ```bash
 npm run electron:dev          # Run desktop with hot-reload
@@ -87,7 +87,7 @@ omniroute setup --non-interactive
 omniroute providers test-batch
 ```
 
-Combined with env vars (`INITIAL_PASSWORD`, `OMNIROUTE_WS_BRIDGE_SECRET`, etc.), this lets you spin up an OmniRoute instance fully scriptable.
+Combined with env vars (`INITIAL_PASSWORD`, `OMNIROUTE_WS_BRIDGE_SECRET`, etc.), this lets you spin up an OmniCode instance fully scriptable.
 
 ### CLI Options
 
@@ -100,7 +100,7 @@ Combined with env vars (`INITIAL_PASSWORD`, `OMNIROUTE_WS_BRIDGE_SECRET`, etc.),
 | `omniroute config`      | CLI tool configuration — list, get, set, validate configs      |
 | `omniroute status`      | Offline status dashboard — version, DB, tools, config          |
 | `omniroute logs`        | Stream usage logs from the API (supports `--follow`)           |
-| `omniroute update`      | Check for or apply OmniRoute updates                           |
+| `omniroute update`      | Check for or apply OmniCode updates                           |
 | `omniroute provider`    | Manage provider connections — add, list, remove, test, default |
 | `omniroute --port 3000` | Set canonical/API port to 3000                                 |
 | `omniroute --mcp`       | Start MCP server (stdio transport)                             |
@@ -238,15 +238,15 @@ For most deployments, you only need these two variables:
 | Variable                 | Default                       | Purpose                                                                                                                                      |
 | ------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `REQUEST_TIMEOUT_MS`     | `600000`                      | Shared baseline for upstream response-start timeout, hidden Undici timeouts, TLS fingerprint requests, and API bridge request/proxy timeouts |
-| `STREAM_IDLE_TIMEOUT_MS` | inherits `REQUEST_TIMEOUT_MS` | Maximum gap between streaming chunks before OmniRoute aborts the SSE stream                                                                  |
+| `STREAM_IDLE_TIMEOUT_MS` | inherits `REQUEST_TIMEOUT_MS` | Maximum gap between streaming chunks before OmniCode aborts the SSE stream                                                                  |
 
 Backward compatibility is preserved: existing `FETCH_TIMEOUT_MS`, `API_BRIDGE_PROXY_TIMEOUT_MS`, and other per-layer timeout vars still work and override the shared baseline.
 
 ### Provider-Specific Notes
 
-For Claude Code-compatible upstreams (`anthropic-compatible-cc-*`), OmniRoute derives the outbound `X-Stainless-Timeout` header from the resolved fetch timeout so provider-side read timeouts stay aligned with your env configuration.
+For Claude Code-compatible upstreams (`anthropic-compatible-cc-*`), OmniCode derives the outbound `X-Stainless-Timeout` header from the resolved fetch timeout so provider-side read timeouts stay aligned with your env configuration.
 
-For third-party Claude Code-compatible reverse proxies, OmniRoute keeps the default `anthropic-beta` set conservative and, when `Client Cache Control` is left on `Auto`, only forwards client-provided `cache_control` markers.
+For third-party Claude Code-compatible reverse proxies, OmniCode keeps the default `anthropic-beta` set conservative and, when `Client Cache Control` is left on `Auto`, only forwards client-provided `cache_control` markers.
 
 ### Advanced Timeout Overrides
 
@@ -264,11 +264,11 @@ For third-party Claude Code-compatible reverse proxies, OmniRoute keeps the defa
 | `API_BRIDGE_SERVER_KEEPALIVE_TIMEOUT_MS` | `5000`                                     | Keep-alive timeout on the API bridge server                          |
 | `API_BRIDGE_SERVER_SOCKET_TIMEOUT_MS`    | `0`                                        | Socket inactivity timeout on the API bridge server (`0` disables it) |
 
-> **Note:** For streaming requests, `FETCH_TIMEOUT_MS` only covers connection setup / waiting for the first upstream response. Once the stream is active, OmniRoute will only abort on an actual stall (`STREAM_IDLE_TIMEOUT_MS`) or Undici body inactivity (`FETCH_BODY_TIMEOUT_MS`).
+> **Note:** For streaming requests, `FETCH_TIMEOUT_MS` only covers connection setup / waiting for the first upstream response. Once the stream is active, OmniCode will only abort on an actual stall (`STREAM_IDLE_TIMEOUT_MS`) or Undici body inactivity (`FETCH_BODY_TIMEOUT_MS`).
 
 ### Reverse Proxy Compatibility
 
-If you run OmniRoute behind Nginx, Caddy, Cloudflare, or another reverse proxy, make sure the proxy timeouts are also higher than your OmniRoute stream/fetch timeouts.
+If you run OmniCode behind Nginx, Caddy, Cloudflare, or another reverse proxy, make sure the proxy timeouts are also higher than your OmniCode stream/fetch timeouts.
 
 ---
 

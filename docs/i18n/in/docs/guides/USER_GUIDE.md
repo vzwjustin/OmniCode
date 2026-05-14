@@ -4,7 +4,7 @@
 
 ---
 
-Complete guide for configuring providers, creating combos, integrating CLI tools, and deploying OmniRoute.
+Complete guide for configuring providers, creating combos, integrating CLI tools, and deploying OmniCode.
 
 ---
 
@@ -128,7 +128,7 @@ Models:
   cc/claude-haiku-4-5-20251001
 ```
 
-**Pro Tip:** Use Opus for complex tasks, Sonnet for speed. OmniRoute tracks quota per model!
+**Pro Tip:** Use Opus for complex tasks, Sonnet for speed. OmniCode tracks quota per model!
 
 #### OpenAI Codex (Plus/Pro)
 
@@ -343,20 +343,20 @@ The CLI automatically loads `.env` from `~/.omniroute/.env` or `./.env`.
 
 ### Uninstalling
 
-When you no longer need OmniRoute, we provide two quick scripts for a clean removal:
+When you no longer need OmniCode, we provide two quick scripts for a clean removal:
 
 | Command                  | Action                                                                              |
 | ------------------------ | ----------------------------------------------------------------------------------- |
 | `npm run uninstall`      | Removes the system app but **keeps your DB and configurations** in `~/.omniroute`.  |
 | `npm run uninstall:full` | Removes the app AND permanently **erases all configurations, keys, and databases**. |
 
-> Note: To run these commands, navigate to the OmniRoute project folder (if you cloned it) and run them. Alternatively, if globally installed, you can simply run `npm uninstall -g omniroute`.
+> Note: To run these commands, navigate to the OmniCode project folder (if you cloned it) and run them. Alternatively, if globally installed, you can simply run `npm uninstall -g omniroute`.
 
 ### VPS Deployment
 
 ```bash
 git clone https://github.com/diegosouzapw/OmniRoute.git
-cd OmniRoute && npm install && npm run build
+cd OmniCode && npm install && npm run build
 
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
@@ -422,7 +422,7 @@ For host-integrated mode with CLI binaries, see the Docker section in the main d
 
 ### Void Linux (xbps-src)
 
-Void Linux users can package and install OmniRoute natively using the `xbps-src` cross-compilation framework. This automates the Node.js standalone build along with the required `better-sqlite3` native bindings.
+Void Linux users can package and install OmniCode natively using the `xbps-src` cross-compilation framework. This automates the Node.js standalone build along with the required `better-sqlite3` native bindings.
 
 <details>
 <summary><b>View xbps-src template</b></summary>
@@ -668,7 +668,7 @@ Returns models grouped by provider with types (`chat`, `embedding`, `image`).
 - Available in **Dashboard → Endpoints** for Docker and other self-hosted deployments
 - Creates a temporary `https://*.trycloudflare.com` URL that forwards to your current OpenAI-compatible `/v1` endpoint
 - First enable installs `cloudflared` only when needed; later restarts reuse the same managed binary
-- Quick Tunnels are not auto-restored after an OmniRoute or container restart; re-enable them from the dashboard when needed
+- Quick Tunnels are not auto-restored after an OmniCode or container restart; re-enable them from the dashboard when needed
 - Tunnel URLs are ephemeral and change every time you stop/start the tunnel
 - Managed Quick Tunnels default to HTTP/2 transport to avoid noisy QUIC UDP buffer warnings in constrained containers
 - Set `CLOUDFLARED_PROTOCOL=quic` or `auto` if you want to override the managed transport choice
@@ -676,15 +676,15 @@ Returns models grouped by provider with types (`chat`, `embedding`, `image`).
 
 ### LLM Gateway Intelligence (Phase 9)
 
-- **Semantic Cache** — Auto-caches non-streaming, temperature=0 responses (bypass with `X-OmniRoute-No-Cache: true`)
+- **Semantic Cache** — Auto-caches non-streaming, temperature=0 responses (bypass with `X-OmniCode-No-Cache: true`)
 - **Request Idempotency** — Deduplicates requests within 5s via `Idempotency-Key` or `X-Request-Id` header
-- **Progress Tracking** — Opt-in SSE `event: progress` events via `X-OmniRoute-Progress: true` header
+- **Progress Tracking** — Opt-in SSE `event: progress` events via `X-OmniCode-Progress: true` header
 
 ---
 
 ### Translator Playground
 
-Access via **Dashboard → Translator**. Debug and visualize how OmniRoute translates API requests between providers.
+Access via **Dashboard → Translator**. Debug and visualize how OmniCode translates API requests between providers.
 
 | Mode             | Purpose                                                                                |
 | ---------------- | -------------------------------------------------------------------------------------- |
@@ -722,7 +722,7 @@ For external session affinity (for example, Claude Code/Codex agents behind reve
 X-Session-Id: your-session-key
 ```
 
-OmniRoute also accepts `x_session_id` and returns the effective session key in `X-OmniRoute-Session-Id`.
+OmniCode also accepts `x_session_id` and returns the effective session key in `X-OmniCode-Session-Id`.
 
 If you use Nginx and send underscore-form headers, enable:
 
@@ -758,7 +758,7 @@ Chain: production-fallback
 
 Configure via **Dashboard → Settings → Resilience**.
 
-OmniRoute implements provider-level resilience with four components:
+OmniCode implements provider-level resilience with four components:
 
 1. **Provider Profiles** — Per-provider configuration for:
    - **Transient Cooldown** — Base cooldown for transient upstream failures
@@ -816,7 +816,7 @@ curl -X POST http://localhost:20128/api/db-backups/import \
 
 **Use Cases:**
 
-- Migrate OmniRoute between machines
+- Migrate OmniCode between machines
 - Create external backups for disaster recovery
 - Share configurations between team members (export all → share archive)
 
@@ -862,7 +862,7 @@ curl http://localhost:20128/api/usage/budget
 
 ### Audio Transcription
 
-OmniRoute supports audio transcription via the OpenAI-compatible endpoint:
+OmniCode supports audio transcription via the OpenAI-compatible endpoint:
 
 ```bash
 POST /v1/audio/transcriptions
@@ -918,7 +918,7 @@ Access via **Dashboard → Health**. Real-time system health overview with 6 car
 
 ## 🖥️ Desktop Application (Electron)
 
-OmniRoute is available as a native desktop application for Windows, macOS, and Linux.
+OmniCode is available as a native desktop application for Windows, macOS, and Linux.
 
 ### स्थापित करें
 

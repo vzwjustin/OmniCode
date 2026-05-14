@@ -6,7 +6,7 @@ lastUpdated: 2026-05-13
 
 # Environment Variables Reference
 
-> Complete reference for every environment variable recognized by OmniRoute.
+> Complete reference for every environment variable recognized by OmniCode.
 > For a quick-start template, see [`.env.example`](../../.env.example).
 
 > [!IMPORTANT]
@@ -57,7 +57,7 @@ These **must** be set before the first run. Without them, the application will e
 | `JWT_SECRET`                 | **Yes**              | _(none)_   | `src/lib/auth`                                     | Signs/verifies all dashboard session cookies (JWT). Generate with `openssl rand -base64 48`.                                                                                                                                                                                  |
 | `API_KEY_SECRET`             | **Yes**              | _(none)_   | `src/lib/db/apiKeys.ts`                            | AES encryption key for API key values at rest in SQLite. Generate with `openssl rand -hex 32`.                                                                                                                                                                                |
 | `INITIAL_PASSWORD`           | **Yes**              | `CHANGEME` | Bootstrap script                                   | Sets the initial admin dashboard password (matches `.env.example` default — kept obviously insecure to force a change). **Change before first use.** After login, change via Dashboard → Settings → Security.                                                                 |
-| `OMNIROUTE_WS_BRIDGE_SECRET` | **Yes** (production) | _(unset)_  | `src/app/api/internal/codex-responses-ws/route.ts` | Shared secret for the internal Codex Responses WebSocket bridge. Authenticates bridge requests between the Electron/browser WS relay and OmniRoute. ⚠️ **REQUIRED in production — when unset, all WS bridge requests are rejected.** Generate with `openssl rand -base64 32`. |
+| `OMNIROUTE_WS_BRIDGE_SECRET` | **Yes** (production) | _(unset)_  | `src/app/api/internal/codex-responses-ws/route.ts` | Shared secret for the internal Codex Responses WebSocket bridge. Authenticates bridge requests between the Electron/browser WS relay and OmniCode. ⚠️ **REQUIRED in production — when unset, all WS bridge requests are rejected.** Generate with `openssl rand -base64 32`. |
 
 ### Generation Commands
 
@@ -76,7 +76,7 @@ echo "OMNIROUTE_WS_BRIDGE_SECRET=$(openssl rand -base64 32)"
 
 ## 2. Storage & Database
 
-OmniRoute uses **SQLite** (via `better-sqlite3`) for all persistence. These variables control data location, encryption, and lifecycle.
+OmniCode uses **SQLite** (via `better-sqlite3`) for all persistence. These variables control data location, encryption, and lifecycle.
 
 | Variable                               | Default              | Source File                                           | Description                                                                                                                      |
 | -------------------------------------- | -------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -174,7 +174,7 @@ MAX_BODY_SIZE_BYTES=5242880    # 5 MB limit
 
 ## 5. Input Sanitization & PII Protection
 
-OmniRoute provides a two-layer defense: request-side injection scanning and response-side PII stripping.
+OmniCode provides a two-layer defense: request-side injection scanning and response-side PII stripping.
 
 ### Request-Side: Prompt Injection Guard
 
@@ -222,7 +222,7 @@ OmniRoute provides a two-layer defense: request-side injection scanning and resp
 | `NEXT_PUBLIC_BASE_URL`                  | `http://localhost:20128`                                        | OAuth, Dashboard, sync                      | Public-facing URL for OAuth redirect_uri, Dashboard links. **Must match your public URL behind reverse proxy.**                                                                                                                                                                                   |
 | `NEXT_PUBLIC_CLOUD_URL`                 | _(empty)_                                                       | Client-side                                 | Client-side mirror of `CLOUD_URL`.                                                                                                                                                                                                                                                                |
 | `NEXT_PUBLIC_APP_URL`                   | _(unset)_                                                       | `src/shared/services/cloudSyncScheduler.ts` | Legacy fallback for `NEXT_PUBLIC_BASE_URL`.                                                                                                                                                                                                                                                       |
-| `OMNIROUTE_PUBLIC_BASE_URL`             | _(unset)_                                                       | `open-sse/executors/chatgpt-web.ts`         | Browser-facing OmniRoute origin used for image URLs in API responses (e.g., `/v1/chatgpt-web/image/<id>`). Set this when OpenWebUI or another relay reaches OmniRoute by an internal URL but the user's browser must fetch images from a LAN, tunnel, or public origin. Do **not** include `/v1`. |
+| `OMNIROUTE_PUBLIC_BASE_URL`             | _(unset)_                                                       | `open-sse/executors/chatgpt-web.ts`         | Browser-facing OmniCode origin used for image URLs in API responses (e.g., `/v1/chatgpt-web/image/<id>`). Set this when OpenWebUI or another relay reaches OmniCode by an internal URL but the user's browser must fetch images from a LAN, tunnel, or public origin. Do **not** include `/v1`. |
 | `OMNIROUTE_CGPT_WEB_IMAGE_TIMEOUT_MS`   | `180000` (3 min)                                                | `open-sse/executors/chatgpt-web.ts`         | Max wait time for an async chatgpt-web image to land via the celsius WebSocket. Increase during upstream queue-deep windows.                                                                                                                                                                      |
 | `OMNIROUTE_CGPT_WEB_IMAGE_CACHE_MAX_MB` | `256`                                                           | `open-sse/services/chatgptImageCache.ts`    | Total in-memory byte budget (MB) for the chatgpt-web image cache serving `/v1/chatgpt-web/image/<id>`. Lower on memory-constrained hosts; raise if image generation is heavy and clients race the 30-minute TTL.                                                                                  |
 | `KIE_CALLBACK_URL`                      | _(unset)_                                                       | `open-sse/utils/kieTask.ts`                 | Public callback URL for asynchronous kie.ai jobs. Highest-priority override before `OMNIROUTE_KIE_CALLBACK_URL` and `OMNIROUTE_PUBLIC_URL`.                                                                                                                                                       |
@@ -263,14 +263,14 @@ Route upstream LLM provider calls through an HTTP or SOCKS5 proxy for egress con
 
 ## 9. CLI Tool Integration
 
-Controls how OmniRoute discovers and launches CLI sidecars (Claude Code, Codex, etc.).
+Controls how OmniCode discovers and launches CLI sidecars (Claude Code, Codex, etc.).
 
 | Variable                  | Default    | Source File                         | Description                                                                        |
 | ------------------------- | ---------- | ----------------------------------- | ---------------------------------------------------------------------------------- |
 | `CLI_MODE`                | `auto`     | `src/shared/services/cliRuntime.ts` | `auto` = search system PATH; `manual` = use explicit paths only.                   |
 | `CLI_EXTRA_PATHS`         | _(unset)_  | `src/shared/services/cliRuntime.ts` | Additional PATH entries for CLI binary discovery (colon-separated).                |
 | `CLI_CONFIG_HOME`         | _(unset)_  | `src/shared/services/cliRuntime.ts` | Override home directory for reading CLI configs (`~/.claude`, `~/.codex`).         |
-| `CLI_ALLOW_CONFIG_WRITES` | `false`    | `src/shared/services/cliRuntime.ts` | Allow OmniRoute to write CLI config files (token refresh, session data).           |
+| `CLI_ALLOW_CONFIG_WRITES` | `false`    | `src/shared/services/cliRuntime.ts` | Allow OmniCode to write CLI config files (token refresh, session data).           |
 | `CLI_CLAUDE_BIN`          | `claude`   | `src/shared/services/cliRuntime.ts` | Custom path to Claude CLI binary.                                                  |
 | `CLI_CODEX_BIN`           | `codex`    | `src/shared/services/cliRuntime.ts` | Custom path to Codex CLI binary.                                                   |
 | `CLI_DROID_BIN`           | `droid`    | `src/shared/services/cliRuntime.ts` | Custom path to Droid CLI binary.                                                   |
@@ -285,7 +285,7 @@ Controls how OmniRoute discovers and launches CLI sidecars (Claude Code, Codex, 
 ### Docker Example
 
 ```bash
-# Mount host binaries into the container and tell OmniRoute where they are:
+# Mount host binaries into the container and tell OmniCode where they are:
 CLI_EXTRA_PATHS=/host-cli/bin
 CLI_CONFIG_HOME=/root
 CLI_ALLOW_CONFIG_WRITES=true
@@ -298,7 +298,7 @@ CLI_CLAUDE_BIN=/host-cli/bin/claude
 
 | Variable                                        | Default     | Source File                                                 | Description                                                                                                                   |
 | ----------------------------------------------- | ----------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `OMNIROUTE_BASE_URL`                            | auto-detect | `open-sse/mcp-server/server.ts`                             | Explicit URL for MCP/A2A tools to reach OmniRoute. Overrides localhost auto-detection.                                        |
+| `OMNIROUTE_BASE_URL`                            | auto-detect | `open-sse/mcp-server/server.ts`                             | Explicit URL for MCP/A2A tools to reach OmniCode. Overrides localhost auto-detection.                                        |
 | `OMNIROUTE_API_KEY`                             | _(unset)_   | MCP/A2A modules                                             | API key for internal MCP tool and A2A skill calls.                                                                            |
 | `OMNIROUTE_API_KEY_ID`                          | _(unset)_   | `open-sse/mcp-server/audit.ts`                              | Key ID for MCP audit log attribution.                                                                                         |
 | `ROUTER_API_KEY`                                | _(unset)_   | Legacy                                                      | Legacy alias for `OMNIROUTE_API_KEY`.                                                                                         |
@@ -323,7 +323,7 @@ CLI_CLAUDE_BIN=/host-cli/bin/claude
 
 | Variable            | Default     | Source File                     | Description                               |
 | ------------------- | ----------- | ------------------------------- | ----------------------------------------- |
-| `OMNIROUTE_SERVER`  | auto-detect | `src/lib/oauth/config/index.ts` | Server URL for CLI↔OmniRoute auth bridge. |
+| `OMNIROUTE_SERVER`  | auto-detect | `src/lib/oauth/config/index.ts` | Server URL for CLI↔OmniCode auth bridge. |
 | `OMNIROUTE_TOKEN`   | _(unset)_   | `src/lib/oauth/config/index.ts` | Auth token for CLI bridge.                |
 | `OMNIROUTE_USER_ID` | `cli`       | `src/lib/oauth/config/index.ts` | User ID for CLI bridge sessions.          |
 | `SERVER_URL`        | _(unset)_   | `src/lib/oauth/config/index.ts` | Legacy alias for `OMNIROUTE_SERVER`.      |
@@ -408,7 +408,7 @@ process.env[`${PROVIDER_ID}_USER_AGENT`]
 
 ## 13. CLI Fingerprint Compatibility
 
-When enabled, OmniRoute reorders HTTP headers and JSON body fields to match the exact signature of official CLI tools. This reduces the risk of account flagging while preserving your proxy IP.
+When enabled, OmniCode reorders HTTP headers and JSON body fields to match the exact signature of official CLI tools. This reduces the risk of account flagging while preserving your proxy IP.
 
 **Source:** `open-sse/config/cliFingerprints.ts`, `open-sse/executors/base.ts`
 
@@ -632,7 +632,7 @@ Automatic model pricing data synchronization from external sources.
 | `LOCAL_HOSTNAMES`                         | _(empty)_          | `open-sse/config/providerRegistry.ts`                                 | Comma-separated additional hostnames treated as "local" (Docker service names, etc.). |
 
 `ENABLE_CC_COMPATIBLE_PROVIDER` is only for third-party relays that accept Claude Code clients
-exclusively. OmniRoute rewrites requests so those relays accept them. If you only want to use
+exclusively. OmniCode rewrites requests so those relays accept them. If you only want to use
 Claude Code CLI, or you are not sure what these relays are, keep this disabled and add a regular
 Anthropic-compatible provider instead.
 
@@ -804,7 +804,7 @@ value below unset in production deployments.
 | `OMNIROUTE_DISABLE_TOKEN_HEALTHCHECK` | `true`                           | `scripts/run-next-playwright.mjs`     | Disable the OAuth token healthcheck loop during tests.                                   |
 | `OMNIROUTE_HIDE_HEALTHCHECK_LOGS`     | `true`                           | `scripts/run-next-playwright.mjs`     | Silence healthcheck noise in Playwright stdout.                                          |
 | `OMNIROUTE_PLAYWRIGHT_SKIP_BUILD`     | `0`                              | `scripts/run-next-playwright.mjs`     | Skip the Next.js production build before Playwright starts (CI optimization).            |
-| `OMNIROUTE_SKIP_UNINSTALL_HOOK`       | `0`                              | `scripts/uninstall.mjs`               | Skip the OmniRoute uninstall hook (used by CI to keep `node_modules` intact).            |
+| `OMNIROUTE_SKIP_UNINSTALL_HOOK`       | `0`                              | `scripts/uninstall.mjs`               | Skip the OmniCode uninstall hook (used by CI to keep `node_modules` intact).            |
 | `ECOSYSTEM_SERVER_WAIT_MS`            | `180000`                         | `scripts/run-ecosystem-tests.mjs`     | Wait time (ms) for the server to become healthy before running ecosystem/protocol tests. |
 | `ELECTRON_SMOKE_URL`                  | `http://127.0.0.1:20128/login`   | `scripts/smoke-electron-packaged.mjs` | URL the Electron smoke harness expects the packaged app to serve.                        |
 | `ELECTRON_SMOKE_TIMEOUT_MS`           | `45000`                          | `scripts/smoke-electron-packaged.mjs` | Total timeout (ms) before the smoke harness gives up.                                    |

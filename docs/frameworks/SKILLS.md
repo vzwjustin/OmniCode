@@ -9,9 +9,9 @@ lastUpdated: 2026-05-13
 > **Source of truth:** `src/lib/skills/` and `src/app/api/skills/`
 > **Last updated:** 2026-05-13 — v3.8.0
 
-OmniRoute exposes an extensible Skills framework that lets language models (and operators) compose reusable capabilities — from filesystem reads and HTTP requests to sandboxed code execution and curated marketplace skills.
+OmniCode exposes an extensible Skills framework that lets language models (and operators) compose reusable capabilities — from filesystem reads and HTTP requests to sandboxed code execution and curated marketplace skills.
 
-A skill is a versioned, schema-defined unit of work. OmniRoute can inject skills as tool definitions into outbound requests, intercept tool calls coming back from the model, run the matching handler, and feed the result back to the model so the conversation can continue. The model never sees the implementation — only the tool interface.
+A skill is a versioned, schema-defined unit of work. OmniCode can inject skills as tool definitions into outbound requests, intercept tool calls coming back from the model, run the matching handler, and feed the result back to the model so the conversation can continue. The model never sees the implementation — only the tool interface.
 
 ---
 
@@ -21,14 +21,14 @@ A skill is a versioned, schema-defined unit of work. OmniRoute can inject skills
 
 Three sources of skills coexist in the same registry:
 
-1. **Built-in skills** (`src/lib/skills/builtins.ts`) — shipped with OmniRoute. Cover the common cases:
+1. **Built-in skills** (`src/lib/skills/builtins.ts`) — shipped with OmniCode. Cover the common cases:
    - `file_read`, `file_write` — per-API-key sandbox workspace under `<DATA_DIR>/skills/workspaces/<hashed-key>/`
    - `http_request` — outbound HTTP through `safeOutboundFetch` with `guard: "public-only"`
    - `web_search` — pluggable search provider with caching (`executeWebSearch`)
    - `eval_code` — Docker-sandboxed `node` or `python` execution
    - `execute_command` — Docker-sandboxed shell command
    - `browser` — Playwright-backed scaffolding, disabled by default (`builtin/browser.ts`)
-2. **SkillsMP** (the OmniRoute Marketplace) — fetched from `https://skillsmp.com/api/v1/skills/search`. Requires `skillsmpApiKey` in Settings.
+2. **SkillsMP** (the OmniCode Marketplace) — fetched from `https://skillsmp.com/api/v1/skills/search`. Requires `skillsmpApiKey` in Settings.
 3. **SkillsSH** (`skills.sh` community catalog) — fetched from `https://skills.sh/api/search`. No auth needed; SKILL.md content pulled from GitHub raw.
 
 A single "active provider" controls which catalog the dashboard installs from (`src/lib/skills/providerSettings.ts`). Switch it under **Settings → Memory & Skills**. Default: `skillsmp`.

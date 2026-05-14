@@ -6,7 +6,7 @@ lastUpdated: 2026-05-13
 
 # Compression Engines
 
-OmniRoute compression is built around engine contracts. A mode can run one engine directly
+OmniCode compression is built around engine contracts. A mode can run one engine directly
 (`caveman` or `rtk`) or a deterministic stacked pipeline that executes multiple engines in order.
 
 ## Modes
@@ -57,7 +57,7 @@ Caveman mode focuses on semantic condensation of normal prose:
 The dashboard surface is `Dashboard -> Context & Cache -> Caveman`.
 
 Caveman upstream reports `~75%` fewer output tokens, `65%` average output savings in benchmarks
-with a `22-87%` range, and a `~46%` input-compression tool. OmniRoute uses the Caveman input-side
+with a `22-87%` range, and a `~46%` input-compression tool. OmniCode uses the Caveman input-side
 number when documenting stacked prompt/context savings; Caveman output mode remains a separate
 response-behavior feature.
 

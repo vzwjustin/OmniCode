@@ -1,12 +1,12 @@
 ---
-title: "OmniRoute Documentation"
+title: "OmniCode Documentation"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# OmniRoute Documentation
+# OmniCode Documentation
 
-Navigable index of the OmniRoute documentation set. Topics are grouped by intent so you can find what you need quickly.
+Navigable index of the OmniCode documentation set. Topics are grouped by intent so you can find what you need quickly.
 
 > Looking for the project overview, install steps, or release notes? See the root [README.md](../README.md), [CHANGELOG.md](../CHANGELOG.md), and [CONTRIBUTING.md](../CONTRIBUTING.md).
 
@@ -26,9 +26,9 @@ How the system is put together — read these to understand the runtime, code la
 
 Task-focused walkthroughs for operators and end users.
 
-- [SETUP_GUIDE.md](guides/SETUP_GUIDE.md) — first-time setup of OmniRoute.
+- [SETUP_GUIDE.md](guides/SETUP_GUIDE.md) — first-time setup of OmniCode.
 - [USER_GUIDE.md](guides/USER_GUIDE.md) — daily usage of the dashboard and API.
-- [DOCKER_GUIDE.md](guides/DOCKER_GUIDE.md) — running OmniRoute under Docker.
+- [DOCKER_GUIDE.md](guides/DOCKER_GUIDE.md) — running OmniCode under Docker.
 - [ELECTRON_GUIDE.md](guides/ELECTRON_GUIDE.md) — desktop (Electron) builds.
 - [TERMUX_GUIDE.md](guides/TERMUX_GUIDE.md) — running on Android via Termux.
 - [PWA_GUIDE.md](guides/PWA_GUIDE.md) — installing the dashboard as a PWA.

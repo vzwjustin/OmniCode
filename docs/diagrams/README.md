@@ -6,7 +6,7 @@ lastUpdated: 2026-05-13
 
 # Diagrams
 
-Mermaid sources (`.mmd`) and exported SVGs for OmniRoute v3.8.0 architecture flows.
+Mermaid sources (`.mmd`) and exported SVGs for OmniCode v3.8.0 architecture flows.
 
 ## Canonical diagrams
 

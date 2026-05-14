@@ -10,11 +10,11 @@ lastUpdated: 2026-05-13
 > **Last updated:** 2026-05-13 — v3.8.0
 > **Audience:** Engineers maintaining provider-specific stealth integrations.
 
-OmniRoute integrates with providers whose edges actively fingerprint non-official clients (TLS JA3/JA4, header ordering, JSON body shape, integrity tokens). This page documents the stealth surfaces OmniRoute exposes and where they are implemented.
+OmniCode integrates with providers whose edges actively fingerprint non-official clients (TLS JA3/JA4, header ordering, JSON body shape, integrity tokens). This page documents the stealth surfaces OmniCode exposes and where they are implemented.
 
 ## Legal and Ethical Notice
 
-Stealth features exist so OmniRoute can act as a compatibility layer between user-owned official accounts (Claude Code CLI, ChatGPT Desktop/Web, Antigravity, Cursor, etc.) and OmniRoute's unified API. They are **not** for evading fraud detection, sharing credentials, or violating provider Terms of Service. The maintainers expect operators to comply with the upstream ToS they signed when creating accounts.
+Stealth features exist so OmniCode can act as a compatibility layer between user-owned official accounts (Claude Code CLI, ChatGPT Desktop/Web, Antigravity, Cursor, etc.) and OmniCode's unified API. They are **not** for evading fraud detection, sharing credentials, or violating provider Terms of Service. The maintainers expect operators to comply with the upstream ToS they signed when creating accounts.
 
 ---
 
@@ -45,7 +45,7 @@ Dedicated TLS impersonator for `chatgpt.com`. ChatGPT's Cloudflare config pins `
 
 ## Claude Code Stealth Bundle
 
-When `cliCompatMode` is on, OmniRoute reshapes outgoing Claude requests so they are indistinguishable from `claude-cli` traffic. Three modules collaborate:
+When `cliCompatMode` is on, OmniCode reshapes outgoing Claude requests so they are indistinguishable from `claude-cli` traffic. Three modules collaborate:
 
 ### `claudeCodeFingerprint.ts`
 
@@ -61,7 +61,7 @@ SHA256(SALT + msg[4] + msg[7] + msg[20] + version)[:3]
 
 ### `claudeCodeCCH.ts` (Client Content Hash)
 
-Server-side integrity check the official Claude Code CLI computes via Bun/Zig. OmniRoute reimplements with `xxhash-wasm`:
+Server-side integrity check the official Claude Code CLI computes via Bun/Zig. OmniCode reimplements with `xxhash-wasm`:
 
 1. Serialize body with `cch=00000;` placeholder
 2. `xxhash64(bytes, seed) & 0xFFFFF`
@@ -134,7 +134,7 @@ Toggle per provider via env (see below). When disabled, headers/body keys appear
 
 ## MITM Proxy (Antigravity, Linux/macOS/Windows)
 
-For CLIs whose binaries cannot be redirected via `OPENAI_BASE_URL`, OmniRoute runs a local TLS-terminating proxy. Endpoints live under `src/app/api/cli-tools/antigravity-mitm/`.
+For CLIs whose binaries cannot be redirected via `OPENAI_BASE_URL`, OmniCode runs a local TLS-terminating proxy. Endpoints live under `src/app/api/cli-tools/antigravity-mitm/`.
 
 | Method | Endpoint                                | Purpose                                          |
 | ------ | --------------------------------------- | ------------------------------------------------ |
@@ -167,7 +167,7 @@ Target intercepted host: **`daily-cloudcode-pa.googleapis.com`** (Antigravity's 
 
 Cert filename: `omniroute-mitm.crt`. Fingerprint match via `getCertFingerprint()` (SHA-1 of DER).
 
-Additionally, `updateNssDatabases()` installs into per-user NSS DBs when `certutil` is available: `~/.pki/nssdb`, `~/snap/chromium/.../nssdb`, all Firefox profiles (including snap), under the nickname **`OmniRoute MITM Root CA`**.
+Additionally, `updateNssDatabases()` installs into per-user NSS DBs when `certutil` is available: `~/.pki/nssdb`, `~/snap/chromium/.../nssdb`, all Firefox profiles (including snap), under the nickname **`OmniCode MITM Root CA`**.
 
 ### macOS / Windows
 
@@ -218,7 +218,7 @@ The provider IP is **always preserved** — the toggle only reshapes the request
 
 ## Inbound Header Sanitization
 
-OmniRoute scrubs inbound client headers before forwarding so a request that arrives from Cursor doesn't leak `User-Agent: Cursor/X.Y.Z` to a Claude upstream. See `src/shared/constants/upstreamHeaders.ts` for the denylist, kept in lockstep with the Zod schemas and unit tests.
+OmniCode scrubs inbound client headers before forwarding so a request that arrives from Cursor doesn't leak `User-Agent: Cursor/X.Y.Z` to a Claude upstream. See `src/shared/constants/upstreamHeaders.ts` for the denylist, kept in lockstep with the Zod schemas and unit tests.
 
 ---
 

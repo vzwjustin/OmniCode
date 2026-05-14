@@ -1,12 +1,12 @@
 ---
-title: "OmniRoute Fly.io 部署指南"
+title: "OmniCode Fly.io 部署指南"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# OmniRoute Fly.io 部署指南
+# OmniCode Fly.io 部署指南
 
-本文档记录 OmniRoute 在 Fly.io 上的实际部署方法，适用于两类场景：
+本文档记录 OmniCode 在 Fly.io 上的实际部署方法，适用于两类场景：
 
 - 首次把当前项目部署到 Fly.io
 - 后续代码更新后继续发布
@@ -92,7 +92,7 @@ flyctl version
 
 ```powershell
 git clone https://github.com/diegosouzapw/OmniRoute.git
-cd OmniRoute
+cd OmniCode
 ```
 
 ### 4.2 确认应用名

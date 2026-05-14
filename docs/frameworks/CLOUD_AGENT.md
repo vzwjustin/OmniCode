@@ -9,7 +9,7 @@ lastUpdated: 2026-05-13
 > **Source of truth:** `src/lib/cloudAgent/` and `src/app/api/v1/agents/tasks/`
 > **Last updated:** 2026-05-13 — v3.8.0
 
-OmniRoute orchestrates third-party cloud-hosted coding agents (Codex Cloud, Devin,
+OmniCode orchestrates third-party cloud-hosted coding agents (Codex Cloud, Devin,
 Jules) as long-running tasks. Each agent is wrapped behind a uniform interface so
 clients can submit a prompt + repo URL and receive results without dealing with
 provider-specific APIs.

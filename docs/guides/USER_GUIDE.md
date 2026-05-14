@@ -8,7 +8,7 @@ lastUpdated: 2026-05-13
 
 🌐 **Languages:** 🇺🇸 [English](./USER_GUIDE.md) | 🇧🇷 [Português (Brasil)](../i18n/pt-BR/docs/guides/USER_GUIDE.md) | 🇪🇸 [Español](../i18n/es/docs/guides/USER_GUIDE.md) | 🇫🇷 [Français](../i18n/fr/docs/guides/USER_GUIDE.md) | 🇮🇹 [Italiano](../i18n/it/docs/guides/USER_GUIDE.md) | 🇷🇺 [Русский](../i18n/ru/docs/guides/USER_GUIDE.md) | 🇨🇳 [中文 (简体)](../i18n/zh-CN/docs/guides/USER_GUIDE.md) | 🇩🇪 [Deutsch](../i18n/de/docs/guides/USER_GUIDE.md) | 🇮🇳 [हिन्दी](../i18n/in/docs/guides/USER_GUIDE.md) | 🇹🇭 [ไทย](../i18n/th/docs/guides/USER_GUIDE.md) | 🇺🇦 [Українська](../i18n/uk-UA/docs/guides/USER_GUIDE.md) | 🇸🇦 [العربية](../i18n/ar/docs/guides/USER_GUIDE.md) | 🇯🇵 [日本語](../i18n/ja/docs/guides/USER_GUIDE.md) | 🇻🇳 [Tiếng Việt](../i18n/vi/docs/guides/USER_GUIDE.md) | 🇧🇬 [Български](../i18n/bg/docs/guides/USER_GUIDE.md) | 🇩🇰 [Dansk](../i18n/da/docs/guides/USER_GUIDE.md) | 🇫🇮 [Suomi](../i18n/fi/docs/guides/USER_GUIDE.md) | 🇮🇱 [עברית](../i18n/he/docs/guides/USER_GUIDE.md) | 🇭🇺 [Magyar](../i18n/hu/docs/guides/USER_GUIDE.md) | 🇮🇩 [Bahasa Indonesia](../i18n/id/docs/guides/USER_GUIDE.md) | 🇰🇷 [한국어](../i18n/ko/docs/guides/USER_GUIDE.md) | 🇲🇾 [Bahasa Melayu](../i18n/ms/docs/guides/USER_GUIDE.md) | 🇳🇱 [Nederlands](../i18n/nl/docs/guides/USER_GUIDE.md) | 🇳🇴 [Norsk](../i18n/no/docs/guides/USER_GUIDE.md) | 🇵🇹 [Português (Portugal)](../i18n/pt/docs/guides/USER_GUIDE.md) | 🇷🇴 [Română](../i18n/ro/docs/guides/USER_GUIDE.md) | 🇵🇱 [Polski](../i18n/pl/docs/guides/USER_GUIDE.md) | 🇸🇰 [Slovenčina](../i18n/sk/docs/guides/USER_GUIDE.md) | 🇸🇪 [Svenska](../i18n/sv/docs/guides/USER_GUIDE.md) | 🇵🇭 [Filipino](../i18n/phi/docs/guides/USER_GUIDE.md) | 🇨🇿 [Čeština](../i18n/cs/docs/guides/USER_GUIDE.md)
 
-Complete guide for configuring providers, creating combos, integrating CLI tools, and deploying OmniRoute.
+Complete guide for configuring providers, creating combos, integrating CLI tools, and deploying OmniCode.
 
 ---
 
@@ -142,7 +142,7 @@ Models:
   cc/claude-haiku-4-5-20251001
 ```
 
-**Pro Tip:** Use Opus for complex tasks, Sonnet for speed. OmniRoute tracks quota per model!
+**Pro Tip:** Use Opus for complex tasks, Sonnet for speed. OmniCode tracks quota per model!
 
 #### OpenAI Codex (Plus/Pro)
 
@@ -365,20 +365,20 @@ The CLI automatically loads `.env` from `~/.omniroute/.env` or `./.env`.
 
 ### Uninstalling
 
-When you no longer need OmniRoute, we provide two quick scripts for a clean removal:
+When you no longer need OmniCode, we provide two quick scripts for a clean removal:
 
 | Command                  | Action                                                                              |
 | ------------------------ | ----------------------------------------------------------------------------------- |
 | `npm run uninstall`      | Removes the system app but **keeps your DB and configurations** in `~/.omniroute`.  |
 | `npm run uninstall:full` | Removes the app AND permanently **erases all configurations, keys, and databases**. |
 
-> Note: To run these commands, navigate to the OmniRoute project folder (if you cloned it) and run them. Alternatively, if globally installed, you can simply run `npm uninstall -g omniroute`.
+> Note: To run these commands, navigate to the OmniCode project folder (if you cloned it) and run them. Alternatively, if globally installed, you can simply run `npm uninstall -g omniroute`.
 
 ### VPS Deployment
 
 ```bash
 git clone https://github.com/diegosouzapw/OmniRoute.git
-cd OmniRoute && npm install && npm run build
+cd OmniCode && npm install && npm run build
 
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
@@ -444,7 +444,7 @@ For host-integrated mode with CLI binaries, see the Docker section in the main d
 
 ### Void Linux (xbps-src)
 
-Void Linux users can package and install OmniRoute natively using the `xbps-src` cross-compilation framework. This automates the Node.js standalone build along with the required `better-sqlite3` native bindings.
+Void Linux users can package and install OmniCode natively using the `xbps-src` cross-compilation framework. This automates the Node.js standalone build along with the required `better-sqlite3` native bindings.
 
 <details>
 <summary><b>View xbps-src template</b></summary>
@@ -626,7 +626,7 @@ For the full environment variable reference, see the [README](../README.md).
 
 **Other compatible providers** (selected): `cohere`, `databricks`, `snowflake`, `together`, `vertex`, `alibaba`, `bedrock` (via `aws-bedrock`), `azure-ai`, `openrouter` (passthrough catalog), `siliconflow`, `hyperbolic`, `huggingface`, `featherless-ai`, `cloudflare-ai`, `scaleway`, `deepinfra`, `vercel-ai-gateway`, `bazaarlink`, `friendliai`, `nous-research`, `reka`, `volcengine`, `ai21`, `gigachat`. Each maintains its own model list in `providerRegistry.ts` and can be auto-synced when the provider exposes a `/models` endpoint.
 
-**Note on model IDs:** OmniRoute uses provider-native IDs (`claude-opus-4-7`, `gpt-5.5`, `glm-5.1`, `MiniMax-M2.7`, `kimi-k2.5`, `grok-4.20-0309-reasoning`). Some IDs include dotted versions because that is how the upstream API expects them. If a model is not listed above, run `omniroute models --search <term>` or hit `GET /api/models/catalog` to confirm availability.
+**Note on model IDs:** OmniCode uses provider-native IDs (`claude-opus-4-7`, `gpt-5.5`, `glm-5.1`, `MiniMax-M2.7`, `kimi-k2.5`, `grok-4.20-0309-reasoning`). Some IDs include dotted versions because that is how the upstream API expects them. If a model is not listed above, run `omniroute models --search <term>` or hit `GET /api/models/catalog` to confirm availability.
 
 </details>
 
@@ -704,7 +704,7 @@ Returns models grouped by provider with types (`chat`, `embedding`, `image`).
 - Available in **Dashboard → Endpoints** for Docker and other self-hosted deployments
 - Creates a temporary `https://*.trycloudflare.com` URL that forwards to your current OpenAI-compatible `/v1` endpoint
 - First enable installs `cloudflared` only when needed; later restarts reuse the same managed binary
-- Quick Tunnels are not auto-restored after an OmniRoute or container restart; re-enable them from the dashboard when needed
+- Quick Tunnels are not auto-restored after an OmniCode or container restart; re-enable them from the dashboard when needed
 - Tunnel URLs are ephemeral and change every time you stop/start the tunnel
 - Managed Quick Tunnels default to HTTP/2 transport to avoid noisy QUIC UDP buffer warnings in constrained containers
 - Set `CLOUDFLARED_PROTOCOL=quic` or `auto` if you want to override the managed transport choice
@@ -713,15 +713,15 @@ Returns models grouped by provider with types (`chat`, `embedding`, `image`).
 
 ### LLM Gateway Intelligence (Phase 9)
 
-- **Semantic Cache** — Auto-caches non-streaming, temperature=0 responses (bypass with `X-OmniRoute-No-Cache: true`)
+- **Semantic Cache** — Auto-caches non-streaming, temperature=0 responses (bypass with `X-OmniCode-No-Cache: true`)
 - **Request Idempotency** — Deduplicates requests within 5s via `Idempotency-Key` or `X-Request-Id` header
-- **Progress Tracking** — Opt-in SSE `event: progress` events via `X-OmniRoute-Progress: true` header
+- **Progress Tracking** — Opt-in SSE `event: progress` events via `X-OmniCode-Progress: true` header
 
 ---
 
 ### Translator Playground
 
-Access via **Dashboard → Translator**. Debug and visualize how OmniRoute translates API requests between providers.
+Access via **Dashboard → Translator**. Debug and visualize how OmniCode translates API requests between providers.
 
 | Mode             | Purpose                                                                                |
 | ---------------- | -------------------------------------------------------------------------------------- |
@@ -774,7 +774,7 @@ For external session affinity (for example, Claude Code/Codex agents behind reve
 X-Session-Id: your-session-key
 ```
 
-OmniRoute also accepts `x_session_id` and returns the effective session key in `X-OmniRoute-Session-Id`.
+OmniCode also accepts `x_session_id` and returns the effective session key in `X-OmniCode-Session-Id`.
 
 If you use Nginx and send underscore-form headers, enable:
 
@@ -810,7 +810,7 @@ Chain: production-fallback
 
 Configure via **Dashboard → Settings → Resilience**.
 
-OmniRoute implements provider-level resilience with five components:
+OmniCode implements provider-level resilience with five components:
 
 1. **Request Queue & Pacing** — System-level request shaping:
    - **Requests Per Minute (RPM)** — Maximum requests per minute per account
@@ -833,7 +833,7 @@ OmniRoute implements provider-level resilience with five components:
 
    The provider breaker runtime state is shown on **Dashboard → Health** only.
 
-4. **Wait For Cooldown** — If every candidate connection is already cooling down, OmniRoute can wait for the earliest cooldown and retry the same client request automatically.
+4. **Wait For Cooldown** — If every candidate connection is already cooling down, OmniCode can wait for the earliest cooldown and retry the same client request automatically.
 
 5. **Rate Limit Auto-Detection** — When upstream providers return explicit wait windows, those hints override the local connection cooldown when the setting is enabled.
 
@@ -867,7 +867,7 @@ curl -X POST http://localhost:20128/api/db-backups/import \
 
 **Use Cases:**
 
-- Migrate OmniRoute between machines
+- Migrate OmniCode between machines
 - Create external backups for disaster recovery
 - Share configurations between team members (export all → share archive)
 
@@ -914,7 +914,7 @@ curl http://localhost:20128/api/usage/budget
 
 ### Audio Transcription
 
-OmniRoute supports audio transcription via the OpenAI-compatible endpoint:
+OmniCode supports audio transcription via the OpenAI-compatible endpoint:
 
 ```bash
 POST /v1/audio/transcriptions
@@ -995,7 +995,7 @@ Access via **Dashboard → Health**. Real-time system health overview with 6 car
 
 ## 🤖 Auto-Routing (Zero-config)
 
-OmniRoute ships with a **score-driven auto-router** that picks the best model for each request across every connected provider — no combo to maintain. Just send the request with one of the `auto/*` prefixes and OmniRoute will assemble a virtual combo on the fly, scoring candidates on latency, cost, success rate, context fit, model fitness for the task, recent failures, quota, and circuit-breaker state.
+OmniCode ships with a **score-driven auto-router** that picks the best model for each request across every connected provider — no combo to maintain. Just send the request with one of the `auto/*` prefixes and OmniCode will assemble a virtual combo on the fly, scoring candidates on latency, cost, success rate, context fit, model fitness for the task, recent failures, quota, and circuit-breaker state.
 
 | Prefix         | Optimizes for                                                                 |
 | -------------- | ----------------------------------------------------------------------------- |
@@ -1026,7 +1026,7 @@ The auto-router is fully described in [AUTO-COMBO.md](../routing/AUTO-COMBO.md) 
 
 ## 🔌 MCP & A2A Integration
 
-OmniRoute is both an **MCP server** (Model Context Protocol) and an **A2A server** (Agent-to-Agent JSON-RPC 2.0). Any MCP-compatible IDE or agent host can call OmniRoute tools directly — no extra wrapper required.
+OmniCode is both an **MCP server** (Model Context Protocol) and an **A2A server** (Agent-to-Agent JSON-RPC 2.0). Any MCP-compatible IDE or agent host can call OmniCode tools directly — no extra wrapper required.
 
 ### MCP transports
 
@@ -1061,7 +1061,7 @@ MCP tools are grouped into 10 scopes: `analytics`, `auth`, `billing`, `combos`, 
 
 ## 🧠 Skills System
 
-OmniRoute exposes an extensible **skill framework** (`src/lib/skills/`) so agents and the A2A endpoint can run domain-specific routines (e.g. `code-review`, `summarize`, `extract-facts`, `web-research`).
+OmniCode exposes an extensible **skill framework** (`src/lib/skills/`) so agents and the A2A endpoint can run domain-specific routines (e.g. `code-review`, `summarize`, `extract-facts`, `web-research`).
 
 - **Marketplace UI** — Browse and install skills from **Dashboard → Skills**
 - **Per-key scopes** — Restrict which API keys can invoke which skills
@@ -1073,7 +1073,7 @@ Full reference: [SKILLS.md](../frameworks/SKILLS.md).
 
 ## 💾 Memory System
 
-OmniRoute persists **long-term conversational memory** with hybrid retrieval:
+OmniCode persists **long-term conversational memory** with hybrid retrieval:
 
 - **SQLite FTS5** for keyword search across past turns
 - **Qdrant vector store** (optional) for semantic recall
@@ -1086,11 +1086,11 @@ Manage memories in **Dashboard → Memory** (search, edit, export, purge). The H
 
 ## 🔔 Webhooks
 
-Subscribe to OmniRoute events for real-time monitoring and automation.
+Subscribe to OmniCode events for real-time monitoring and automation.
 
 - Create a webhook in **Dashboard → Webhooks** with target URL and HMAC signing secret
 - Available events: `request.completed`, `request.failed`, `provider.unavailable`, `budget.exceeded`, `combo.switched`, `circuit_breaker.opened`, `circuit_breaker.closed`
-- Every payload includes `X-OmniRoute-Signature` (HMAC-SHA256) for verification
+- Every payload includes `X-OmniCode-Signature` (HMAC-SHA256) for verification
 - Retries: 3 attempts with exponential backoff, then dead-letter queue
 
 Full schema in [WEBHOOKS.md](../frameworks/WEBHOOKS.md).
@@ -1099,11 +1099,11 @@ Full schema in [WEBHOOKS.md](../frameworks/WEBHOOKS.md).
 
 ## ☁️ Cloud Agents
 
-OmniRoute integrates with cloud coding agents (**OpenAI Codex Cloud**, **Devin**, **Jules**, **Antigravity**) so you can dispatch long-running tasks from the same dashboard that handles your local routing.
+OmniCode integrates with cloud coding agents (**OpenAI Codex Cloud**, **Devin**, **Jules**, **Antigravity**) so you can dispatch long-running tasks from the same dashboard that handles your local routing.
 
 - Create tasks in **Dashboard → Cloud Agents** or via `POST /api/v1/agents/tasks`
 - Track status, logs, and artifacts per task
-- Bring-your-own API key per provider — credentials never leave the OmniRoute instance
+- Bring-your-own API key per provider — credentials never leave the OmniCode instance
 
 Full reference: [CLOUD_AGENT.md](../frameworks/CLOUD_AGENT.md).
 
@@ -1111,7 +1111,7 @@ Full reference: [CLOUD_AGENT.md](../frameworks/CLOUD_AGENT.md).
 
 ## 🛠️ Programmatic Management
 
-You can manage every OmniRoute resource (providers, combos, keys, settings) over HTTP using a **Bearer key with the `manage` scope**.
+You can manage every OmniCode resource (providers, combos, keys, settings) over HTTP using a **Bearer key with the `manage` scope**.
 
 Generate the key in **Dashboard → API Manager → New Key → Scope: manage**, then:
 
@@ -1144,7 +1144,7 @@ See [API_REFERENCE.md](../reference/API_REFERENCE.md) for the full endpoint cata
 
 ## 💻 Internal CLI
 
-OmniRoute ships an internal CLI (`omniroute …`) for setup, diagnostics, and runtime control. This is **separate from the "CLI Tools" page in the dashboard**, which configures third-party CLIs (Claude Code, Cursor, Codex, Cline, …) so they can talk to OmniRoute.
+OmniCode ships an internal CLI (`omniroute …`) for setup, diagnostics, and runtime control. This is **separate from the "CLI Tools" page in the dashboard**, which configures third-party CLIs (Claude Code, Cursor, Codex, Cline, …) so they can talk to OmniCode.
 
 ```bash
 omniroute setup                    # Interactive wizard (password, providers, combos)
@@ -1175,7 +1175,7 @@ Tip: pair `omniroute doctor --json` with your monitoring tool to alert on unheal
 
 ## 🖥️ Desktop Application (Electron)
 
-OmniRoute is available as a native desktop application for Windows, macOS, and Linux.
+OmniCode is available as a native desktop application for Windows, macOS, and Linux.
 
 ### Installation
 

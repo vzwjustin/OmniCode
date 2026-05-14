@@ -1,4 +1,4 @@
-# Contributing to OmniRoute
+# Contributing to OmniCode
 
 Thank you for your interest in contributing! This guide covers everything you need to get started.
 
@@ -16,7 +16,7 @@ Thank you for your interest in contributing! This guide covers everything you ne
 
 ```bash
 git clone https://github.com/diegosouzapw/OmniRoute.git
-cd OmniRoute
+cd OmniCode
 npm install
 ```
 

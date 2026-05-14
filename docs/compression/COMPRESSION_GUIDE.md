@@ -1,16 +1,16 @@
 ---
-title: "🗜️ Prompt Compression Guide — OmniRoute"
+title: "🗜️ Prompt Compression Guide — OmniCode"
 version: 3.8.0
 lastUpdated: 2026-05-13
 ---
 
-# 🗜️ Prompt Compression Guide — OmniRoute
+# 🗜️ Prompt Compression Guide — OmniCode
 
 > Save 15-95% on eligible context automatically. For a quick overview, see the [README Compression section](../README.md#%EF%B8%8F-prompt-compression--save-15-95-eligible-tokens-automatically).
 
 ## Overview
 
-OmniRoute implements a modular prompt compression pipeline that runs **proactively** before requests hit upstream providers. This means your token savings happen transparently — no changes needed to your workflow.
+OmniCode implements a modular prompt compression pipeline that runs **proactively** before requests hit upstream providers. This means your token savings happen transparently — no changes needed to your workflow.
 
 ```
 Client Request
@@ -118,15 +118,15 @@ compression combos assigned to routing combos.
 
 ## Upstream Savings Math
 
-OmniRoute documents compression savings from two sources: upstream project benchmarks and
-OmniRoute's own engine composition.
+OmniCode documents compression savings from two sources: upstream project benchmarks and
+OmniCode's own engine composition.
 
 | Source  | Upstream README number used here                                                                                      |
 | ------- | --------------------------------------------------------------------------------------------------------------------- |
 | Caveman | `~75%` fewer output tokens, `65%` benchmark average output savings, `22-87%` range, and `~46%` input compression tool |
 | RTK     | `60-90%` command-output savings; sample session `~118,000 -> ~23,900` tokens, or `79.7%` saved (`~80%`)               |
 
-For overlapping tool/context payloads, the default OmniRoute combo stacks the engines:
+For overlapping tool/context payloads, the default OmniCode combo stacks the engines:
 
 ```txt
 RTK -> Caveman

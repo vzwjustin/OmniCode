@@ -1,7 +1,7 @@
-# CLI Tools Setup Guide — OmniRoute
+# CLI Tools Setup Guide — OmniCode
 
 This guide explains how to install and configure all supported AI coding CLI tools
-to use **OmniRoute** as the unified backend, giving you centralized key management,
+to use **OmniCode** as the unified backend, giving you centralized key management,
 cost tracking, model switching, and request logging across every tool.
 
 ---
@@ -11,10 +11,10 @@ cost tracking, model switching, and request logging across every tool.
 ```
 Claude / Codex / OpenCode / Cline / KiloCode / Continue / Kiro / Cursor / Copilot
            │
-           ▼  (all point to OmniRoute)
+           ▼  (all point to OmniCode)
     http://YOUR_SERVER:20128/v1
            │
-           ▼  (OmniRoute routes to the right provider)
+           ▼  (OmniCode routes to the right provider)
     Anthropic / OpenAI / Gemini / DeepSeek / Groq / Mistral / ...
 ```
 
@@ -42,7 +42,7 @@ Current list (v3.0.0-rc.16):
 | **Cline**          | `cline`       | `cline`    | custom     | npm            |
 | **Kilo Code**      | `kilo`        | `kilocode` | custom     | npm            |
 | **Continue**       | `continue`    | extension  | guide      | VS Code        |
-| **Antigravity**    | `antigravity` | internal   | mitm       | OmniRoute      |
+| **Antigravity**    | `antigravity` | internal   | mitm       | OmniCode      |
 | **GitHub Copilot** | `copilot`     | extension  | custom     | VS Code        |
 | **OpenCode**       | `opencode`    | `opencode` | guide      | npm            |
 | **Kiro AI**        | `kiro`        | app/cli    | mitm       | desktop/CLI    |
@@ -63,9 +63,9 @@ Legacy IDs still accepted for compatibility: `copilot`, `kimi-coding`, `qwen`.
 
 ---
 
-## Step 1 — Get an OmniRoute API Key
+## Step 1 — Get an OmniCode API Key
 
-1. Open the OmniRoute dashboard → **API Manager** (`/dashboard/api-manager`)
+1. Open the OmniCode dashboard → **API Manager** (`/dashboard/api-manager`)
 2. Click **Create API Key**
 3. Give it a name (e.g. `cli-tools`) and select all permissions
 4. Copy the key — you'll need it for every CLI below
@@ -118,7 +118,7 @@ kiro-cli --version   # 1.x.x
 Add to `~/.bashrc` (or `~/.zshrc`), then run `source ~/.bashrc`:
 
 ```bash
-# OmniRoute Universal Endpoint
+# OmniCode Universal Endpoint
 export OPENAI_BASE_URL="http://localhost:20128/v1"
 export OPENAI_API_KEY="sk-your-omniroute-key"
 export ANTHROPIC_BASE_URL="http://localhost:20128"
@@ -199,7 +199,7 @@ EOF
 **VS Code mode:**
 Cline extension settings → API Provider: `OpenAI Compatible` → Base URL: `http://localhost:20128/v1`
 
-Or use the OmniRoute dashboard → **CLI Tools → Cline → Apply Config**.
+Or use the OmniCode dashboard → **CLI Tools → Cline → Apply Config**.
 
 ---
 
@@ -220,7 +220,7 @@ kilocode --api-base http://localhost:20128/v1 --api-key sk-your-omniroute-key
 }
 ```
 
-Or use the OmniRoute dashboard → **CLI Tools → KiloCode → Apply Config**.
+Or use the OmniCode dashboard → **CLI Tools → KiloCode → Apply Config**.
 
 ---
 
@@ -230,7 +230,7 @@ Edit `~/.continue/config.yaml`:
 
 ```yaml
 models:
-  - name: OmniRoute
+  - name: OmniCode
     provider: openai
     model: auto
     apiBase: http://localhost:20128/v1
@@ -248,8 +248,8 @@ Restart VS Code after editing.
 # Login to your AWS/Kiro account:
 kiro-cli login
 
-# The CLI uses its own auth — OmniRoute is not needed as backend for Kiro CLI itself.
-# Use kiro-cli alongside OmniRoute for other tools.
+# The CLI uses its own auth — OmniCode is not needed as backend for Kiro CLI itself.
+# Use kiro-cli alongside OmniCode for other tools.
 kiro-cli status
 ```
 
@@ -282,7 +282,7 @@ EOF
     "openai": [
       {
         "id": "omniroute-default",
-        "name": "OmniRoute (Auto)",
+        "name": "OmniCode (Auto)",
         "envKey": "OPENAI_API_KEY",
         "baseUrl": "http://localhost:20128/v1"
       }
@@ -306,19 +306,19 @@ qwen
 
 ### Cursor (Desktop App)
 
-> **Note:** Cursor routes requests through its cloud. For OmniRoute integration,
-> enable **Cloud Endpoint** in OmniRoute Settings and use your public domain URL.
+> **Note:** Cursor routes requests through its cloud. For OmniCode integration,
+> enable **Cloud Endpoint** in OmniCode Settings and use your public domain URL.
 
 Via GUI: **Settings → Models → OpenAI API Key**
 
 - Base URL: `https://your-domain.com/v1`
-- API Key: your OmniRoute key
+- API Key: your OmniCode key
 
 ---
 
 ## Dashboard Auto-Configuration
 
-The OmniRoute dashboard automates configuration for most tools:
+The OmniCode dashboard automates configuration for most tools:
 
 1. Go to `http://localhost:20128/dashboard/cli-tools`
 2. Expand any tool card
@@ -330,8 +330,8 @@ The OmniRoute dashboard automates configuration for most tools:
 
 ## Built-in Agents: Droid & OpenClaw
 
-**Droid** and **OpenClaw** are AI agents built directly into OmniRoute — no installation needed.
-They run as internal routes and use OmniRoute's model routing automatically.
+**Droid** and **OpenClaw** are AI agents built directly into OmniCode — no installation needed.
+They run as internal routes and use OmniCode's model routing automatically.
 
 - Access: `http://localhost:20128/dashboard/agents`
 - Configure: same combos and providers as all other tools
@@ -407,7 +407,7 @@ omniroute logs --base-url http://localhost:20128
 
 ### `omniroute update`
 
-Check for or apply OmniRoute updates.
+Check for or apply OmniCode updates.
 
 ```bash
 omniroute update --check              # Check for updates only
@@ -436,7 +436,7 @@ omniroute provider default <name|id>               # Set default provider
 
 ## Quick Setup Script (One Command)
 
-Set up all CLI tools and configure for OmniRoute:
+Set up all CLI tools and configure for OmniCode:
 
 ```bash
 OMNIROUTE_URL="http://localhost:20128/v1"
@@ -461,11 +461,11 @@ export ANTHROPIC_AUTH_TOKEN="$OMNIROUTE_KEY"
 EOF
 
 source ~/.bashrc
-echo "✅ All CLIs installed and configured for OmniRoute"
+echo "✅ All CLIs installed and configured for OmniCode"
 ```
 
 ```bash
-# Install all CLIs and configure for OmniRoute (replace with your key and server URL)
+# Install all CLIs and configure for OmniCode (replace with your key and server URL)
 OMNIROUTE_URL="http://localhost:20128/v1"
 OMNIROUTE_ANTHROPIC_URL="http://localhost:20128"
 OMNIROUTE_KEY="sk-your-omniroute-key"
@@ -488,5 +488,5 @@ export ANTHROPIC_AUTH_TOKEN="$OMNIROUTE_KEY"
 EOF
 
 source ~/.bashrc
-echo "✅ All CLIs installed and configured for OmniRoute"
+echo "✅ All CLIs installed and configured for OmniCode"
 ```

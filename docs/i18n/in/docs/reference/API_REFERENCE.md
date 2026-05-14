@@ -4,7 +4,7 @@
 
 ---
 
-Complete reference for all OmniRoute API endpoints.
+Complete reference for all OmniCode API endpoints.
 
 ---
 
@@ -42,16 +42,16 @@ Content-Type: application/json
 
 | Header                   | Direction | Description                                      |
 | ------------------------ | --------- | ------------------------------------------------ |
-| `X-OmniRoute-No-Cache`   | Request   | Set to `true` to bypass cache                    |
-| `X-OmniRoute-Progress`   | Request   | Set to `true` for progress events                |
+| `X-OmniCode-No-Cache`   | Request   | Set to `true` to bypass cache                    |
+| `X-OmniCode-Progress`   | Request   | Set to `true` for progress events                |
 | `X-Session-Id`           | Request   | Sticky session key for external session affinity |
 | `x_session_id`           | Request   | Underscore variant also accepted (direct HTTP)   |
 | `Idempotency-Key`        | Request   | Dedup key (5s window)                            |
 | `X-Request-Id`           | Request   | Alternative dedup key                            |
-| `X-OmniRoute-Cache`      | Response  | `HIT` or `MISS` (non-streaming)                  |
-| `X-OmniRoute-Idempotent` | Response  | `true` if deduplicated                           |
-| `X-OmniRoute-Progress`   | Response  | `enabled` if progress tracking on                |
-| `X-OmniRoute-Session-Id` | Response  | Effective session ID used by OmniRoute           |
+| `X-OmniCode-Cache`      | Response  | `HIT` or `MISS` (non-streaming)                  |
+| `X-OmniCode-Idempotent` | Response  | `true` if deduplicated                           |
+| `X-OmniCode-Progress`   | Response  | `enabled` if progress tracking on                |
+| `X-OmniCode-Session-Id` | Response  | Effective session ID used by OmniCode           |
 
 > Nginx note: if you rely on underscore headers (for example `x_session_id`), enable `underscores_in_headers on;`.
 
