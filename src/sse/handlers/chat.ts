@@ -137,6 +137,37 @@ function intersectAllowedConnectionIds(primary: unknown, secondary: unknown): st
 const PROVIDER_BREAKER_FAILURE_STATUSES = new Set([408, 500, 502, 503, 504]);
 
 /**
+ * Strip provider/combo prefixes from `tools[i].model`.
+ *
+ * Anthropic's Claude Code SDK Task (sub-agent) tool accepts a `model` field
+ * specifying which model the sub-agent should run on. When the client request
+ * uses a combo-prefixed model id like `cc/claude-opus-4-7`, Claude Code
+ * propagates that same prefixed value into every Task tool definition. The
+ * Anthropic upstream then rejects the whole request with:
+ *   `400 [400]: tools.N.model: cc/claude-opus-4-7`
+ *
+ * Strip any leading `<prefix>/` so the upstream sees the bare Anthropic model
+ * id. Real Anthropic model ids never contain a slash, so a `/` in
+ * `tools[i].model` is always proxy-side routing metadata that the upstream
+ * must not see. No-op for tools without a `model` field or without a slash.
+ *
+ * Mutates `body.tools[i].model` in place. Safe to call multiple times.
+ */
+export function stripToolModelPrefixes(body: any): void {
+  if (!body || !Array.isArray(body.tools)) return;
+  for (const tool of body.tools) {
+    if (!tool || typeof tool !== "object") continue;
+    const t = tool as Record<string, unknown>;
+    if (typeof t.model !== "string") continue;
+    const m = t.model;
+    const slashIdx = m.indexOf("/");
+    if (slashIdx > 0 && slashIdx < m.length - 1) {
+      t.model = m.slice(slashIdx + 1);
+    }
+  }
+}
+
+/**
  * Handle chat completion request
  * Supports: OpenAI, Claude, Gemini, OpenAI Responses API formats
  * Format detection and translation handled by translator
@@ -260,6 +291,14 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
   }
   body = preCallGuardrails.payload;
   telemetry.endPhase();
+
+  // Strip combo/provider prefixes from any `tools[i].model` values. Claude Code
+  // SDK's Task (sub-agent) tool propagates the top-level model id into each
+  // Task tool's `model` field, and Anthropic rejects values like
+  // `cc/claude-opus-4-7` with `400: tools.N.model: ...`. This must run AFTER
+  // guardrails (which may rebuild `body`) and BEFORE any combo/executor path
+  // so every upstream call sees bare model ids.
+  stripToolModelPrefixes(body);
 
   // T08: per-key active session limit (0 = unlimited).
   if (apiKeyInfo?.id && sessionId) {
