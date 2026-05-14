@@ -2,22 +2,22 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  buildOmniRouteResponseMetaHeaders,
-  buildOmniRouteSseMetadataComment,
-  formatOmniRouteCost,
-  getOmniRouteTokenCounts,
+  buildOmniCodeResponseMetaHeaders,
+  buildOmniCodeSseMetadataComment,
+  formatOmniCodeCost,
+  getOmniCodeTokenCounts,
 } from "../../src/domain/omnirouteResponseMeta.ts";
 
-test("getOmniRouteTokenCounts normalizes common usage shapes", () => {
+test("getOmniCodeTokenCounts normalizes common usage shapes", () => {
   assert.deepEqual(
-    getOmniRouteTokenCounts({
+    getOmniCodeTokenCounts({
       prompt_tokens: 12,
       completion_tokens: 5,
     }),
     { input: 12, output: 5 }
   );
   assert.deepEqual(
-    getOmniRouteTokenCounts({
+    getOmniCodeTokenCounts({
       input_tokens: "9",
       output_tokens: "4",
     }),
@@ -25,8 +25,8 @@ test("getOmniRouteTokenCounts normalizes common usage shapes", () => {
   );
 });
 
-test("buildOmniRouteResponseMetaHeaders formats provider alias, tokens, latency, and cost", () => {
-  const headers = buildOmniRouteResponseMetaHeaders({
+test("buildOmniCodeResponseMetaHeaders formats provider alias, tokens, latency, and cost", () => {
+  const headers = buildOmniCodeResponseMetaHeaders({
     provider: "claude",
     model: "claude-sonnet-4-6",
     cacheHit: true,
@@ -47,8 +47,8 @@ test("buildOmniRouteResponseMetaHeaders formats provider alias, tokens, latency,
   assert.equal(headers["X-OmniRoute-Response-Cost"], "0.0012345679");
 });
 
-test("buildOmniRouteSseMetadataComment emits comment lines compatible with SSE", () => {
-  const comment = buildOmniRouteSseMetadataComment({
+test("buildOmniCodeSseMetadataComment emits comment lines compatible with SSE", () => {
+  const comment = buildOmniCodeSseMetadataComment({
     provider: "openai",
     model: "gpt-4o-mini",
     usage: {
@@ -56,7 +56,7 @@ test("buildOmniRouteSseMetadataComment emits comment lines compatible with SSE",
       completion_tokens: 2,
     },
     latencyMs: 50,
-    costUsd: formatOmniRouteCost(0),
+    costUsd: formatOmniCodeCost(0),
   });
 
   assert.match(comment, /^: x-omniroute-cache-hit=false/m);

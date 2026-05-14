@@ -133,14 +133,24 @@ if (existsSync(APP_DIR)) {
 console.log("  🏗️  Building Next.js (standalone)...");
 const nextBuildBundlerFlag =
   process.env.OMNIROUTE_USE_TURBOPACK === "1" ? "--turbopack" : "--webpack";
-execFileSync(NPX_BIN, ["next", "build", nextBuildBundlerFlag], {
-  cwd: ROOT,
-  stdio: "inherit",
-  env: {
-    ...process.env,
-    NEXT_PRIVATE_BUILD_WORKER: "0",
-  },
-});
+// Next 16.2.6 + React 19.2.6 crashes when statically prerendering the synthetic
+// /_global-error fallback shell ("Cannot read properties of null (reading 'use')"
+// inside Next's compiled router code, .next/server/chunks/*.js). All app routes
+// are already declared `force-dynamic` via the root layout, so static export is
+// not needed — `--experimental-build-mode=compile` skips the static-export step
+// entirely while still emitting the standalone server output we publish.
+execFileSync(
+  NPX_BIN,
+  ["next", "build", nextBuildBundlerFlag, "--experimental-build-mode=compile"],
+  {
+    cwd: ROOT,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NEXT_PRIVATE_BUILD_WORKER: "0",
+    },
+  }
+);
 
 // ── Step 4: Verify standalone output ───────────────────────
 const standaloneDir = join(ROOT, ".next", "standalone");

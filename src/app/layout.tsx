@@ -8,6 +8,13 @@ import { getSettings } from "@/lib/db/settings";
 import type { Viewport } from "next";
 import { PwaRegister } from "@/shared/components/PwaRegister";
 
+// Force dynamic rendering for every route in the app.
+// Next 16 + React 19 + next-intl crash during static prerender of client
+// components that call useTranslations (TypeError: Cannot read properties of
+// null (reading 'use')). All pages already depend on request-time locale /
+// settings, so prerender is not buying us anything anyway.
+export const dynamic = "force-dynamic";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",

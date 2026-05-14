@@ -63,7 +63,7 @@ export function buildOmniCoderResponseMetaHeaders({
   const headers: Record<string, string> = {
     [OMNIROUTE_RESPONSE_HEADERS.cacheHit]: String(cacheHit),
     [OMNIROUTE_RESPONSE_HEADERS.latencyMs]: String(toNonNegativeInteger(latencyMs)),
-    [OMNIROUTE_RESPONSE_HEADERS.responseCost]: formatOmniRouteCost(costUsd),
+    [OMNIROUTE_RESPONSE_HEADERS.responseCost]: formatOmniCodeCost(costUsd),
     [OMNIROUTE_RESPONSE_HEADERS.tokensIn]: String(tokens.input),
     [OMNIROUTE_RESPONSE_HEADERS.tokensOut]: String(tokens.output),
   };
