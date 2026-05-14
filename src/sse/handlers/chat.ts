@@ -146,10 +146,12 @@ const PROVIDER_BREAKER_FAILURE_STATUSES = new Set([408, 500, 502, 503, 504]);
  * Anthropic upstream then rejects the whole request with:
  *   `400 [400]: tools.N.model: cc/claude-opus-4-7`
  *
- * Strip any leading `<prefix>/` so the upstream sees the bare Anthropic model
- * id. Real Anthropic model ids never contain a slash, so a `/` in
- * `tools[i].model` is always proxy-side routing metadata that the upstream
- * must not see. No-op for tools without a `model` field or without a slash.
+ * Strip up to and including the LAST `/` so the upstream sees the bare
+ * Anthropic model id even with chained combo prefixes (e.g.
+ * `cc/auto/claude-opus-4-7`). Real Anthropic model ids never contain a
+ * slash, so a `/` in `tools[i].model` is always proxy-side routing metadata
+ * that the upstream must not see. No-op for tools without a `model` field,
+ * without a slash, with a trailing-slash-only value, or with a leading slash.
  *
  * Mutates `body.tools[i].model` in place. Safe to call multiple times.
  */
@@ -160,9 +162,9 @@ export function stripToolModelPrefixes(body: any): void {
     const t = tool as Record<string, unknown>;
     if (typeof t.model !== "string") continue;
     const m = t.model;
-    const slashIdx = m.indexOf("/");
-    if (slashIdx > 0 && slashIdx < m.length - 1) {
-      t.model = m.slice(slashIdx + 1);
+    const lastSlash = m.lastIndexOf("/");
+    if (lastSlash > 0 && lastSlash < m.length - 1) {
+      t.model = m.slice(lastSlash + 1);
     }
   }
 }

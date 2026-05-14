@@ -96,6 +96,22 @@ test("stripToolModelPrefixes is idempotent", () => {
   assert.equal(body.tools[0].model, "claude-opus-4-7");
 });
 
+test("stripToolModelPrefixes strips chained combo prefixes (cc/auto/foo → foo)", () => {
+  const body: any = {
+    tools: [
+      { name: "T1", model: "cc/auto/claude-opus-4-7" },
+      { name: "T2", model: "auto/cc/claude-sonnet-4-5-20250929" },
+      { name: "T3", model: "a/b/c/claude-haiku-4-5-20251001" },
+    ],
+  };
+
+  stripToolModelPrefixes(body);
+
+  assert.equal(body.tools[0].model, "claude-opus-4-7");
+  assert.equal(body.tools[1].model, "claude-sonnet-4-5-20250929");
+  assert.equal(body.tools[2].model, "claude-haiku-4-5-20251001");
+});
+
 test("stripToolModelPrefixes ignores trailing-slash edge cases", () => {
   const body: any = {
     tools: [
