@@ -3,7 +3,7 @@ import { getApiKeyById } from "@/lib/localDb";
 import { isApiKeyRevealEnabled } from "@/lib/apiKeyExposure";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { logAuditEvent } from "@/lib/compliance";
-import { getClientIp } from "@/lib/ipUtils";
+import { getClientIpFromRequest } from "@/lib/ipUtils";
 import * as log from "@/sse/utils/logger";
 
 // GET /api/keys/[id]/reveal - Reveal full API key for explicit copy actions
@@ -12,7 +12,7 @@ export async function GET(request, { params }) {
   if (authError) return authError;
 
   const { id } = await params;
-  const ipAddress = getClientIp(request);
+  const ipAddress = getClientIpFromRequest(request);
 
   try {
     if (!isApiKeyRevealEnabled()) {

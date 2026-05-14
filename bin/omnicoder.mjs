@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * OmniRoute CLI — Smart AI Router with Auto Fallback
+ * OmniCoder CLI — Lean AI proxy for coding tools
  *
  * Usage:
- *   omniroute                          Start the server (default port 20128)
- *   omniroute --port 3000              Start on custom port
- *   omniroute --no-open                Start without opening browser
- *   omniroute --mcp                    Start MCP server (stdio transport for IDEs)
- *   omniroute setup                    Interactive guided setup
- *   omniroute doctor                   Run local health checks
- *   omniroute providers available      List supported providers
- *   omniroute providers list           List configured providers
- *   omniroute reset-encrypted-columns  Reset broken encrypted credentials
- *   omniroute --help                   Show help
- *   omniroute --version                Show version
+ *   omnicoder                          Start the server (default port 20128)
+ *   omnicoder --port 3000              Start on custom port
+ *   omnicoder --no-open                Start without opening browser
+ *   omnicoder --mcp                    Start MCP server (stdio transport for IDEs)
+ *   omnicoder setup                    Interactive guided setup
+ *   omnicoder doctor                   Run local health checks
+ *   omnicoder providers available      List supported providers
+ *   omnicoder providers list           List configured providers
+ *   omnicoder reset-encrypted-columns  Reset broken encrypted credentials
+ *   omnicoder --help                   Show help
+ *   omnicoder --version                Show version
  */
 
 import { spawn } from "node:child_process";
@@ -41,8 +41,11 @@ function loadEnvFile() {
   if (home) {
     if (platform() === "win32") {
       const appData = process.env.APPDATA || join(home, "AppData", "Roaming");
+      // Prefer omnicoder dir, then upstream omniroute dir for upgrade compat.
+      envPaths.push(join(appData, "omnicoder", ".env"));
       envPaths.push(join(appData, "omniroute", ".env"));
     } else {
+      envPaths.push(join(home, ".omnicoder", ".env"));
       envPaths.push(join(home, ".omniroute", ".env"));
     }
   }
@@ -94,57 +97,57 @@ if (CLI_COMMANDS.has(command)) {
 
 if (args.includes("--help") || args.includes("-h")) {
   console.log(`
-  \x1b[1m\x1b[36m⚡ OmniRoute\x1b[0m — Smart AI Router with Auto Fallback
+  \x1b[1m\x1b[36m⚡ OmniCoder\x1b[0m — Lean AI proxy for coding tools
 
   \x1b[1mUsage:\x1b[0m
-    omniroute                 Start the server
-    omniroute setup           Interactive guided setup
-    omniroute doctor          Run local health checks
-    omniroute providers available  List supported providers
-    omniroute providers list  List configured providers
-    omniroute --port <port>   Use custom API port (default: 20128)
-    omniroute --no-open       Don't open browser automatically
-    omniroute --mcp           Start MCP server (stdio transport for IDEs)
-    omniroute reset-encrypted-columns  Reset encrypted credentials (recovery)
-    omniroute --help          Show this help
-    omniroute --version       Show version
+    omnicoder                 Start the server
+    omnicoder setup           Interactive guided setup
+    omnicoder doctor          Run local health checks
+    omnicoder providers available  List supported providers
+    omnicoder providers list  List configured providers
+    omnicoder --port <port>   Use custom API port (default: 20128)
+    omnicoder --no-open       Don't open browser automatically
+    omnicoder --mcp           Start MCP server (stdio transport for IDEs)
+    omnicoder reset-encrypted-columns  Reset encrypted credentials (recovery)
+    omnicoder --help          Show this help
+    omnicoder --version       Show version
 
   \x1b[1mMCP Integration:\x1b[0m
-    The --mcp flag starts an MCP server over stdio, exposing OmniRoute
+    The --mcp flag starts an MCP server over stdio, exposing OmniCoder
     tools for AI agents in VS Code, Cursor, Claude Desktop, and Copilot.
 
-    Available tools: omniroute_get_health, omniroute_list_combos,
-    omniroute_check_quota, omniroute_route_request, and more.
+    Available tools: omnicoder_get_health, omnicoder_list_combos,
+    omnicoder_check_quota, omnicoder_route_request, and more.
 
   \x1b[1mConfig:\x1b[0m
-    Loads .env from: ~/.omniroute/.env or ./.env
+    Loads .env from: ~/.omnicoder/.env or ~/.omniroute/.env or ./.env
     Memory limit: OMNIROUTE_MEMORY_MB (default: 512)
 
   \x1b[1mSetup:\x1b[0m
-    omniroute setup --password <password>
-    omniroute setup --add-provider --provider openai --api-key <key>
-    omniroute setup --non-interactive
+    omnicoder setup --password <password>
+    omnicoder setup --add-provider --provider openai --api-key <key>
+    omnicoder setup --non-interactive
 
   \x1b[1mDoctor:\x1b[0m
-    omniroute doctor
-    omniroute doctor --json
-    omniroute doctor --no-liveness
+    omnicoder doctor
+    omnicoder doctor --json
+    omnicoder doctor --no-liveness
 
   \x1b[1mProviders:\x1b[0m
-    omniroute providers available
-    omniroute providers available --search openai
-    omniroute providers available --category api-key
-    omniroute providers list
-    omniroute providers test <id|name>
-    omniroute providers test-all
-    omniroute providers validate
+    omnicoder providers available
+    omnicoder providers available --search openai
+    omnicoder providers available --category api-key
+    omnicoder providers list
+    omnicoder providers test <id|name>
+    omnicoder providers test-all
+    omnicoder providers validate
 
   \x1b[1mAfter starting:\x1b[0m
     Dashboard:  http://localhost:<dashboard-port>
     API:        http://localhost:<api-port>/v1
 
-  \x1b[1mConnect your tools:\x1b[0m
-    Set your CLI tool (Cursor, Cline, Codex, etc.) to use:
+  \x1b[1mConnect your coding tool:\x1b[0m
+    Set your tool (Claude Code, Codex, Cursor, Cline, etc.) to use:
     \x1b[33mhttp://localhost:<api-port>/v1\x1b[0m
   `);
   process.exit(0);
@@ -161,18 +164,32 @@ if (args.includes("--version") || args.includes("-v")) {
 }
 
 // ── reset-encrypted-columns subcommand ──────────────────────────────────────
-// Recovery tool for users who lost STORAGE_ENCRYPTION_KEY after upgrade (#1622)
+// Recovery tool for users who lost STORAGE_ENCRYPTION_KEY after upgrade.
 if (args.includes("reset-encrypted-columns")) {
   const dataDir = (() => {
     const configured = process.env.DATA_DIR?.trim();
     if (configured) return configured;
     if (platform() === "win32") {
       const appData = process.env.APPDATA || join(homedir(), "AppData", "Roaming");
-      return join(appData, "omniroute");
+      const omnicoderDir = join(appData, "omnicoder");
+      const omnirouteDir = join(appData, "omniroute");
+      if (existsSync(omnicoderDir)) return omnicoderDir;
+      if (existsSync(omnirouteDir)) return omnirouteDir;
+      return omnicoderDir;
     }
     const xdg = process.env.XDG_CONFIG_HOME?.trim();
-    if (xdg) return join(xdg, "omniroute");
-    return join(homedir(), ".omniroute");
+    if (xdg) {
+      const omnicoderDir = join(xdg, "omnicoder");
+      const omnirouteDir = join(xdg, "omniroute");
+      if (existsSync(omnicoderDir)) return omnicoderDir;
+      if (existsSync(omnirouteDir)) return omnirouteDir;
+      return omnicoderDir;
+    }
+    const omnicoderDir = join(homedir(), ".omnicoder");
+    const omnirouteDir = join(homedir(), ".omniroute");
+    if (existsSync(omnicoderDir)) return omnicoderDir;
+    if (existsSync(omnirouteDir)) return omnirouteDir;
+    return omnicoderDir;
   })();
 
   const dbPath = join(dataDir, "storage.sqlite");
@@ -199,7 +216,7 @@ if (args.includes("reset-encrypted-columns")) {
   Database: ${dbPath}
 
   \x1b[1mTo confirm, run:\x1b[0m
-    omniroute reset-encrypted-columns --force
+    omnicoder reset-encrypted-columns --force
     `);
     process.exit(0);
   }
@@ -288,14 +305,14 @@ const apiPort = parsePort(process.env.API_PORT || String(port), port);
 const dashboardPort = parsePort(process.env.DASHBOARD_PORT || String(port), port);
 const noOpen = args.includes("--no-open");
 
-console.log(`
-\x1b[36m   ____                  _ ____              _
-   / __ \\\\                (_) __ \\\\            | |
-  | |  | |_ __ ___  _ __ _| |__) |___  _   _| |_ ___
-  | |  | | '_ \` _ \\\\| '_ \\\\ |  _  // _ \\\\| | | | __/ _ \\\\
-  | |__| | | | | | | | | | | | \\\\ \\\\ (_) | |_| | ||  __/
-   \\\\____/|_| |_| |_|_| |_|_|_|  \\\\_\\\\___/ \\\\__,_|\\\\__\\\\___|
-\x1b[0m`);
+console.log(`\x1b[36m   ____                  _  ____               _
+  / __ \\                (_)/ ___|___   __| | ___ _ __
+ | |  | |_ __ ___  _ __ _| |   / _ \\ / _\` |/ _ \\ '__|
+ | |  | | '_ \` _ \\| '_ \\ | |__| (_) | (_| |  __/ |
+ | |__| | | | | | | | | | |\\____\\___/ \\__,_|\\___|_|
+  \\____/|_| |_| |_|_| |_|_|
+\x1b[0m  \x1b[2mLean AI proxy for coding tools\x1b[0m
+`);
 
 const nodeSupport = getNodeRuntimeSupport();
 if (!nodeSupport.nodeCompatible) {
@@ -321,18 +338,16 @@ if (!existsSync(serverJs)) {
   const isNvm = nodeExec.includes(".nvm") || nodeExec.includes("nvm");
   if (isMise) {
     console.error(
-      "  \x1b[33m⚠ mise detected:\x1b[0m If you installed via `npm install -g omniroute`,"
+      "  \x1b[33m⚠ mise detected:\x1b[0m If the bin is stale, rebuild from the repo:"
     );
-    console.error("    try: \x1b[36mnpx omniroute@latest\x1b[0m  (downloads a fresh copy)");
-    console.error("    or:  \x1b[36mmise exec -- npx omniroute\x1b[0m");
+    console.error("    \x1b[36menv -u NODE_ENV npm run build:cli && npm link\x1b[0m");
   } else if (isNvm) {
     console.error(
       "  \x1b[33m⚠ nvm detected:\x1b[0m Try reinstalling after loading the correct Node version:"
     );
-    console.error("    \x1b[36mnvm use --lts && npm install -g omniroute\x1b[0m");
+    console.error("    \x1b[36mnvm use --lts && env -u NODE_ENV npm run build:cli && npm link\x1b[0m");
   } else {
-    console.error("  Try: \x1b[36mnpm install -g omniroute\x1b[0m  (reinstall)");
-    console.error("  Or:  \x1b[36mnpx omniroute@latest\x1b[0m");
+    console.error("  Rebuild from the repo: \x1b[36menv -u NODE_ENV npm run build:cli && npm link\x1b[0m");
   }
   process.exit(1);
 }
@@ -411,7 +426,7 @@ server.on("exit", (code) => {
 });
 
 function shutdown() {
-  console.log("\n\x1b[33m⏹ Shutting down OmniRoute...\x1b[0m");
+  console.log("\n\x1b[33m⏹ Shutting down OmniCoder...\x1b[0m");
   server.kill("SIGTERM");
   setTimeout(() => {
     server.kill("SIGKILL");
@@ -427,12 +442,12 @@ async function onReady() {
   const apiUrl = `http://localhost:${apiPort}`;
 
   console.log(`
-  \x1b[32m✔ OmniRoute is running!\x1b[0m
+  \x1b[32m✔ OmniCoder is running!\x1b[0m
 
   \x1b[1m  Dashboard:\x1b[0m  ${dashboardUrl}
   \x1b[1m  API Base:\x1b[0m   ${apiUrl}/v1
 
-  \x1b[2m  Point your CLI tool (Cursor, Cline, Codex) to:\x1b[0m
+  \x1b[2m  Point your coding tool (Claude Code, Codex, Cursor, Cline) to:\x1b[0m
   \x1b[33m  ${apiUrl}/v1\x1b[0m
 
   \x1b[2m  Press Ctrl+C to stop\x1b[0m

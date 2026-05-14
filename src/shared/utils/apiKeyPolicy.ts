@@ -48,6 +48,7 @@ export interface ApiKeyMetadata {
   maxRequestsPerMinute?: number | null;
   maxSessions?: number | null;
   rateLimits?: RateLimitRule[] | null;
+  ipAllowlist?: string[] | null;
 }
 
 /**
@@ -212,8 +213,8 @@ export async function enforceApiKeyPolicy(
   // gate used by login brute-force applies here.
   if (apiKeyInfo.ipAllowlist && apiKeyInfo.ipAllowlist.length > 0) {
     try {
-      const { getClientIp } = await import("@/lib/ipUtils");
-      const peer = getClientIp(request as Request);
+      const { getClientIpFromRequest } = await import("@/lib/ipUtils");
+      const peer = getClientIpFromRequest(request as Request);
       // CIDR matching: very small surface; rely on prefix match for IPv4 /32
       // ranges and explicit equality otherwise. A future migration can move
       // to ip-address style matching if more complex CIDRs are needed.

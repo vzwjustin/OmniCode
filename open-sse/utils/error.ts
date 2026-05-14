@@ -47,7 +47,7 @@ export function buildErrorBody(statusCode, message) {
  * @param {object} [opts] - Optional headers (e.g. { requestId })
  * @returns {Response} HTTP Response object
  */
-export function errorResponse(statusCode, message, opts) {
+export function errorResponse(statusCode, message, opts?) {
   const headers = { "Content-Type": "application/json" };
   const requestId =
     opts?.requestId ||

@@ -1233,7 +1233,7 @@ export class MuseSparkWebExecutor extends BaseExecutor {
     } finally {
       clearTimeout(timeoutId);
     }
-    if (!fetchResult.ok) return fetchResult.result;
+    if (fetchResult.ok !== true) return fetchResult.result;
 
     const upstreamResponse = fetchResult.response;
     if (!upstreamResponse.ok) {

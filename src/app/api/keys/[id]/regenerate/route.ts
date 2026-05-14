@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { regenerateApiKey } from "@/lib/localDb";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { logAuditEvent } from "@/lib/compliance";
-import { getClientIp } from "@/lib/ipUtils";
+import { getClientIpFromRequest } from "@/lib/ipUtils";
 import * as log from "@/sse/utils/logger";
 
 /**
@@ -16,7 +16,7 @@ export async function POST(request, { params }) {
   if (authError) return authError;
 
   const { id } = await params;
-  const ipAddress = getClientIp(request);
+  const ipAddress = getClientIpFromRequest(request);
 
   try {
     if (!id) {

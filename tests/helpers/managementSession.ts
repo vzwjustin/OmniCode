@@ -59,6 +59,6 @@ export async function makeManagementSessionRequest(
   return new Request(url, {
     method,
     headers: requestHeaders,
-    body: shouldSerializeJson ? JSON.stringify(body) : body,
+    body: shouldSerializeJson ? JSON.stringify(body) : (body as BodyInit | null | undefined),
   });
 }
