@@ -281,9 +281,7 @@ Full troubleshooting: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
 ---
 
-## Attribution
-
-OmniCoder started as a fork of [diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute), which itself builds on prior work from [decolua/9router](https://github.com/decolua/9router) and [router-for-me/CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI). Compression engines draw on [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) and [rtk-ai/rtk](https://github.com/rtk-ai/rtk). MIT-licensed, like the upstream.
+Compression engines draw on [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) and [rtk-ai/rtk](https://github.com/rtk-ai/rtk). MIT-licensed, like the upstream.
 
 ---
 
