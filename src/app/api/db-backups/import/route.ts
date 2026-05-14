@@ -7,6 +7,9 @@ import { getDbInstance, resetDbInstance, SQLITE_FILE } from "@/lib/db/core";
 import { backupDbFile } from "@/lib/db/backup";
 import { isAuthRequired, isAuthenticated } from "@/shared/utils/apiAuth";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const MAX_UPLOAD_SIZE = 100 * 1024 * 1024; // 100 MB
 
 // Required tables that must exist in a valid OmniRoute database

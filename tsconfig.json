@@ -50,6 +50,11 @@
     "_mono_repo",
     "_references",
     "omnirouteCloud",
-    "omnirouteSite"
+    "omnirouteSite",
+    "tests",
+    "**/*.stories.tsx",
+    "**/*.stories.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }
