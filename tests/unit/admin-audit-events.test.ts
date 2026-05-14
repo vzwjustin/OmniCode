@@ -13,11 +13,13 @@ process.env.INITIAL_PASSWORD = "admin-secret";
 const core = await import("../../src/lib/db/core.ts");
 const compliance = await import("../../src/lib/compliance/index.ts");
 const loginRoute = await import("../../src/app/api/auth/login/route.ts");
+const loginInternals = await import("../../src/app/api/auth/login/internals.ts");
 const logoutRoute = await import("../../src/app/api/auth/logout/route.ts");
+const logoutInternals = await import("../../src/app/api/auth/logout/internals.ts");
 const providersRoute = await import("../../src/app/api/providers/route.ts");
 const providerByIdRoute = await import("../../src/app/api/providers/[id]/route.ts");
-const originalGetLoginCookieStore = loginRoute.authRouteInternals.getCookieStore;
-const originalGetLogoutCookieStore = logoutRoute.logoutRouteInternals.getCookieStore;
+const originalGetLoginCookieStore = loginInternals.authRouteInternals.getCookieStore;
+const originalGetLogoutCookieStore = logoutInternals.logoutRouteInternals.getCookieStore;
 
 function resetDb() {
   core.resetDbInstance();
@@ -30,8 +32,8 @@ test.beforeEach(() => {
 });
 
 test.afterEach(() => {
-  loginRoute.authRouteInternals.getCookieStore = originalGetLoginCookieStore;
-  logoutRoute.logoutRouteInternals.getCookieStore = originalGetLogoutCookieStore;
+  loginInternals.authRouteInternals.getCookieStore = originalGetLoginCookieStore;
+  logoutInternals.logoutRouteInternals.getCookieStore = originalGetLogoutCookieStore;
 });
 
 test.after(() => {
@@ -43,10 +45,10 @@ test("auth login/logout routes emit structured audit events with ip and request 
   const setCalls = [];
   const deleteCalls = [];
 
-  loginRoute.authRouteInternals.getCookieStore = async () => ({
+  loginInternals.authRouteInternals.getCookieStore = async () => ({
     set: (...args) => setCalls.push(args),
   });
-  logoutRoute.logoutRouteInternals.getCookieStore = async () => ({
+  logoutInternals.logoutRouteInternals.getCookieStore = async () => ({
     delete: (...args) => deleteCalls.push(args),
   });
 
@@ -95,7 +97,7 @@ test("auth login/logout routes emit structured audit events with ip and request 
 });
 
 test("auth login route records failed password attempts", async () => {
-  loginRoute.authRouteInternals.getCookieStore = async () => ({
+  loginInternals.authRouteInternals.getCookieStore = async () => ({
     set() {},
   });
 

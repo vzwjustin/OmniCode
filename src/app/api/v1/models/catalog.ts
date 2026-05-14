@@ -9,12 +9,8 @@ import {
   getModelIsHidden,
 } from "@/lib/localDb";
 import { getAllEmbeddingModels } from "@omniroute/open-sse/config/embeddingRegistry.ts";
-import { getAllImageModels } from "@omniroute/open-sse/config/imageRegistry.ts";
 import { getAllRerankModels } from "@omniroute/open-sse/config/rerankRegistry.ts";
-import { getAllAudioModels } from "@omniroute/open-sse/config/audioRegistry.ts";
 import { getAllModerationModels } from "@omniroute/open-sse/config/moderationRegistry.ts";
-import { getAllVideoModels } from "@omniroute/open-sse/config/videoRegistry.ts";
-import { getAllMusicModels } from "@omniroute/open-sse/config/musicRegistry.ts";
 import { REGISTRY } from "@omniroute/open-sse/config/providerRegistry.ts";
 import { CODEX_NATIVE_UNPREFIXED_MODELS } from "@omniroute/open-sse/services/model.ts";
 import { getAllSyncedAvailableModels } from "@/lib/db/models";
@@ -462,12 +458,18 @@ export async function getUnifiedModelsResponse(
           let modelType: string | undefined;
           if (endpoints.includes("embeddings")) modelType = "embedding";
           else if (endpoints.includes("rerank")) modelType = "rerank";
-          else if (endpoints.includes("images")) modelType = "image";
-          else if (endpoints.includes("audio")) modelType = "audio";
+          // Drop media-only model types: images, audio, video, music
+          if (
+            endpoints.includes("images") ||
+            endpoints.includes("audio") ||
+            endpoints.includes("video") ||
+            endpoints.includes("music")
+          ) {
+            continue;
+          }
           const syncedFields = {
             ...(modelType ? { type: modelType } : {}),
             ...(apiFormat !== "chat-completions" ? { api_format: apiFormat } : {}),
-            ...(modelType === "audio" ? { subtype: "transcription" } : {}),
             ...(sm.inputTokenLimit ? { context_length: sm.inputTokenLimit } : {}),
             ...(endpoints.length > 1 || !endpoints.includes("chat")
               ? { supported_endpoints: endpoints }
@@ -490,24 +492,6 @@ export async function getUnifiedModelsResponse(
             parent: null,
             ...syncedFields,
           });
-
-          if (modelType === "audio") {
-            models.push({
-              id: aliasId,
-              object: "model",
-              created: timestamp,
-              owned_by: canonicalProviderId,
-              permission: [],
-              root: sm.id,
-              parent: null,
-              type: "audio",
-              subtype: "speech",
-              ...(sm.inputTokenLimit ? { context_length: sm.inputTokenLimit } : {}),
-              ...(endpoints.length > 1 || !endpoints.includes("chat")
-                ? { supported_endpoints: endpoints }
-                : {}),
-            });
-          }
 
           if (canonicalProviderId !== alias && !prefix) {
             const providerPrefixedId = `${canonicalProviderId}/${sm.id}`;
@@ -585,24 +569,6 @@ export async function getUnifiedModelsResponse(
       });
     }
 
-    // Add image models (filtered by active providers)
-    for (const imgModel of getAllImageModels()) {
-      if (!isProviderActive(imgModel.provider)) continue;
-      const rawModelId = imgModel.id.split("/").pop() || imgModel.id;
-      if (!providerSupportsModel(imgModel.provider, rawModelId)) continue;
-      models.push({
-        id: imgModel.id,
-        object: "model",
-        created: timestamp,
-        owned_by: imgModel.provider,
-        type: "image",
-        supported_sizes: imgModel.supportedSizes,
-        input_modalities: imgModel.inputModalities || ["text"],
-        output_modalities: ["image"],
-        ...(imgModel.description ? { description: imgModel.description } : {}),
-      });
-    }
-
     // Add rerank models (filtered by active providers)
     for (const rerankModel of getAllRerankModels()) {
       if (!isProviderActive(rerankModel.provider)) continue;
@@ -621,21 +587,6 @@ export async function getUnifiedModelsResponse(
       });
     }
 
-    // Add audio models (filtered by active providers)
-    for (const audioModel of getAllAudioModels()) {
-      if (!isProviderActive(audioModel.provider)) continue;
-      const rawModelId = audioModel.id.split("/").pop() || audioModel.id;
-      if (!providerSupportsModel(audioModel.provider, rawModelId)) continue;
-      models.push({
-        id: audioModel.id,
-        object: "model",
-        created: timestamp,
-        owned_by: audioModel.provider,
-        type: "audio",
-        subtype: audioModel.subtype,
-      });
-    }
-
     // Add moderation models (filtered by active providers)
     for (const modModel of getAllModerationModels()) {
       if (!isProviderActive(modModel.provider)) continue;
@@ -647,34 +598,6 @@ export async function getUnifiedModelsResponse(
         created: timestamp,
         owned_by: modModel.provider,
         type: "moderation",
-      });
-    }
-
-    // Add video models (filtered by active providers)
-    for (const videoModel of getAllVideoModels()) {
-      if (!isProviderActive(videoModel.provider)) continue;
-      const rawModelId = videoModel.id.split("/").pop() || videoModel.id;
-      if (!providerSupportsModel(videoModel.provider, rawModelId)) continue;
-      models.push({
-        id: videoModel.id,
-        object: "model",
-        created: timestamp,
-        owned_by: videoModel.provider,
-        type: "video",
-      });
-    }
-
-    // Add music models (filtered by active providers)
-    for (const musicModel of getAllMusicModels()) {
-      if (!isProviderActive(musicModel.provider)) continue;
-      const rawModelId = musicModel.id.split("/").pop() || musicModel.id;
-      if (!providerSupportsModel(musicModel.provider, rawModelId)) continue;
-      models.push({
-        id: musicModel.id,
-        object: "model",
-        created: timestamp,
-        owned_by: musicModel.provider,
-        type: "music",
       });
     }
 
@@ -733,8 +656,15 @@ export async function getUnifiedModelsResponse(
           let modelType: string | undefined;
           if (endpoints.includes("embeddings")) modelType = "embedding";
           else if (endpoints.includes("rerank")) modelType = "rerank";
-          else if (endpoints.includes("images")) modelType = "image";
-          else if (endpoints.includes("audio")) modelType = "audio";
+          // Skip media-only custom models
+          if (
+            endpoints.includes("images") ||
+            endpoints.includes("audio") ||
+            endpoints.includes("video") ||
+            endpoints.includes("music")
+          ) {
+            continue;
+          }
           if (
             modelType &&
             hasEquivalentSpecialtyModel(canonicalProviderId, modelId, modelType, aliasId)

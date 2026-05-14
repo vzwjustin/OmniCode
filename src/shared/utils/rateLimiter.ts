@@ -1,38 +1,15 @@
-import Redis from "ioredis";
-
-// Reuse existing REDIS_URL if set, or local redis via default docker-compose
-// Use REDIS_URL from env (Docker/Production) or fallback to local redis
-const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
-if (process.env.NODE_ENV === "production" && !process.env.REDIS_URL) {
-  console.warn("[REDIS] REDIS_URL is not set in production. Falling back to default.");
-}
-
-let redisClient: Redis | null = null;
-
-export function getRedisClient() {
-  if (!redisClient) {
-    redisClient = new Redis(REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      enableReadyCheck: false,
-      enableOfflineQueue: false,
-      lazyConnect: true,
-      connectTimeout: 500,
-      retryStrategy(times) {
-        // Stop reconnect attempts after 10 tries so an unreachable Redis
-        // doesn't pin open the Node event loop (process won't exit otherwise).
-        if (times > 10) return null;
-        return Math.min(times * 50, 2000); // Exponential backoff
-      },
-    });
-    redisClient.on("error", (err) => {
-      // Throttle noisy connection-refused logs in environments without Redis.
-      if (!/ECONNREFUSED|connect ETIMEDOUT/.test(err.message)) {
-        console.error("[REDIS] Error:", err.message);
-      }
-    });
-  }
-  return redisClient;
-}
+/**
+ * In-memory multi-window rate limiter.
+ *
+ * Redis was removed in 3.8.x — OmniRoute is a single-instance application
+ * (SQLite + in-memory caches). Multi-process / multi-machine rate limiting
+ * isn't a goal of this project.
+ *
+ * If you need distributed rate limiting in the future, reintroduce the Redis
+ * client behind a feature flag in this file; the public API of this module
+ * (`checkRateLimit`, `setRateLimiterTestMode`) must stay stable so callers
+ * don't need to change.
+ */
 
 export interface RateLimitRule {
   limit: number;
@@ -45,109 +22,84 @@ export interface RateLimitResult {
 }
 
 /**
- * Atomic Lua script for multi-rule rate limiting using fixed window.
- * Returns {1, 0} if allowed, or {0, failedWindow} if rejected.
+ * Backwards-compatible no-op shim for callers that previously expected a
+ * Redis client. Always returns `null`; new code should not call this — use
+ * the cache helpers in `db/apiKeys.ts` instead.
+ *
+ * @deprecated Redis support was removed. Returns `null`.
  */
-const RATE_LIMIT_SCRIPT = `
-local key_prefix = KEYS[1]
-local current_time = tonumber(ARGV[1])
+export function getRedisClient(): null {
+  return null;
+}
 
-local rules = {}
-for i = 2, #ARGV, 2 do
-  table.insert(rules, {
-    limit = tonumber(ARGV[i]),
-    window = tonumber(ARGV[i+1])
-  })
-end
+/**
+ * In-memory rate-limit window store.
+ *
+ * Counts are kept per-process — single-instance only. Window keys carry a
+ * TTL via `MEMORY_STORE_EXPIRY`; expired entries are GC'd opportunistically
+ * on read.
+ */
+const MEMORY_STORE = new Map<string, number>();
+const MEMORY_STORE_EXPIRY = new Map<string, number>();
 
--- First pass: check if any limit is exceeded
-for i, rule in ipairs(rules) do
-  local current_window = math.floor(current_time / rule.window)
-  local window_key = key_prefix .. ":" .. rule.window .. ":" .. current_window
-  
-  local count = tonumber(redis.call("GET", window_key) or "0")
-  if count >= rule.limit then
-    return { 0, rule.window } -- Reject, return which window failed
-  end
-end
-
--- Second pass: increment all rules
-for i, rule in ipairs(rules) do
-  local current_window = math.floor(current_time / rule.window)
-  local window_key = key_prefix .. ":" .. rule.window .. ":" .. current_window
-  
-  local count = redis.call("INCR", window_key)
-  if count == 1 then
-    -- TTL is twice the window size to ensure it covers the current window safely
-    redis.call("EXPIRE", window_key, rule.window * 2)
-  end
-end
-
-return { 1, 0 } -- Accepted
-`;
-
-const TEST_MEMORY_STORE = new Map<string, number>();
 let explicitTestMode = false;
 
 export function setRateLimiterTestMode(enabled: boolean) {
   explicitTestMode = enabled;
-  if (enabled) TEST_MEMORY_STORE.clear();
+  if (enabled) {
+    MEMORY_STORE.clear();
+    MEMORY_STORE_EXPIRY.clear();
+  }
+}
+
+function gcExpired(now: number) {
+  if (MEMORY_STORE_EXPIRY.size <= 256) return;
+  for (const [k, expiresAt] of MEMORY_STORE_EXPIRY) {
+    if (expiresAt <= now) {
+      MEMORY_STORE.delete(k);
+      MEMORY_STORE_EXPIRY.delete(k);
+    }
+  }
+}
+
+function evaluateInMemory(keyId: string, rules: RateLimitRule[]): RateLimitResult {
+  const now = Math.floor(Date.now() / 1000);
+  gcExpired(now);
+
+  // First pass: check if any limit is exceeded.
+  for (const rule of rules) {
+    const currentWindow = Math.floor(now / rule.window);
+    const windowKey = `rl:api_key:${keyId}:${rule.window}:${currentWindow}`;
+    const count = MEMORY_STORE.get(windowKey) || 0;
+    if (count >= rule.limit) {
+      return { allowed: false, failedWindow: rule.window };
+    }
+  }
+
+  // Second pass: increment every rule's counter and set TTL once.
+  for (const rule of rules) {
+    const currentWindow = Math.floor(now / rule.window);
+    const windowKey = `rl:api_key:${keyId}:${rule.window}:${currentWindow}`;
+    MEMORY_STORE.set(windowKey, (MEMORY_STORE.get(windowKey) || 0) + 1);
+    if (!MEMORY_STORE_EXPIRY.has(windowKey)) {
+      MEMORY_STORE_EXPIRY.set(windowKey, now + rule.window * 2);
+    }
+  }
+  return { allowed: true };
 }
 
 /**
- * Checks multi-window rate limits for an API key atomically via Redis.
+ * Checks multi-window rate limits for an API key.
+ *
+ * `setRateLimiterTestMode(true)` and `NODE_ENV=test` keep the same code path
+ * (in-memory) as production — the only difference in tests is that the store
+ * is reset between cases.
  */
 export async function checkRateLimit(
   keyId: string,
   rules: RateLimitRule[]
 ): Promise<RateLimitResult> {
   if (!rules || rules.length === 0) return { allowed: true };
-
-  // ── In-memory mock for unit tests ──
-  const isTestMode =
-    explicitTestMode ||
-    process.env.NODE_ENV === "test" ||
-    process.env.DISABLE_SQLITE_AUTO_BACKUP === "true";
-
-  if (isTestMode) {
-    const now = Math.floor(Date.now() / 1000);
-    for (const rule of rules) {
-      const currentWindow = Math.floor(now / rule.window);
-      const windowKey = `rl:api_key:${keyId}:${rule.window}:${currentWindow}`;
-      const count = TEST_MEMORY_STORE.get(windowKey) || 0;
-      if (count >= rule.limit) {
-        return { allowed: false, failedWindow: rule.window };
-      }
-    }
-    for (const rule of rules) {
-      const currentWindow = Math.floor(now / rule.window);
-      const windowKey = `rl:api_key:${keyId}:${rule.window}:${currentWindow}`;
-      TEST_MEMORY_STORE.set(windowKey, (TEST_MEMORY_STORE.get(windowKey) || 0) + 1);
-    }
-    return { allowed: true };
-  }
-
-  const redis = getRedisClient();
-  const args: (string | number)[] = [Math.floor(Date.now() / 1000)];
-
-  for (const rule of rules) {
-    args.push(rule.limit, rule.window);
-  }
-
-  try {
-    const result = (await redis.eval(RATE_LIMIT_SCRIPT, 1, `rl:api_key:${keyId}`, ...args)) as [
-      number,
-      number,
-    ];
-
-    if (result[0] === 0) {
-      return { allowed: false, failedWindow: result[1] };
-    }
-
-    return { allowed: true };
-  } catch (error) {
-    // Fail-open strategy if Redis goes down to prevent complete API outage
-    console.error("[RATE_LIMITER] Redis eval failed, bypassing rate limit:", error);
-    return { allowed: true };
-  }
+  void explicitTestMode; // referenced so the test-mode setter has observable side effects
+  return evaluateInMemory(keyId, rules);
 }

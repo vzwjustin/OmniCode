@@ -26,17 +26,18 @@ export async function GET(request) {
 
     if (alias) {
       const resolved = await resolveModelAliasLookup(alias);
-      if (!resolved.ok) {
+      if (resolved.ok !== true) {
+        const failureError = resolved.error;
         return NextResponse.json(
           {
             error: {
-              message: resolved.error.message,
-              code: resolved.error.code,
-              ...(resolved.error.candidates ? { candidates: resolved.error.candidates } : {}),
+              message: failureError.message,
+              code: failureError.code,
+              ...(failureError.candidates ? { candidates: failureError.candidates } : {}),
             },
           },
           {
-            status: resolved.error.status,
+            status: failureError.status,
             headers: getCatalogDiagnosticsHeaders({ request, resolvedAlias: alias }),
           }
         );

@@ -136,6 +136,32 @@ function markMessageCacheControl(msg: ClaudeMessage, ttl?: string): boolean {
   return true;
 }
 
+// Strip combo/provider prefixes from subagent-tool `model` fields. The Anthropic
+// API only accepts its own model IDs (no provider prefix) for server-side tools
+// like `task_*` / `subagent_*`. Clients (e.g. Claude Code) sometimes pass the
+// combo-prefixed model through, which causes a 400 with `tools.<n>.model: cc/claude-...`.
+// Normalize by dropping the leading `<prefix>/` segment whenever the model
+// string looks prefixed. Mutates `tools` in place. Safe for null/undefined and
+// non-array inputs (no-op). Exported so the Claude passthrough path in
+// chatCore.ts can apply it without going through the full translateRequest
+// flow that prepareClaudeRequest already covers.
+export function stripToolModelPrefixes(tools: unknown): void {
+  if (!Array.isArray(tools)) return;
+  for (const tool of tools) {
+    if (
+      tool &&
+      typeof tool === "object" &&
+      typeof (tool as { model?: unknown }).model === "string"
+    ) {
+      const m = (tool as { model: string }).model;
+      const slashIdx = m.indexOf("/");
+      if (slashIdx > 0 && slashIdx < m.length - 1) {
+        (tool as { model: string }).model = m.slice(slashIdx + 1);
+      }
+    }
+  }
+}
+
 // Prepare request for Claude format endpoints
 // - Cleanup cache_control (unless preserveCacheControl=true for passthrough)
 // - Filter empty messages
@@ -241,6 +267,9 @@ export function prepareClaudeRequest(
     // Also filter top-level tool declarations with empty names
     if (body.tools && Array.isArray(body.tools)) {
       body.tools = body.tools.filter((tool) => tool.name && tool.name?.trim());
+
+      // Strip combo/provider prefixes from subagent-tool `model` fields.
+      stripToolModelPrefixes(body.tools);
     }
 
     // Pass 1.5: Fix tool_use/tool_result ordering

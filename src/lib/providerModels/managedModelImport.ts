@@ -249,12 +249,12 @@ export async function importManagedModels({
   }
 
   const importedChanges = summarizeImportedChanges(
-    previousSyncedAvailableModels as JsonRecord[],
-    discoveredModels as JsonRecord[],
+    previousSyncedAvailableModels as unknown as JsonRecord[],
+    discoveredModels as unknown as JsonRecord[],
     importedIds
   );
   const importedModels = collectAddedImportedModels(
-    previousSyncedAvailableModels as JsonRecord[],
+    previousSyncedAvailableModels as unknown as JsonRecord[],
     candidateImportedModels
   );
 

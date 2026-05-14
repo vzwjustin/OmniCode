@@ -107,15 +107,68 @@ export function humanizeCursorModelId(id: string): string {
 }
 
 export function parseCursorAgentModels(text: string): string[] {
-  const match = text.match(/Available models:\s*([^\n]+)/);
-  if (!match) return [];
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const raw of match[1].split(",")) {
-    const id = raw.trim();
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    out.push(id);
+
+  // cursor-agent emits ANSI SGR escape codes around the header and around each
+  // model id (e.g. \u001b[2mAvailable models\u001b[22m, \u001b[36mauto\u001b[39m).
+  // Strip them before parsing so anchors and character classes work.
+  // Matches: ESC [ ... letter — covers all CSI/SGR sequences.
+  const ansiStripped = text.replace(/\u001b\[[0-9;]*[A-Za-z]/g, "");
+
+  // New cursor-agent format (2026.05+):
+  //   Available models
+  //
+  //   auto - Auto
+  //   composer-2-fast - Composer 2 Fast (current, default)
+  //   ...
+  //   kimi-k2.5 - Kimi K2.5
+  //
+  //   Tip: use --model <id> ...
+  //
+  // The header is `Available models` (no colon) followed by blank line and
+  // then `<id> - <name>` per line until a blank line or "Tip:".
+  const headerIdx = ansiStripped.search(/Available models\b/i);
+  if (headerIdx !== -1) {
+    const after = ansiStripped.slice(headerIdx);
+    const lines = after.split(/\r?\n/);
+    // Skip the header line itself.
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) {
+        // Blank line: skip while still pre-list; once we've seen entries, blank
+        // means end of list.
+        if (out.length > 0) break;
+        continue;
+      }
+      if (/^Tip\b/i.test(line)) break;
+      // Match `id [optional - name]` — accept either "id - Name" (new) or just
+      // a bare id (legacy fallback). Stop on the first non-matching line if
+      // we've already collected entries.
+      const m = line.match(/^([A-Za-z0-9][A-Za-z0-9._-]*)(?:\s*[-\u2014]\s*.+)?$/);
+      if (!m) {
+        if (out.length > 0) break;
+        continue;
+      }
+      const id = m[1];
+      if (!seen.has(id)) {
+        seen.add(id);
+        out.push(id);
+      }
+    }
+    if (out.length > 0) return out;
+  }
+
+  // Legacy format (pre-2026.05):
+  //   Cannot use this model: --help. Available models: auto, composer-2, ...
+  const legacy = ansiStripped.match(/Available models:\s*([^\n]+)/);
+  if (legacy) {
+    for (const raw of legacy[1].split(",")) {
+      const id = raw.trim();
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
   }
   return out;
 }
@@ -138,12 +191,13 @@ export async function fetchCursorAgentModels(
     );
   }
 
-  // cursor-agent prints "Available models: ..." to stderr and exits non-zero
-  // when given an unknown model id, so we intentionally pass `--help` as the
-  // model value to coerce it into listing.
+  // cursor-agent 2026.05+ exposes a proper `--list-models` flag that prints
+  // the model list to stdout and exits 0. On older builds we fall back to the
+  // legacy `--model --help` trick that printed "Available models: ..." to
+  // stderr. Either way we feed combined output to parseCursorAgentModels.
   let result: { stdout: string; stderr: string };
   try {
-    result = await runCursorAgent(binary, ["--model", "--help"], timeoutMs);
+    result = await runCursorAgent(binary, ["--list-models"], timeoutMs);
   } catch (err: unknown) {
     const e = err as NodeJS.ErrnoException;
     if (e?.code === "ENOENT") {
@@ -151,11 +205,21 @@ export async function fetchCursorAgentModels(
     }
     throw err;
   }
-  const combined = `${result.stdout}\n${result.stderr}`;
+  let combined = `${result.stdout}\n${result.stderr}`;
 
-  const ids = parseCursorAgentModels(combined);
+  let ids = parseCursorAgentModels(combined);
   if (ids.length === 0) {
-    throw new Error("cursor-agent did not return an 'Available models:' line");
+    // Fallback: older cursor-agent builds that don't accept --list-models.
+    try {
+      const legacy = await runCursorAgent(binary, ["--model", "--help"], timeoutMs);
+      combined = `${legacy.stdout}\n${legacy.stderr}`;
+      ids = parseCursorAgentModels(combined);
+    } catch {
+      // Swallow — fall through to the diagnostic error below.
+    }
+  }
+  if (ids.length === 0) {
+    throw new Error("cursor-agent did not return an 'Available models' list");
   }
 
   return ids.map((id) => ({

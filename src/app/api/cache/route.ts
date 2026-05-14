@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     const idempotencyStats = await getIdempotencyStats();
     const promptCacheMetrics = await getCacheMetrics();
     const trend = await getCacheTrend(trendHours);
-    const settings = await getCachedSettings().catch(() => ({}));
+    const settings = (await getCachedSettings().catch(() => ({}))) as Record<string, unknown>;
 
     return NextResponse.json({
       semanticCache: cacheStats,

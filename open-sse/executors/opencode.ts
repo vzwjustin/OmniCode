@@ -74,7 +74,10 @@ export class OpencodeExecutor extends BaseExecutor {
     stream: boolean,
     credentials: ProviderCredentials
   ): any {
-    const modifiedBody = super.transformRequest(model, body, stream, credentials);
+    const modifiedBody = super.transformRequest(model, body, stream, credentials) as
+      | Record<string, unknown>
+      | null
+      | undefined;
     if (
       modifiedBody &&
       typeof modifiedBody === "object" &&

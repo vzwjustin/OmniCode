@@ -20,7 +20,6 @@ import ModelsDevSyncTab from "./components/ModelsDevSyncTab";
 import ResilienceTab from "./components/ResilienceTab";
 import CliproxyapiSettingsTab from "./components/CliproxyapiSettingsTab";
 import PayloadRulesTab from "./components/PayloadRulesTab";
-import VisionBridgeSettingsTab from "./components/VisionBridgeSettingsTab";
 import RequestLimitsTab from "./components/RequestLimitsTab";
 import ModelRoutingSection from "@/shared/components/ModelRoutingSection";
 
@@ -113,7 +112,6 @@ export default function SettingsPage() {
                   chevron_right
                 </span>
               </Link>
-              <VisionBridgeSettingsTab />
               <SystemPromptTab />
               <MemorySkillsTab />
               <ModelsDevSyncTab />

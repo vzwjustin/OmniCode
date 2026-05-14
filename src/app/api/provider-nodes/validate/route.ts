@@ -78,13 +78,18 @@ export async function POST(request) {
           );
         }
 
-        const result = await validateClaudeCodeCompatibleProvider({
+        const result = (await validateClaudeCodeCompatibleProvider({
           apiKey,
           providerSpecificData: {
             baseUrl: sanitizeClaudeCodeCompatibleBaseUrl(baseUrl),
             chatPath: chatPath || undefined,
           },
-        });
+        })) as {
+          valid?: boolean;
+          error?: string | null;
+          warning?: string | null;
+          method?: string | null;
+        };
 
         return NextResponse.json({
           valid: !!result.valid,

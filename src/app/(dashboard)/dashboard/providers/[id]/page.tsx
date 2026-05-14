@@ -509,6 +509,9 @@ interface ConnectionRowConnection {
   expiresAt?: string;
   tokenExpiresAt?: string;
   maxConcurrent?: number | null;
+  // Auth metadata — distinguishes OAuth, API key, Bearer, and Basic flows. Without this field,
+  // the OAuth-only re-auth / refresh-token affordances were hidden from the UI.
+  authType?: string | null;
 }
 
 interface ConnectionRowProps {
@@ -1101,12 +1104,6 @@ export default function ProviderDetailPage() {
         return t("responsesApi");
       case "embeddings":
         return t("embeddings");
-      case "audio-transcriptions":
-        return t("audioTranscriptions");
-      case "audio-speech":
-        return t("audioSpeech");
-      case "images-generations":
-        return t("imagesGenerations");
       default:
         return t("chatCompletions");
     }
@@ -1121,12 +1118,6 @@ export default function ProviderDetailPage() {
         return "/responses";
       case "embeddings":
         return "/embeddings";
-      case "audio-transcriptions":
-        return "/audio/transcriptions";
-      case "audio-speech":
-        return "/audio/speech";
-      case "images-generations":
-        return "/images/generations";
       default:
         return "/chat/completions";
     }
@@ -3024,7 +3015,7 @@ export default function ProviderDetailPage() {
 
                       {selectedIds.size > 0 && (
                         <Button
-                          variant="destructive"
+                          variant="danger"
                           size="sm"
                           icon="delete"
                           loading={batchDeleting}
@@ -3154,7 +3145,7 @@ export default function ProviderDetailPage() {
 
                       {selectedIds.size > 0 && (
                         <Button
-                          variant="destructive"
+                          variant="danger"
                           size="sm"
                           icon="delete"
                           loading={batchDeleting}
@@ -4383,9 +4374,6 @@ function CustomModelsSection({
               <option value="responses">{t("responsesApi")}</option>
               <option value="embeddings">{t("embeddings")}</option>
               <option value="rerank">Rerank</option>
-              <option value="audio-transcriptions">{t("audioTranscriptions")}</option>
-              <option value="audio-speech">{t("audioSpeech")}</option>
-              <option value="images-generations">{t("imagesGenerations")}</option>
             </select>
           </div>
           <div className="flex-1">
@@ -4393,7 +4381,7 @@ function CustomModelsSection({
               {t("supportedEndpointsLabel")}
             </span>
             <div className="flex items-center gap-3">
-              {["chat", "embeddings", "rerank", "images", "audio"].map((ep) => (
+              {["chat", "embeddings", "rerank"].map((ep) => (
                 <label
                   key={ep}
                   className="flex items-center gap-1.5 text-xs text-text-main cursor-pointer"
@@ -4414,11 +4402,7 @@ function CustomModelsSection({
                     ? `💬 ${t("supportedEndpointChat")}`
                     : ep === "embeddings"
                       ? `📐 ${t("supportedEndpointEmbeddings")}`
-                      : ep === "rerank"
-                        ? "Rerank"
-                        : ep === "images"
-                          ? `🖼️ ${t("supportedEndpointImages")}`
-                          : `🔊 ${t("supportedEndpointAudio")}`}
+                      : "Rerank"}
                 </label>
               ))}
             </div>
@@ -4469,16 +4453,6 @@ function CustomModelsSection({
                         {`📐 ${t("supportedEndpointEmbeddings")}`}
                       </span>
                     )}
-                    {model.supportedEndpoints?.includes("images") && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium">
-                        {`🖼️ ${t("imagesShortLabel")}`}
-                      </span>
-                    )}
-                    {model.supportedEndpoints?.includes("audio") && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400 font-medium">
-                        {`🔊 ${t("audioShortLabel")}`}
-                      </span>
-                    )}
                     {anyNormalizeCompatBadge(model.id, customMap, overrideMap) && (
                       <span
                         className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-500/15 text-slate-400 font-medium"
@@ -4521,9 +4495,6 @@ function CustomModelsSection({
                             <option value="responses">{t("responsesApi")}</option>
                             <option value="embeddings">{t("embeddings")}</option>
                             <option value="rerank">Rerank</option>
-                            <option value="audio-transcriptions">{t("audioTranscriptions")}</option>
-                            <option value="audio-speech">{t("audioSpeech")}</option>
-                            <option value="images-generations">{t("imagesGenerations")}</option>
                           </select>
                         </div>
                         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 overflow-x-auto overflow-y-visible [scrollbar-width:thin]">
@@ -4531,7 +4502,7 @@ function CustomModelsSection({
                             {t("supportedEndpointsLabel")}
                           </span>
                           <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1 min-w-0">
-                            {["chat", "embeddings", "rerank", "images", "audio"].map((ep) => (
+                            {["chat", "embeddings", "rerank"].map((ep) => (
                               <label
                                 key={ep}
                                 className="flex items-center gap-1.5 text-xs text-text-main cursor-pointer whitespace-nowrap"
@@ -4554,11 +4525,7 @@ function CustomModelsSection({
                                   ? `💬 ${t("supportedEndpointChat")}`
                                   : ep === "embeddings"
                                     ? `📐 ${t("supportedEndpointEmbeddings")}`
-                                    : ep === "rerank"
-                                      ? "Rerank"
-                                      : ep === "images"
-                                        ? `🖼️ ${t("supportedEndpointImages")}`
-                                        : `🔊 ${t("supportedEndpointAudio")}`}
+                                    : "Rerank"}
                               </label>
                             ))}
                           </div>
@@ -7024,9 +6991,6 @@ function EditCompatibleNodeModal({
     { value: "chat", label: t("chatCompletions") },
     { value: "responses", label: t("responsesApi") },
     { value: "embeddings", label: t("embeddings") },
-    { value: "audio-transcriptions", label: t("audioTranscriptions") },
-    { value: "audio-speech", label: t("audioSpeech") },
-    { value: "images-generations", label: t("imagesGenerations") },
   ];
 
   const handleSubmit = async () => {

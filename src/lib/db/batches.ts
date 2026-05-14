@@ -1,6 +1,9 @@
 import { getDbInstance, rowToCamel, objToSnake } from "./core";
 import { v4 as uuidv4 } from "uuid";
 
+// Re-export FileRecord so consumers can import batch + file types from the same module.
+export type { FileRecord } from "./files";
+
 function parseBatchRow(row: any): BatchRecord {
   const camel = rowToCamel(row) as any;
   if (camel.metadata && typeof camel.metadata === "string") {

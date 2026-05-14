@@ -1,6 +1,7 @@
 import { BaseExecutor, ExecuteInput, type ProviderCredentials } from "./base.ts";
 import { PROVIDERS, OAUTH_ENDPOINTS } from "../config/constants.ts";
 import { getModelTargetFormat } from "../config/providerModels.ts";
+import { sanitizeUpstreamHeaders } from "../utils/responseHeaders.ts";
 import {
   getGitHubCopilotChatHeaders,
   getGitHubCopilotRefreshHeaders,
@@ -116,10 +117,11 @@ export class GithubExecutor extends BaseExecutor {
     if (!input.stream) {
       // wreq-js clone/text semantics consume the original response body. Materialize
       // non-streaming responses immediately so downstream code always sees a native
-      // fetch Response with a readable body.
+      // fetch Response with a readable body. Strip Content-Encoding because Node
+      // fetch auto-decompressed the body — keeping it triggers ZlibError on client.
       const status = result.response.status;
       const statusText = result.response.statusText;
-      const headers = new Headers(result.response.headers);
+      const headers = sanitizeUpstreamHeaders(result.response.headers);
       const payload = await result.response.text();
       result.response = new Response(payload, { status, statusText, headers });
       return result;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import Fuse from "fuse.js";
+import Fuse, { type FuseResult } from "fuse.js";
 import { SEARCH_INDEX, SearchItem } from "../lib/searchIndex";
 import { docsNavigation } from "../lib/docsNavigation";
 
@@ -27,7 +27,7 @@ const fuseContent = new Fuse(SEARCH_INDEX, {
 
 export function DocsSearchClient({ onResultClick }: { onResultClick?: () => void }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Fuse.FuseResult<SearchItem>[]>([]);
+  const [results, setResults] = useState<FuseResult<SearchItem>[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,7 +43,7 @@ export function DocsSearchClient({ onResultClick }: { onResultClick?: () => void
     const contentResults = fuseContent.search(value.trim()).slice(0, 4);
 
     const seen = new Set<string>();
-    const merged: Fuse.FuseResult<SearchItem>[] = [];
+    const merged: FuseResult<SearchItem>[] = [];
     for (const r of [...titleResults, ...contentResults]) {
       if (!seen.has(r.item.slug)) {
         seen.add(r.item.slug);

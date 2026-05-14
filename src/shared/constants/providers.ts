@@ -423,19 +423,6 @@ export const APIKEY_PROVIDERS = {
     hasFree: true,
     freeNote: "Trial credits for new accounts",
   },
-  runwayml: {
-    id: "runwayml",
-    alias: "runway",
-    name: "Runway",
-    icon: "movie",
-    color: "#111827",
-    textIcon: "RW",
-    website: "https://docs.dev.runwayml.com",
-    authHint:
-      "Use your Runway API key in Authorization: Bearer <key>. OmniRoute targets the current Runway API at https://api.dev.runwayml.com/v1 and sends the required X-Runway-Version header automatically.",
-    apiHint:
-      "Runway video generation is task-based. OmniRoute submits text-to-video or image-to-video jobs, polls /v1/tasks/{id}, and normalizes the finished video outputs back into the OpenAI-like /v1/videos/generations response.",
-  },
   anthropic: {
     id: "anthropic",
     alias: "anthropic",
@@ -658,15 +645,6 @@ export const APIKEY_PROVIDERS = {
     website: "https://hyperbolic.xyz",
     hasFree: true,
     freeNote: "$1-5 trial credits on signup for serverless inference",
-  },
-  nanobanana: {
-    id: "nanobanana",
-    alias: "nb",
-    name: "NanoBanana",
-    icon: "image",
-    color: "#FFD700",
-    textIcon: "NB",
-    website: "https://nanobananaapi.ai",
   },
   kie: {
     id: "kie",
@@ -1420,62 +1398,10 @@ export const APIKEY_PROVIDERS = {
     hasFree: true,
     freeNote: "10M free tokens on signup (non-commercial), no credit card required",
   },
-  "fal-ai": {
-    id: "fal-ai",
-    alias: "fal",
-    name: "Fal.ai",
-    icon: "image",
-    color: "#2563EB",
-    textIcon: "FL",
-    website: "https://fal.ai",
-  },
-  "stability-ai": {
-    id: "stability-ai",
-    alias: "stability",
-    name: "Stability AI",
-    icon: "image",
-    color: "#8B5CF6",
-    textIcon: "SA",
-    website: "https://stability.ai",
-  },
-  "black-forest-labs": {
-    id: "black-forest-labs",
-    alias: "bfl",
-    name: "Black Forest Labs",
-    icon: "image",
-    color: "#111827",
-    textIcon: "BF",
-    website: "https://blackforestlabs.ai",
-  },
-  recraft: {
-    id: "recraft",
-    alias: "recraft",
-    name: "Recraft",
-    icon: "image",
-    color: "#EC4899",
-    textIcon: "RC",
-    website: "https://recraft.ai",
-  },
-  topaz: {
-    id: "topaz",
-    alias: "topaz",
-    name: "Topaz",
-    icon: "image",
-    color: "#059669",
-    textIcon: "TP",
-    website: "https://topazlabs.com",
-  },
 };
 
 // Sub-categories within APIKEY_PROVIDERS (used by dashboard and catalog views).
-export const IMAGE_ONLY_PROVIDER_IDS = new Set([
-  "nanobanana",
-  "fal-ai",
-  "stability-ai",
-  "black-forest-labs",
-  "recraft",
-  "topaz",
-]);
+export const IMAGE_ONLY_PROVIDER_IDS = new Set<string>([]);
 
 export const AGGREGATOR_PROVIDER_IDS = new Set([
   "openrouter",
@@ -1514,7 +1440,7 @@ export const ENTERPRISE_CLOUD_PROVIDER_IDS = new Set([
   "modal",
 ]);
 
-export const VIDEO_PROVIDER_IDS = new Set(["runwayml"]);
+export const VIDEO_PROVIDER_IDS = new Set<string>([]);
 
 export const EMBEDDING_RERANK_PROVIDER_IDS = new Set(["voyage-ai", "jina-ai"]);
 
@@ -1624,30 +1550,6 @@ export const LOCAL_PROVIDERS = {
     localDefault: "http://localhost:5000/v1",
     passthroughModels: true,
   },
-  sdwebui: {
-    id: "sdwebui",
-    alias: "sdwebui",
-    name: "SD WebUI",
-    icon: "brush",
-    color: "#FF7043",
-    textIcon: "SD",
-    website: "https://github.com/AUTOMATIC1111/stable-diffusion-webui",
-    authHint:
-      "No API key required. Configure the local WebUI base URL (default: http://localhost:7860).",
-    localDefault: "http://localhost:7860",
-  },
-  comfyui: {
-    id: "comfyui",
-    alias: "comfyui",
-    name: "ComfyUI",
-    icon: "account_tree",
-    color: "#4CAF50",
-    textIcon: "CF",
-    website: "https://github.com/comfyanonymous/ComfyUI",
-    authHint:
-      "No API key required. Configure the local ComfyUI base URL (default: http://localhost:8188).",
-    localDefault: "http://localhost:8188",
-  },
 };
 
 // Search Providers
@@ -1755,74 +1657,8 @@ export const SEARCH_PROVIDERS = {
   },
 };
 
-// Audio Only Providers
-export const AUDIO_ONLY_PROVIDERS = {
-  deepgram: {
-    id: "deepgram",
-    alias: "dg",
-    name: "Deepgram",
-    icon: "mic",
-    color: "#13EF93",
-    textIcon: "DG",
-    website: "https://deepgram.com",
-  },
-  assemblyai: {
-    id: "assemblyai",
-    alias: "aai",
-    name: "AssemblyAI",
-    icon: "record_voice_over",
-    color: "#0062FF",
-    textIcon: "AA",
-    website: "https://assemblyai.com",
-  },
-  elevenlabs: {
-    id: "elevenlabs",
-    alias: "el",
-    name: "ElevenLabs",
-    icon: "record_voice_over",
-    color: "#6C47FF",
-    textIcon: "EL",
-    website: "https://elevenlabs.io",
-  },
-  cartesia: {
-    id: "cartesia",
-    alias: "cartesia",
-    name: "Cartesia",
-    icon: "spatial_audio",
-    color: "#FF4F8B",
-    textIcon: "CA",
-    website: "https://cartesia.ai",
-  },
-  playht: {
-    id: "playht",
-    alias: "playht",
-    name: "PlayHT",
-    icon: "play_circle",
-    color: "#00B4D8",
-    textIcon: "PH",
-    website: "https://play.ht",
-  },
-  inworld: {
-    id: "inworld",
-    alias: "inworld",
-    name: "Inworld",
-    icon: "voice_chat",
-    color: "#7B2EF2",
-    textIcon: "IW",
-    website: "https://inworld.ai",
-  },
-  "aws-polly": {
-    id: "aws-polly",
-    alias: "polly",
-    name: "AWS Polly",
-    icon: "record_voice_over",
-    color: "#FF9900",
-    textIcon: "PL",
-    website: "https://aws.amazon.com/polly/",
-    authHint:
-      "Use AWS Secret Access Key as API key; set providerSpecificData.accessKeyId and optional region.",
-  },
-};
+// Audio Only Providers — purged in coding-only build.
+export const AUDIO_ONLY_PROVIDERS = {} as const;
 
 export const OPENAI_COMPATIBLE_PREFIX = "openai-compatible-";
 export const ANTHROPIC_COMPATIBLE_PREFIX = "anthropic-compatible-";

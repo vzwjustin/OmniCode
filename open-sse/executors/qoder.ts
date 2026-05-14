@@ -8,6 +8,7 @@ import {
 import { FETCH_TIMEOUT_MS, PROVIDERS } from "../config/constants.ts";
 import { getQoderDashscopeCompatHeaders } from "../config/providerHeaderProfiles.ts";
 import { sanitizeQwenThinkingToolChoice } from "../services/qwenThinking.ts";
+import { sanitizeUpstreamHeaders } from "../utils/responseHeaders.ts";
 
 function getAuthToken(credentials: ProviderCredentials): string {
   if (typeof credentials.apiKey === "string" && credentials.apiKey.trim()) {
@@ -96,7 +97,9 @@ export class QoderExecutor extends BaseExecutor {
 
     mergeUpstreamExtraHeaders(headers, upstreamExtraHeaders);
 
-    const payload = this.transformRequest(mappedModel, body, stream, credentials);
+    const payload = this.transformRequest(mappedModel, body);
+    void stream;
+    void credentials;
 
     const bodyStr = JSON.stringify(payload);
 
@@ -125,7 +128,10 @@ export class QoderExecutor extends BaseExecutor {
         clearTimeout(timeoutId);
       }
 
-      const newHeaders = new Headers(response.headers);
+      // Strip Content-Encoding from upstream headers — Node fetch auto-decompresses
+      // the body before exposing response.body, so forwarding the original header
+      // would mislead clients into attempting gunzip on plain bytes (ZlibError).
+      const newHeaders = sanitizeUpstreamHeaders(response.headers);
 
       if (!response.ok) {
         let errText = await response.text();

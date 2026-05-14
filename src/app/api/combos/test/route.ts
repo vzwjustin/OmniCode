@@ -11,9 +11,30 @@ import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 async function getInternalApiKey(): Promise<string | null> {
   try {
     const keys = await getApiKeys();
+    // Mirror the full validateApiKey lifecycle gates here: an API key is only
+    // valid to drive a combo test if it's active, not banned, not revoked,
+    // and not past its expiry. Anything weaker risks the combo test running
+    // against a stale "active" row that would fail validation in production.
+    const now = Date.now();
     const active = (
-      keys as Array<{ key: string; isActive?: boolean; revokedAt?: string | null }>
-    ).find((k) => k.key && k.isActive !== false && !k.revokedAt);
+      keys as Array<{
+        key?: string;
+        isActive?: boolean;
+        isBanned?: boolean;
+        revokedAt?: string | null;
+        expiresAt?: string | null;
+      }>
+    ).find((k) => {
+      if (!k.key) return false;
+      if (k.isActive === false) return false;
+      if (k.isBanned === true) return false;
+      if (k.revokedAt) return false;
+      if (k.expiresAt) {
+        const expiresMs = Date.parse(k.expiresAt);
+        if (Number.isFinite(expiresMs) && expiresMs <= now) return false;
+      }
+      return true;
+    });
     return active?.key ?? null;
   } catch {
     return null;

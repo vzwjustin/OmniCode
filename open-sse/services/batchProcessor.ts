@@ -396,14 +396,7 @@ async function processSingleItem(item: BatchRequestItem, apiKey: string) {
 }
 
 export function buildRequestBody(item: BatchRequestItem) {
-  const isChatEndpoint = ![
-    "/v1/embeddings",
-    "/v1/moderations",
-    "/v1/images/generations",
-    "/v1/images/edits",
-    "/v1/videos",
-    "/v1/videos/generations",
-  ].includes(item.url);
+  const isChatEndpoint = !["/v1/embeddings", "/v1/moderations"].includes(item.url);
 
   return {
     ...item.body,

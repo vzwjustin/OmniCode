@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   deleteCompressionCombo,
   getCompressionCombo,
@@ -8,24 +7,7 @@ import {
 } from "@/lib/db/compressionCombos";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
-import {
-  cavemanIntensitySchema,
-  stackedPipelineStepSchema,
-} from "@/shared/validation/compressionConfigSchemas";
-
-export const pipelineStepSchema = stackedPipelineStepSchema;
-
-export const compressionComboUpdateSchema = z
-  .object({
-    name: z.string().trim().min(1).max(120).optional(),
-    description: z.string().max(1000).optional(),
-    pipeline: z.array(pipelineStepSchema).min(1).optional(),
-    languagePacks: z.array(z.string().trim().min(1)).optional(),
-    outputMode: z.boolean().optional(),
-    outputModeIntensity: cavemanIntensitySchema.optional(),
-    isDefault: z.boolean().optional(),
-  })
-  .strict();
+import { compressionComboUpdateSchema } from "../schemas";
 
 export async function GET(request: Request, { params }) {
   const authError = await requireManagementAuth(request);

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   PreviewCompressionConfigSchema,
   PreviewRequestSchema,
-} from "../../../src/app/api/compression/preview/route.ts";
+} from "../../../src/app/api/compression/preview/schema.ts";
 
 describe("compression preview API contract", () => {
   it("accepts RTK and stacked preview payloads", () => {

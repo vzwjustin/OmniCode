@@ -214,15 +214,12 @@ test("configured-only preference storage round-trips correctly", () => {
   assert.equal(providerPageStorage.readConfiguredOnlyPreference(mockStorage), false);
 });
 
-test("static catalog entries resolve local, search, audio, web-cookie and upstream providers", () => {
+test("static catalog entries resolve local, search, web-cookie and upstream providers", () => {
   const freeProvider = providerPageUtils.resolveDashboardProviderInfo("amazon-q");
-  const localProvider = providerPageUtils.resolveDashboardProviderInfo("sdwebui");
   const localChatProvider = providerPageUtils.resolveDashboardProviderInfo("lm-studio");
   const lemonadeProvider = providerPageUtils.resolveDashboardProviderInfo("lemonade");
   const searchProvider = providerPageUtils.resolveDashboardProviderInfo("brave-search");
   const youcomSearchProvider = providerPageUtils.resolveDashboardProviderInfo("youcom-search");
-  const audioProvider = providerPageUtils.resolveDashboardProviderInfo("assemblyai");
-  const awsPollyProvider = providerPageUtils.resolveDashboardProviderInfo("aws-polly");
   const webCookieProvider = providerPageUtils.resolveDashboardProviderInfo("grok-web");
   const apiKeyProvider = providerPageUtils.resolveDashboardProviderInfo("glhf");
   const gitlabProvider = providerPageUtils.resolveDashboardProviderInfo("gitlab");
@@ -242,7 +239,6 @@ test("static catalog entries resolve local, search, audio, web-cookie and upstre
   const modalProvider = providerPageUtils.resolveDashboardProviderInfo("modal");
   const rekaProvider = providerPageUtils.resolveDashboardProviderInfo("reka");
   const nlpCloudProvider = providerPageUtils.resolveDashboardProviderInfo("nlpcloud");
-  const runwayProvider = providerPageUtils.resolveDashboardProviderInfo("runwayml");
   const embeddingProvider = providerPageUtils.resolveDashboardProviderInfo("voyage-ai");
   const rerankProvider = providerPageUtils.resolveDashboardProviderInfo("jina-ai");
   const perplexityWebProvider = providerPageUtils.resolveDashboardProviderInfo("perplexity-web");
@@ -253,8 +249,6 @@ test("static catalog entries resolve local, search, audio, web-cookie and upstre
   assert.equal(freeProvider?.category, "free");
   assert.equal(freeProvider?.name, providers.FREE_PROVIDERS["amazon-q"].name);
 
-  assert.equal(localProvider?.category, "local");
-  assert.equal(localProvider?.name, providers.LOCAL_PROVIDERS.sdwebui.name);
   assert.equal(localChatProvider?.category, "local");
   assert.equal(localChatProvider?.name, providers.LOCAL_PROVIDERS["lm-studio"].name);
   assert.equal(lemonadeProvider?.category, "local");
@@ -264,11 +258,6 @@ test("static catalog entries resolve local, search, audio, web-cookie and upstre
   assert.equal(searchProvider?.name, providers.SEARCH_PROVIDERS["brave-search"].name);
   assert.equal(youcomSearchProvider?.category, "search");
   assert.equal(youcomSearchProvider?.name, providers.SEARCH_PROVIDERS["youcom-search"].name);
-
-  assert.equal(audioProvider?.category, "audio");
-  assert.equal(audioProvider?.name, providers.AUDIO_ONLY_PROVIDERS.assemblyai.name);
-  assert.equal(awsPollyProvider?.category, "audio");
-  assert.equal(awsPollyProvider?.name, providers.AUDIO_ONLY_PROVIDERS["aws-polly"].name);
 
   assert.equal(apiKeyProvider?.category, "apikey");
   assert.equal(apiKeyProvider?.name, providers.APIKEY_PROVIDERS.glhf.name);
@@ -306,8 +295,6 @@ test("static catalog entries resolve local, search, audio, web-cookie and upstre
   assert.equal(rekaProvider?.name, providers.APIKEY_PROVIDERS.reka.name);
   assert.equal(nlpCloudProvider?.category, "apikey");
   assert.equal(nlpCloudProvider?.name, providers.APIKEY_PROVIDERS.nlpcloud.name);
-  assert.equal(runwayProvider?.category, "apikey");
-  assert.equal(runwayProvider?.name, providers.APIKEY_PROVIDERS.runwayml.name);
 
   assert.equal(embeddingProvider?.category, "apikey");
   assert.equal(embeddingProvider?.name, providers.APIKEY_PROVIDERS["voyage-ai"].name);
@@ -357,15 +344,11 @@ test("managed provider connection ids include supported static categories and ex
   assert.equal(providerCatalog.isManagedProviderConnectionId("modal"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("reka"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("nlpcloud"), true);
-  assert.equal(providerCatalog.isManagedProviderConnectionId("runwayml"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("voyage-ai"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("jina-ai"), true);
-  assert.equal(providerCatalog.isManagedProviderConnectionId("sdwebui"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("lm-studio"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("vllm"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("lemonade"), true);
-  assert.equal(providerCatalog.isManagedProviderConnectionId("assemblyai"), true);
-  assert.equal(providerCatalog.isManagedProviderConnectionId("aws-polly"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("grok-web"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("perplexity-web"), true);
   assert.equal(providerCatalog.isManagedProviderConnectionId("blackbox-web"), true);
@@ -379,16 +362,12 @@ test("managed provider connection ids include supported static categories and ex
 test("grok-web taxonomy stays web-cookie only and does not leak into api-key entries", () => {
   assert.equal("grok-web" in providers.APIKEY_PROVIDERS, false);
   assert.equal("grok-web" in providers.WEB_COOKIE_PROVIDERS, true);
-  assert.equal("sdwebui" in providers.APIKEY_PROVIDERS, false);
-  assert.equal("sdwebui" in providers.LOCAL_PROVIDERS, true);
   assert.equal("lm-studio" in providers.APIKEY_PROVIDERS, false);
   assert.equal("lm-studio" in providers.LOCAL_PROVIDERS, true);
   assert.equal("vllm" in providers.APIKEY_PROVIDERS, false);
   assert.equal("vllm" in providers.LOCAL_PROVIDERS, true);
   assert.equal("lemonade" in providers.APIKEY_PROVIDERS, false);
   assert.equal("lemonade" in providers.LOCAL_PROVIDERS, true);
-  assert.equal("comfyui" in providers.APIKEY_PROVIDERS, false);
-  assert.equal("comfyui" in providers.LOCAL_PROVIDERS, true);
   assert.equal("blackbox-web" in providers.APIKEY_PROVIDERS, false);
   assert.equal("blackbox-web" in providers.WEB_COOKIE_PROVIDERS, true);
   assert.equal("muse-spark-web" in providers.APIKEY_PROVIDERS, false);
@@ -414,7 +393,6 @@ test("grok-web taxonomy stays web-cookie only and does not leak into api-key ent
   assert.equal("modal" in providers.APIKEY_PROVIDERS, true);
   assert.equal("reka" in providers.APIKEY_PROVIDERS, true);
   assert.equal("nlpcloud" in providers.APIKEY_PROVIDERS, true);
-  assert.equal("runwayml" in providers.APIKEY_PROVIDERS, true);
   assert.equal("voyage-ai" in providers.APIKEY_PROVIDERS, true);
   assert.equal("jina-ai" in providers.APIKEY_PROVIDERS, true);
 
@@ -428,14 +406,6 @@ test("grok-web taxonomy stays web-cookie only and does not leak into api-key ent
     total: 0,
   }));
 
-  assert.equal(
-    apiKeyEntries.some((entry) => entry.providerId === "sdwebui"),
-    false
-  );
-  assert.equal(
-    apiKeyEntries.some((entry) => entry.providerId === "comfyui"),
-    false
-  );
   assert.equal(
     apiKeyEntries.some((entry) => entry.providerId === "lm-studio"),
     false
@@ -533,23 +503,11 @@ test("grok-web taxonomy stays web-cookie only and does not leak into api-key ent
     true
   );
   assert.equal(
-    apiKeyEntries.some((entry) => entry.providerId === "runwayml"),
-    true
-  );
-  assert.equal(
     apiKeyEntries.some((entry) => entry.providerId === "voyage-ai"),
     true
   );
   assert.equal(
     apiKeyEntries.some((entry) => entry.providerId === "jina-ai"),
-    true
-  );
-  assert.equal(
-    localEntries.some((entry) => entry.providerId === "sdwebui"),
-    true
-  );
-  assert.equal(
-    localEntries.some((entry) => entry.providerId === "comfyui"),
     true
   );
   assert.equal(

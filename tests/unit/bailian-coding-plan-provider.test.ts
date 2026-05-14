@@ -280,7 +280,7 @@ test("getStaticModelsForProvider returns local image catalogs for image-only pro
 
 test("getStaticModelsForProvider returns models for other static providers", () => {
   // Verify other static providers still work
-  const staticProviders = ["deepgram", "assemblyai", "nanobanana", "perplexity"];
+  const staticProviders = ["perplexity"];
 
   for (const provider of staticProviders) {
     const models = getStaticModelsForProvider(provider);

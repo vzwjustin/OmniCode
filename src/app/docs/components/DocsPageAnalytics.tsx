@@ -69,7 +69,10 @@ export function getPopularPages(
 
   try {
     const events = getEvents();
-    const counts = new Map<string, { title: string; section: string; views: number }>();
+    const counts = new Map<
+      string,
+      { slug: string; title: string; section: string; views: number }
+    >();
 
     for (const event of events) {
       const existing = counts.get(event.slug);

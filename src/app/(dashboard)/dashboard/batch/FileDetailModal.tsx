@@ -42,6 +42,9 @@ interface FileRecord {
   purpose: string;
   createdAt: number;
   expiresAt?: number | null;
+  // Legacy/server-side snake_case fields kept for backward compatibility.
+  created_at?: number;
+  expires_at?: number | null;
 }
 
 interface FileDetailModalProps {

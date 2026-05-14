@@ -72,7 +72,7 @@ export async function PUT(request, { params }) {
     const normalizedUpdate = { ...validation.data };
     if (normalizedUpdate.compressionOverride !== undefined) {
       const legacyCompressionOverride = normalizedUpdate.compressionOverride;
-      const nextConfig =
+      const nextConfig: Record<string, unknown> =
         currentCombo.config &&
         typeof currentCombo.config === "object" &&
         !Array.isArray(currentCombo.config)
@@ -91,8 +91,10 @@ export async function PUT(request, { params }) {
       ? {
           ...normalizedUpdate,
           models: normalizeComboModels(normalizedUpdate.models, {
-            comboName,
-            allCombos,
+            comboName: comboName as string | null | undefined,
+            allCombos: allCombos as unknown as Parameters<
+              typeof normalizeComboModels
+            >[1]["allCombos"],
           }),
         }
       : normalizedUpdate;
@@ -102,7 +104,7 @@ export async function PUT(request, { params }) {
       name: comboName,
     };
     const compositeValidation = validateCompositeTiersConfig(nextComboState);
-    if (!compositeValidation.success) {
+    if (compositeValidation.success !== true) {
       return NextResponse.json({ error: compositeValidation.error }, { status: 400 });
     }
 

@@ -8,7 +8,7 @@ import {
   getRecommendedMinTier,
 } from "./specificityDetector";
 import type { RuleInput } from "./specificityTypes";
-import type { ResolvedComboTarget } from "./combo";
+import type { ResolvedComboTarget } from "./comboTypes";
 
 export type StrategyModifier =
   | "default"

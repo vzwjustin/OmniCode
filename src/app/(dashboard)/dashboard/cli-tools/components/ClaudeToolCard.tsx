@@ -221,7 +221,13 @@ export default function ClaudeToolCard({
 
   // Generate settings.json content for manual copy
   const getManualConfigs = () => {
-    const env = { ANTHROPIC_BASE_URL: getEffectiveBaseUrl() };
+    // Claude CLI reads both ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN from
+    // ~/.claude/settings.json. Declare the env shape with both keys explicitly
+    // so TypeScript narrows correctly and additional model env keys can be
+    // attached below.
+    const env: Record<string, string> = {
+      ANTHROPIC_BASE_URL: getEffectiveBaseUrl(),
+    };
     if (selectedApiKey && selectedApiKey.trim()) {
       env.ANTHROPIC_AUTH_TOKEN = "<API_KEY_FROM_DASHBOARD>";
     } else if (cloudEnabled) {

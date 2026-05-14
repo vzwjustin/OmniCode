@@ -61,6 +61,8 @@ import { recordCost } from "@/domain/costRules";
 import { calculateCost } from "@/lib/usage/costCalculator";
 import { buildOmniRouteResponseMetaHeaders } from "@/domain/omnirouteResponseMeta";
 import { CLAUDE_OAUTH_TOOL_PREFIX } from "../translator/request/openai-to-claude.ts";
+import { stripToolModelPrefixes } from "../translator/helpers/claudeHelper.ts";
+import { sanitizeUpstreamHeaders } from "../utils/responseHeaders.ts";
 import {
   getModelNormalizeToolCallId,
   getModelPreserveOpenAIDeveloperRole,
@@ -2381,6 +2383,15 @@ export async function handleChatCore({
       // regardless of combo strategy or cache_control settings.
       translatedBody = { ...body };
       translatedBody._disableToolPrefix = true;
+
+      // Strip combo/provider prefixes from subagent-tool `model` fields.
+      // Anthropic's /v1/messages rejects "cc/claude-opus-4-7" etc. with
+      // 400: "tools.<n>.model: cc/...". The full translateRequest path
+      // already strips these inside prepareClaudeRequest, but the passthrough
+      // branch bypasses that flow — apply directly. Mutates translatedBody.tools
+      // in place; safe when tools is absent or non-array.
+      stripToolModelPrefixes(translatedBody.tools);
+
       normalizeClaudeUpstreamMessages(translatedBody, { preserveToolResultBlocks: true });
 
       log?.debug?.("FORMAT", `claude passthrough (preserveCache=${preserveCacheControl})`);
@@ -2950,6 +2961,7 @@ export async function handleChatCore({
                   return res;
                 }
 
+                const streamSafeHeaders = sanitizeUpstreamHeaders(res.response.headers);
                 return {
                   ...res,
                   response: new Response(
@@ -2957,10 +2969,10 @@ export async function handleChatCore({
                     {
                       status: res.response.status,
                       statusText: res.response.statusText,
-                      headers: res.response.headers,
+                      headers: streamSafeHeaders,
                     }
                   ),
-                  headers: res.response.headers,
+                  headers: streamSafeHeaders,
                 };
               }
 
@@ -2975,9 +2987,11 @@ export async function handleChatCore({
         }
 
         // Non-stream: release semaphore immediately after reading full response body.
+        // Sanitize headers: `Content-Encoding` would otherwise mislead the client into
+        // attempting to gunzip the already-decompressed payload (ZlibError).
         const status = rawResult.response.status;
         const statusText = rawResult.response.statusText;
-        const headers = new Headers(rawResult.response.headers);
+        const headers = sanitizeUpstreamHeaders(rawResult.response.headers);
         const payload = await withBodyTimeout<string>(rawResult.response.text());
         acquireAccountSemaphoreRelease();
 
@@ -4072,9 +4086,15 @@ export async function handleChatCore({
     await onRequestSuccess();
   }
 
+  // Sanitize upstream headers before forwarding to the client. Stripping
+  // Content-Encoding is critical because Node's fetch auto-decompresses
+  // response bodies but leaves the header intact — clients then try to
+  // gunzip plain text and throw ZlibError. Also strips hop-by-hop headers
+  // (RFC 7230) and Content-Length (becomes wrong after transform stream).
+  const sanitizedUpstreamHeaders = sanitizeUpstreamHeaders(providerResponse.headers);
   const responseHeaders: Record<string, string> = {
     ...Object.fromEntries(
-      Array.from(providerResponse.headers.entries()).filter(
+      Array.from(sanitizedUpstreamHeaders.entries() as Iterable<[string, string]>).filter(
         ([k]) => k.toLowerCase() !== "content-type"
       )
     ),

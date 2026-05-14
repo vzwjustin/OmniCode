@@ -4,8 +4,6 @@ import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { rtkConfigSchema } from "@/shared/validation/compressionConfigSchemas";
 
-export { rtkConfigSchema };
-
 export async function GET(request: Request) {
   const authError = await requireManagementAuth(request);
   if (authError) return authError;

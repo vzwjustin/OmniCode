@@ -502,3 +502,35 @@ test("toolCallHelper normalizes ids, links tool responses and inserts missing to
   assert.equal(toolCallHelper.hasToolResults({ role: "user", content: [] }, []), false);
   assert.deepEqual(toolCallHelper.fixMissingToolResponses({ messages: null }), { messages: null });
 });
+
+test("claudeHelper strips combo/provider prefixes from tool.model fields", () => {
+  // Regression for Anthropic 400 "tools.<n>.model: cc/claude-opus-4-7".
+  // Combo prefixes (cc/, openai/, etc.) must be stripped before forwarding to
+  // Anthropic's /v1/messages endpoint because it only accepts bare model IDs.
+  const out = claudeHelper.prepareClaudeRequest(
+    {
+      messages: [{ role: "user", content: "hi" }],
+      tools: [
+        { name: "task_general", model: "cc/claude-opus-4-7", description: "subagent" },
+        { name: "subagent_search", model: "openai/gpt-4", description: "search" },
+        { name: "no_model", description: "no model field" },
+        { name: "bare", model: "claude-sonnet-4-5", description: "already bare" },
+        { name: "trailing_slash", model: "cc/", description: "edge: empty after slash" },
+        { name: "leading_slash", model: "/cc-claude", description: "edge: empty before slash" },
+      ],
+    },
+    "claude",
+    false
+  );
+
+  // First two: prefixes stripped
+  assert.equal(out.tools[0].model, "claude-opus-4-7");
+  assert.equal(out.tools[1].model, "gpt-4");
+  // No model field: unchanged
+  assert.equal(out.tools[2].model, undefined);
+  // Bare model: unchanged
+  assert.equal(out.tools[3].model, "claude-sonnet-4-5");
+  // Edge cases: trailing slash and leading slash both left unchanged (slashIdx out of bounds)
+  assert.equal(out.tools[4].model, "cc/");
+  assert.equal(out.tools[5].model, "/cc-claude");
+});

@@ -18,7 +18,6 @@ export const HIDEABLE_SIDEBAR_ITEM_IDS = [
   "skills",
   "translator",
   "playground",
-  "media",
   "search-tools",
   "logs",
   "audit",
@@ -69,7 +68,6 @@ const PRIMARY_SIDEBAR_ITEMS: readonly SidebarItemDefinition[] = [
   { id: "analytics", href: "/dashboard/analytics", i18nKey: "analytics", icon: "analytics" },
   { id: "cache", href: "/dashboard/cache", i18nKey: "cache", icon: "cached" },
   { id: "batch", href: "/dashboard/batch", i18nKey: "batch", icon: "view_list" },
-  { id: "media", href: "/dashboard/cache/media", i18nKey: "media", icon: "perm_media" },
 ];
 
 const CLI_SIDEBAR_ITEMS: readonly SidebarItemDefinition[] = [

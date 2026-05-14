@@ -334,8 +334,10 @@ function isSchemaAlreadyApplied(
       return (
         hasColumn(db, "call_logs", "detail_state") && hasColumn(db, "call_logs", "request_summary")
       );
-    case "026":
-      return hasColumn(db, "call_logs", "cache_source");
+    // (026 reserved — SQL file was never committed under that number; the
+    // cache_source column it would have added is already present in
+    // 001_initial_schema.sql + 025_call_logs_summary_storage.sql, so any
+    // installation will satisfy the idempotency check transparently.)
     case "027":
       return hasColumn(db, "skills", "mode");
     case "028":

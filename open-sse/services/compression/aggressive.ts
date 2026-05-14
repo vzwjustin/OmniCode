@@ -145,7 +145,7 @@ export function compressAggressive(
 
   if (resultStats.savingsPercent < cfg.minSavingsThreshold * 100) {
     try {
-      const cavemanResult = cavemanCompress({ messages: currentMessages });
+      const cavemanResult = cavemanCompress({ messages: currentMessages as never });
       if (cavemanResult?.compressed && cavemanResult.stats) {
         const cavemanSavings = cavemanResult.stats.savingsPercent ?? 0;
         if (cavemanSavings > resultStats.savingsPercent) {

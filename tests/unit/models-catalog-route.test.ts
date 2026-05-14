@@ -479,14 +479,9 @@ test("v1 models catalog includes synced non-Gemini provider models from discover
   assert.equal(syncedModel.context_length, 262144);
 });
 
-test("v1 models catalog includes media, moderation, rerank, video, and music models for active providers", async () => {
-  await seedConnection("openai", { name: "openai-media" });
+test("v1 models catalog includes moderation and rerank models for active providers", async () => {
+  await seedConnection("openai", { name: "openai-moderation" });
   await seedConnection("cohere", { name: "cohere-rerank" });
-  await seedConnection("comfyui", {
-    name: "comfy-media",
-    apiKey: null,
-    accessToken: null,
-  });
 
   const response = await v1ModelsCatalog.getUnifiedModelsResponse(
     new Request("http://localhost/api/v1/models")
@@ -495,13 +490,8 @@ test("v1 models catalog includes media, moderation, rerank, video, and music mod
   const byId = new Map(body.data.map((item) => [item.id, item]));
 
   assert.equal(response.status, 200);
-  assert.equal((byId.get("openai/gpt-image-2") as any).type, "image");
-  assert.equal((byId.get("openai/whisper-1") as any).type, "audio");
-  assert.equal((byId.get("openai/whisper-1") as any).subtype, "transcription");
   assert.equal((byId.get("openai/omni-moderation-latest") as any).type, "moderation");
   assert.equal((byId.get("cohere/rerank-v3.5") as any).type, "rerank");
-  assert.equal((byId.get("comfyui/animatediff") as any).type, "video");
-  assert.equal((byId.get("comfyui/stable-audio-open") as any).type, "music");
 });
 
 test("v1 models catalog does not duplicate imported Jina specialty models", async () => {

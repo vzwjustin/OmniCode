@@ -36,24 +36,6 @@ const API_ENDPOINTS: ApiEndpoint[] = [
   },
   {
     method: "POST",
-    path: "/v1/images/generations",
-    description: "Generate images from text prompts",
-    tag: "Images",
-  },
-  {
-    method: "POST",
-    path: "/v1/audio/transcriptions",
-    description: "Transcribe audio files",
-    tag: "Audio",
-  },
-  {
-    method: "POST",
-    path: "/v1/audio/speech",
-    description: "Text-to-speech generation",
-    tag: "Audio",
-  },
-  {
-    method: "POST",
     path: "/v1/moderations",
     description: "Content moderation check",
     tag: "Moderations",
@@ -69,18 +51,6 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     path: "/v1/search",
     description: "Web search across 5 providers",
     tag: "Search",
-  },
-  {
-    method: "POST",
-    path: "/v1/videos/generations",
-    description: "Generate videos from prompts",
-    tag: "Video",
-  },
-  {
-    method: "POST",
-    path: "/v1/music/generations",
-    description: "Generate music from prompts",
-    tag: "Music",
   },
 ];
 
@@ -101,11 +71,6 @@ const EXAMPLE_BODIES: Record<string, string> = {
   "/v1/models": "",
   "/v1/embeddings": JSON.stringify(
     { model: "openai/text-embedding-3-small", input: "Hello world" },
-    null,
-    2
-  ),
-  "/v1/images/generations": JSON.stringify(
-    { model: "openai/gpt-image-2", prompt: "A sunset over mountains", n: 1 },
     null,
     2
   ),

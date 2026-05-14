@@ -8,10 +8,6 @@ const handlerLoaders: Record<SupportedBatchEndpoint, () => Promise<BatchRouteHan
   "/v1/embeddings": async () => (await import("@/app/api/v1/embeddings/route")).POST,
   "/v1/completions": async () => (await import("@/app/api/v1/completions/route")).POST,
   "/v1/moderations": async () => (await import("@/app/api/v1/moderations/route")).POST,
-  "/v1/images/generations": async () =>
-    (await import("@/app/api/v1/images/generations/route")).POST,
-  "/v1/videos/generations": async () =>
-    (await import("@/app/api/v1/videos/generations/route")).POST,
 };
 
 const handlerCache = new Map<SupportedBatchEndpoint, BatchRouteHandler>();

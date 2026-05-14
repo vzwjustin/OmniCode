@@ -90,6 +90,11 @@ function registerCompressionSchedulerShutdownHooks(): void {
  * subsequent calls are no-ops once the periodic timer is running.
  */
 export async function initCompressionScheduler(): Promise<void> {
+  if (_compressionSchedulerTimer) {
+    // Already initialized — bail out so repeated calls (e.g. Next.js HMR)
+    // don't leak timers.
+    return;
+  }
   console.log("[CompressionScheduler] Initializing compression scheduler...");
 
   try {
@@ -98,9 +103,9 @@ export async function initCompressionScheduler(): Promise<void> {
     console.error("[CompressionScheduler] Failed to run initial compression:", err);
   }
 
-  if (_compressionSchedulerTimer) return;
-
-  // Set up periodic check (every hour)
+  // Set up periodic check (every hour). Capture the timer handle so we can
+  // shut it down on process exit, and unref() so an idle scheduler never
+  // pins the event loop open.
   _compressionSchedulerTimer = setInterval(
     async () => {
       try {

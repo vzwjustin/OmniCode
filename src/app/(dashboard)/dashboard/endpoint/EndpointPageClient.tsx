@@ -109,7 +109,7 @@ type EndpointModelSummary = {
   root?: string;
 };
 
-type CopyHandler = (text: string, key?: string) => void | Promise<void>;
+type CopyHandler = (text: string, key?: string) => void | Promise<void> | Promise<boolean>;
 
 type EndpointTunnelVisibility = {
   showCloudflaredTunnel: boolean;
@@ -1331,7 +1331,7 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
               </p>
             )}
             <p className="text-xs text-text-muted/70 mt-3">
-              Tip: don't have a cloud instance yet? You can skip this — OmniRoute works
+              Tip: don&apos;t have a cloud instance yet? You can skip this — OmniRoute works
               fully local. Sync is optional.
             </p>
           </div>
@@ -1876,105 +1876,6 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
                 onToggle={() =>
                   setExpandedEndpoint(expandedEndpoint === "embeddings" ? null : "embeddings")
                 }
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Image Generation */}
-              <EndpointSection
-                icon="image"
-                iconColor="text-purple-500"
-                iconBg="bg-purple-500/10"
-                title={t("imageGeneration")}
-                path="/v1/images/generations"
-                description={t("imageDesc")}
-                models={endpointData.images}
-                expanded={expandedEndpoint === "images"}
-                onToggle={() =>
-                  setExpandedEndpoint(expandedEndpoint === "images" ? null : "images")
-                }
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Audio Transcription */}
-              <EndpointSection
-                icon="mic"
-                iconColor="text-rose-500"
-                iconBg="bg-rose-500/10"
-                title={t("audioTranscription")}
-                path="/v1/audio/transcriptions"
-                description={t("audioTranscriptionDesc")}
-                models={endpointData.audioTranscription}
-                expanded={expandedEndpoint === "audioTranscription"}
-                onToggle={() =>
-                  setExpandedEndpoint(
-                    expandedEndpoint === "audioTranscription" ? null : "audioTranscription"
-                  )
-                }
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Audio Speech (TTS) */}
-              <EndpointSection
-                icon="record_voice_over"
-                iconColor="text-cyan-500"
-                iconBg="bg-cyan-500/10"
-                title={t("textToSpeech")}
-                path="/v1/audio/speech"
-                description={t("textToSpeechDesc")}
-                models={endpointData.audioSpeech}
-                expanded={expandedEndpoint === "audioSpeech"}
-                onToggle={() =>
-                  setExpandedEndpoint(expandedEndpoint === "audioSpeech" ? null : "audioSpeech")
-                }
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Music Generation */}
-              <EndpointSection
-                icon="music_note"
-                iconColor="text-fuchsia-500"
-                iconBg="bg-fuchsia-500/10"
-                title={t("musicGeneration") || "Music Generation"}
-                path="/v1/music/generations"
-                description={
-                  t("musicDesc") ||
-                  "Generate music and audio tracks via ComfyUI (Stable Audio, MusicGen)"
-                }
-                models={endpointData.music}
-                expanded={expandedEndpoint === "music"}
-                onToggle={() => setExpandedEndpoint(expandedEndpoint === "music" ? null : "music")}
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Video Generation */}
-              <EndpointSection
-                icon="videocam"
-                iconColor="text-red-500"
-                iconBg="bg-red-500/10"
-                title={t("videoGeneration") || "Video Generation"}
-                path="/v1/videos/generations"
-                description={
-                  t("videoDesc") ||
-                  "Generate videos via ComfyUI, Stable Diffusion WebUI, and compatible providers"
-                }
-                models={endpointData.video}
-                expanded={expandedEndpoint === "video"}
-                onToggle={() => setExpandedEndpoint(expandedEndpoint === "video" ? null : "video")}
                 copy={copy}
                 copied={copied}
                 baseUrl={currentEndpoint}

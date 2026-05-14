@@ -208,27 +208,6 @@ test("provider models route returns static catalog entries for providers with ha
   assert.equal(body.models.length, 8);
 });
 
-test("provider models route returns AWS Polly speech engines from the audio registry", async () => {
-  const connection = await seedConnection("aws-polly", {
-    apiKey: "aws-secret-key",
-    providerSpecificData: {
-      accessKeyId: "AKIA_TEST",
-      region: "us-east-1",
-    },
-  });
-
-  const response = await callRoute(connection.id);
-  const body = (await response.json()) as any;
-
-  assert.equal(response.status, 200);
-  assert.equal(body.provider, "aws-polly");
-  assert.equal(body.source, "local_catalog");
-  assert.deepEqual(
-    body.models.map((model) => model.id),
-    ["standard", "neural", "long-form", "generative"]
-  );
-});
-
 test("provider models route returns the local catalog for GitLab Duo fallback models", async () => {
   const connection = await seedConnection("gitlab", {
     apiKey: "glpat-test",
@@ -293,21 +272,7 @@ test("provider models route discovers local OpenAI-style models without requirin
   ]);
 });
 
-test("provider models route returns the local catalog for built-in image providers", async () => {
-  const connection = await seedConnection("topaz", {
-    apiKey: "topaz-key",
-  });
-
-  const response = await callRoute(connection.id);
-  const body = (await response.json()) as any;
-
-  assert.equal(response.status, 200);
-  assert.equal(body.provider, "topaz");
-  assert.ok(Array.isArray(body.models));
-  assert.deepEqual(body.models, [{ id: "topaz-enhance", name: "topaz-enhance" }]);
-});
-
-test("provider models route prefers the remote OpenRouter /models API over static image models", async () => {
+test("provider models route prefers the remote OpenRouter /models API over the local catalog", async () => {
   const connection = await seedConnection("openrouter", {
     apiKey: "openrouter-key",
   });
@@ -372,22 +337,6 @@ test("provider models route returns the local catalog for embedding and rerank p
     )
   );
   assert.ok(jinaBody.models.some((model) => model.id === "jina-reranker-m0"));
-});
-
-test("provider models route returns the local catalog for Runway video models", async () => {
-  const connection = await seedConnection("runwayml", {
-    apiKey: "runway-key",
-  });
-
-  const response = await callRoute(connection.id);
-  const body = (await response.json()) as any;
-
-  assert.equal(response.status, 200);
-  assert.equal(body.provider, "runwayml");
-  assert.equal(body.source, "local_catalog");
-  assert.ok(body.models.some((model) => model.id === "gen4.5"));
-  assert.ok(body.models.some((model) => model.id === "veo3.1"));
-  assert.ok(body.models.some((model) => model.id === "gen3a_turbo"));
 });
 
 test("provider models route returns the updated local catalog for GitHub Copilot", async () => {

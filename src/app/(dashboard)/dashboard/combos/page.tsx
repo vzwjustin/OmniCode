@@ -32,6 +32,7 @@ import {
   isIntelligentBuilderStrategy,
   parseQualifiedModel,
   resolveComboBuilderProviderId,
+  type ComboBuilderStage,
 } from "@/lib/combos/builderDraft";
 import { normalizeComboConfigMode } from "@/shared/constants/comboConfigMode";
 import BuilderIntelligentStep from "./BuilderIntelligentStep";
@@ -163,7 +164,7 @@ const LEGACY_COMBO_RESILIENCE_KEYS = new Set([
   "healthCheckTimeoutMs",
 ]);
 
-function sanitizeComboRuntimeConfig(config) {
+function sanitizeComboRuntimeConfig(config): Record<string, any> {
   if (!config || typeof config !== "object") return {};
   return Object.fromEntries(
     Object.entries(config).filter(
@@ -305,7 +306,12 @@ const STRATEGY_RECOMMENDATIONS_FALLBACK = {
 };
 
 const COMBO_USAGE_GUIDE_STORAGE_KEY = "omniroute:combos:hide-usage-guide";
-const COMBO_FORM_STAGE_META = [
+const COMBO_FORM_STAGE_META: Array<{
+  id: ComboBuilderStage;
+  fallbackLabel: string;
+  fallbackDescription: string;
+  icon: string;
+}> = [
   {
     id: "basics",
     fallbackLabel: "Basics",
@@ -444,7 +450,9 @@ function getStrategyDescription(t, strategy) {
   return getI18nOrFallback(
     t,
     key,
-    STRATEGY_DESC_FALLBACK[strategy] || STRATEGY_DESC_FALLBACK.priority || strategy
+    (STRATEGY_DESC_FALLBACK as Record<string, string>)[strategy] ||
+      (STRATEGY_DESC_FALLBACK as Record<string, string>).priority ||
+      strategy
   );
 }
 
@@ -2011,7 +2019,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   ]);
 
   useEffect(() => {
-    if (!comboBuilderStages.includes(builderStage)) {
+    if (!comboBuilderStages.includes(builderStage as ComboBuilderStage)) {
       setBuilderStage("strategy");
     }
   }, [builderStage, comboBuilderStages]);
@@ -2355,11 +2363,15 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   };
 
   const handleGoToNextStage = () => {
-    setBuilderStage((currentStage) => getNextComboBuilderStage(currentStage, { strategy }));
+    setBuilderStage((currentStage) =>
+      getNextComboBuilderStage(currentStage as ComboBuilderStage, { strategy })
+    );
   };
 
   const handleGoToPreviousStage = () => {
-    setBuilderStage((currentStage) => getPreviousComboBuilderStage(currentStage, { strategy }));
+    setBuilderStage((currentStage) =>
+      getPreviousComboBuilderStage(currentStage as ComboBuilderStage, { strategy })
+    );
   };
 
   const handleAddBuilderStep = () => {
@@ -2957,7 +2969,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
                   ...previousConfig,
                   ...nextIntelligentConfig,
                   weights: {
-                    ...(previousConfig?.weights || {}),
+                    ...((previousConfig as any)?.weights || {}),
                     ...(nextIntelligentConfig?.weights || {}),
                   },
                 }))

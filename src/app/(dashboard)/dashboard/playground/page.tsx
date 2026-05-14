@@ -49,37 +49,10 @@ const DEFAULT_BODIES: Record<string, object> = {
     input: "Hello! Say hi in one sentence.",
     stream: false,
   },
-  images: {
-    model: "",
-    prompt: "A beautiful sunset over mountains",
-    n: 1,
-    size: "1024x1024",
-  },
   embeddings: {
     model: "",
     input: "Hello world",
     encoding_format: "float",
-  },
-  speech: {
-    model: "openai/tts-1",
-    input: "Hello, this is a test of the text-to-speech endpoint.",
-    voice: "alloy",
-    response_format: "mp3",
-  },
-  transcription: {
-    // Note: this endpoint requires multipart/form-data — use the file upload below
-    model: "deepgram/nova-3",
-    language: "en",
-  },
-  video: {
-    model: "comfyui/animatediff",
-    prompt: "A timelapse of a sunset over the ocean",
-    n: 1,
-  },
-  music: {
-    model: "comfyui/stable-audio",
-    prompt: "Calm ambient piano music with soft reverb",
-    duration: 10,
   },
   rerank: {
     model: "cohere/rerank-english-v3.0",
@@ -101,12 +74,7 @@ const DEFAULT_BODIES: Record<string, object> = {
 const ENDPOINT_PATHS: Record<string, string> = {
   chat: "/v1/chat/completions",
   responses: "/v1/responses",
-  images: "/v1/images/generations",
   embeddings: "/v1/embeddings",
-  speech: "/v1/audio/speech",
-  transcription: "/v1/audio/transcriptions",
-  video: "/v1/videos/generations",
-  music: "/v1/music/generations",
   rerank: "/v1/rerank",
   search: "/v1/search",
 };
@@ -193,12 +161,7 @@ export default function PlaygroundPage() {
       { value: "conversational", label: "Chat (Conversational)" },
       { value: "chat", label: t("endpointOptions.chat") },
       { value: "responses", label: t("endpointOptions.responses") },
-      { value: "images", label: t("endpointOptions.images") },
       { value: "embeddings", label: t("endpointOptions.embeddings") },
-      { value: "speech", label: t("endpointOptions.speech") },
-      { value: "transcription", label: t("endpointOptions.transcription") },
-      { value: "video", label: t("endpointOptions.video") },
-      { value: "music", label: t("endpointOptions.music") },
       { value: "rerank", label: t("endpointOptions.rerank") },
       { value: "search", label: t("endpointOptions.search") },
     ],

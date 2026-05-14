@@ -13,24 +13,24 @@ const { parseModelFromRegistry, getAllModelsFromRegistry, buildAuthHeaders } =
 // ─── Test fixtures ────────────────────────────────────────────
 
 const MOCK_REGISTRY = {
-  elevenlabs: {
-    id: "elevenlabs",
-    baseUrl: "https://api.elevenlabs.io/v1",
+  groq: {
+    id: "groq",
+    baseUrl: "https://api.groq.com/openai/v1",
     authType: "apikey",
-    authHeader: "xi-api-key",
+    authHeader: "bearer",
     models: [
-      { id: "eleven_multilingual_v2", name: "Multilingual V2" },
-      { id: "eleven_turbo_v2_5", name: "Turbo V2.5" },
+      { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B Versatile" },
+      { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B" },
     ],
   },
-  comfyui: {
-    id: "comfyui",
-    baseUrl: "http://localhost:8188",
+  ollama: {
+    id: "ollama",
+    baseUrl: "http://localhost:11434",
     authType: "none",
     authHeader: "none",
     models: [
-      { id: "flux-dev", name: "FLUX Dev" },
-      { id: "sdxl", name: "SDXL" },
+      { id: "qwen2.5-coder", name: "Qwen 2.5 Coder" },
+      { id: "deepseek-coder-v2", name: "DeepSeek Coder V2" },
     ],
   },
   nvidia: {
@@ -38,7 +38,7 @@ const MOCK_REGISTRY = {
     baseUrl: "https://integrate.api.nvidia.com/v1",
     authType: "apikey",
     authHeader: "bearer",
-    models: [{ id: "parakeet-ctc-1.1b-asr", name: "Parakeet CTC 1.1B" }],
+    models: [{ id: "nemotron-4-340b-instruct", name: "Nemotron 4 340B" }],
   },
 };
 
@@ -57,26 +57,26 @@ test("parseModelFromRegistry: returns null provider for empty string", () => {
 });
 
 test("parseModelFromRegistry: parses provider/model prefix correctly", () => {
-  const result = parseModelFromRegistry("elevenlabs/eleven_multilingual_v2", MOCK_REGISTRY);
+  const result = parseModelFromRegistry("groq/llama-3.3-70b-versatile", MOCK_REGISTRY);
   assert.deepEqual(result, {
-    provider: "elevenlabs",
-    model: "eleven_multilingual_v2",
+    provider: "groq",
+    model: "llama-3.3-70b-versatile",
   });
 });
 
-test("parseModelFromRegistry: parses comfyui/flux-dev correctly", () => {
-  const result = parseModelFromRegistry("comfyui/flux-dev", MOCK_REGISTRY);
-  assert.deepEqual(result, { provider: "comfyui", model: "flux-dev" });
+test("parseModelFromRegistry: parses ollama/qwen2.5-coder correctly", () => {
+  const result = parseModelFromRegistry("ollama/qwen2.5-coder", MOCK_REGISTRY);
+  assert.deepEqual(result, { provider: "ollama", model: "qwen2.5-coder" });
 });
 
 test("parseModelFromRegistry: finds bare model ID without provider prefix", () => {
-  const result = parseModelFromRegistry("sdxl", MOCK_REGISTRY);
-  assert.deepEqual(result, { provider: "comfyui", model: "sdxl" });
+  const result = parseModelFromRegistry("deepseek-coder-v2", MOCK_REGISTRY);
+  assert.deepEqual(result, { provider: "ollama", model: "deepseek-coder-v2" });
 });
 
 test("parseModelFromRegistry: finds bare model in first matching provider", () => {
-  const result = parseModelFromRegistry("parakeet-ctc-1.1b-asr", MOCK_REGISTRY);
-  assert.deepEqual(result, { provider: "nvidia", model: "parakeet-ctc-1.1b-asr" });
+  const result = parseModelFromRegistry("nemotron-4-340b-instruct", MOCK_REGISTRY);
+  assert.deepEqual(result, { provider: "nvidia", model: "nemotron-4-340b-instruct" });
 });
 
 test("parseModelFromRegistry: returns null provider for unknown model", () => {
@@ -102,14 +102,14 @@ test("parseModelFromRegistry: handles provider prefix with no matching model", (
 test("getAllModelsFromRegistry: returns all models with prefixed IDs", () => {
   const models = getAllModelsFromRegistry(MOCK_REGISTRY);
 
-  // Total: elevenlabs(2) + comfyui(2) + nvidia(1) = 5
+  // Total: groq(2) + ollama(2) + nvidia(1) = 5
   assert.equal(models.length, 5);
 
   // Check IDs are prefixed
   const ids = models.map((m) => m.id);
-  assert.ok(ids.includes("elevenlabs/eleven_multilingual_v2"));
-  assert.ok(ids.includes("comfyui/flux-dev"));
-  assert.ok(ids.includes("nvidia/parakeet-ctc-1.1b-asr"));
+  assert.ok(ids.includes("groq/llama-3.3-70b-versatile"));
+  assert.ok(ids.includes("ollama/qwen2.5-coder"));
+  assert.ok(ids.includes("nvidia/nemotron-4-340b-instruct"));
 });
 
 test("getAllModelsFromRegistry: each model has provider field", () => {
@@ -126,11 +126,11 @@ test("getAllModelsFromRegistry: extra callback adds fields per provider", () => 
     authType: config.authType,
   }));
 
-  const elevenlabsModel = models.find((m) => m.id === "elevenlabs/eleven_multilingual_v2");
-  assert.equal(elevenlabsModel.authType, "apikey");
+  const groqModel = models.find((m) => m.id === "groq/llama-3.3-70b-versatile");
+  assert.equal(groqModel.authType, "apikey");
 
-  const comfyuiModel = models.find((m) => m.id === "comfyui/flux-dev");
-  assert.equal(comfyuiModel.authType, "none");
+  const ollamaModel = models.find((m) => m.id === "ollama/qwen2.5-coder");
+  assert.equal(ollamaModel.authType, "none");
 });
 
 test("getAllModelsFromRegistry: returns empty array for empty registry", () => {
@@ -147,13 +147,8 @@ test("buildAuthHeaders: returns Bearer header for bearer authHeader", () => {
   assert.deepEqual(headers, { Authorization: "Bearer my-api-key" });
 });
 
-test("buildAuthHeaders: returns xi-api-key header for ElevenLabs", () => {
-  const headers = buildAuthHeaders(MOCK_REGISTRY.elevenlabs, "eleven-key-123");
-  assert.deepEqual(headers, { "xi-api-key": "eleven-key-123" });
-});
-
 test("buildAuthHeaders: returns empty object for authType none", () => {
-  const headers = buildAuthHeaders(MOCK_REGISTRY.comfyui, "any-token");
+  const headers = buildAuthHeaders(MOCK_REGISTRY.ollama, "any-token");
   assert.deepEqual(headers, {});
 });
 
@@ -180,52 +175,14 @@ test("buildAuthHeaders: returns x-api-key header", () => {
   assert.deepEqual(headers, { "x-api-key": "custom-key" });
 });
 
+test("buildAuthHeaders: returns x-custom-key header", () => {
+  const provider = { ...MOCK_REGISTRY.nvidia, authHeader: "xi-api-key", authType: "apikey" };
+  const headers = buildAuthHeaders(provider, "xi-key");
+  assert.deepEqual(headers, { "xi-api-key": "xi-key" });
+});
+
 test("buildAuthHeaders: returns empty object for authHeader none", () => {
   const provider = { ...MOCK_REGISTRY.nvidia, authHeader: "none", authType: "apikey" };
   const headers = buildAuthHeaders(provider, "some-token");
   assert.deepEqual(headers, {});
-});
-
-// ═══════════════════════════════════════════════════════════════
-//  Integration: Video/Music/Audio registry utils
-// ═══════════════════════════════════════════════════════════════
-
-test("parseVideoModel: works via video registry", async () => {
-  const { parseVideoModel } = await import("../../open-sse/config/videoRegistry.ts");
-  const result = parseVideoModel("comfyui/animatediff");
-  assert.deepEqual(result, { provider: "comfyui", model: "animatediff" });
-});
-
-test("parseMusicModel: works via music registry", async () => {
-  const { parseMusicModel } = await import("../../open-sse/config/musicRegistry.ts");
-  const result = parseMusicModel("comfyui/stable-audio-open");
-  assert.deepEqual(result, { provider: "comfyui", model: "stable-audio-open" });
-});
-
-test("getAllVideoModels: returns video models with provider prefix", async () => {
-  const { getAllVideoModels } = await import("../../open-sse/config/videoRegistry.ts");
-  const models = getAllVideoModels();
-  assert.ok(models.length >= 3, `Expected at least 3 video models, got ${models.length}`);
-  assert.ok(models.some((m) => m.id === "kie/kling-3.0/video"));
-  assert.ok(models.some((m) => m.id === "kie/sora-2-pro-image-to-video"));
-  assert.ok(models.some((m) => m.id === "comfyui/animatediff"));
-  assert.ok(models.some((m) => m.id === "runwayml/gen4.5"));
-});
-
-test("getAllMusicModels: returns music models with provider prefix", async () => {
-  const { getAllMusicModels } = await import("../../open-sse/config/musicRegistry.ts");
-  const models = getAllMusicModels();
-  assert.ok(models.length >= 2, `Expected at least 2 music models, got ${models.length}`);
-  assert.equal(models.find((m) => m.id === "kie/suno-v4.0")?.name, "Suno V4.0");
-  assert.ok(models.some((m) => m.id === "comfyui/stable-audio-open"));
-});
-
-test("getAllAudioModels: returns nested transcription models with provider prefix", async () => {
-  const { getAllAudioModels } = await import("../../open-sse/config/audioRegistry.ts");
-  const models = getAllAudioModels();
-  const nvidiaWhisper = models.find((m) => m.id === "nvidia/openai/whisper-large-v3");
-
-  assert.equal(nvidiaWhisper?.name, "Whisper Large v3 (NVIDIA)");
-  assert.equal(nvidiaWhisper?.provider, "nvidia");
-  assert.equal(nvidiaWhisper?.subtype, "transcription");
 });

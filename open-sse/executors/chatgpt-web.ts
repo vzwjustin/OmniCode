@@ -22,12 +22,26 @@ import {
   TlsClientUnavailableError,
   type TlsFetchResult,
 } from "../services/chatgptTlsClient.ts";
-import {
-  storeChatGptImage,
-  getChatGptImageConversationContext,
-  __resetChatGptImageCacheForTesting,
-  type ChatGptImageConversationContext,
-} from "../services/chatgptImageCache.ts";
+// ChatGPT image cache module was removed when media features were purged.
+// The chat completion flow still calls these helpers when the upstream
+// surfaces an image, but image bytes are now discarded (the
+// /api/v1/chatgpt-web/image/[id] route no longer exists). All helpers are
+// inlined as no-ops so the text chat path keeps working unchanged.
+type ChatGptImageConversationContext = {
+  conversationId?: string;
+  responseId?: string;
+  messageId?: string;
+  parentMessageId?: string;
+};
+const storeChatGptImage = (
+  _bytes: Uint8Array,
+  _mime: string,
+  _name?: string,
+  _ctx?: ChatGptImageConversationContext
+): string => "";
+const getChatGptImageConversationContext = (_id: string): ChatGptImageConversationContext | null =>
+  null;
+const __resetChatGptImageCacheForTesting = (): void => {};
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 

@@ -1,12 +1,17 @@
 <div align="center">
 
-# 🚀 OmniRoute — The Free AI Gateway
+# 🚀 OmniRoute — Coding-Focused Fork
 
-### Never stop coding. Save 15-95% eligible tokens with RTK+Caveman compression + auto-fallback to **FREE & low-cost AI models**.
+### Pure focus on coding. No media bloat. No Redis. All the improvements that matter.
 
-_The most complete open-source AI proxy — **one endpoint**, **160+ providers**, **14 routing strategies**, zero downtime. Multi-platform: **Web**, **Desktop (Electron)**, **Mobile (PWA + Termux)**. Fully extensible via **MCP Server (30 tools)**, **A2A Protocol**, and **Memory/Skills** systems. Available in **40+ languages**._
+_A hardened, coding-only fork of OmniRoute — **one endpoint**, **150+ chat/embedding providers**, **13 routing strategies**, zero downtime. Multi-platform: **Web**, **Desktop (Electron)**, **Mobile (PWA + Termux)**. Fully extensible via **MCP Server (37 tools)**, **A2A Protocol**, and **Memory/Skills** systems. Available in **40+ languages**._
 
-**Chat Completions • Responses API • Embeddings • Image Generation • Video • Music • Audio Speech/Transcription • Reranking • Moderations • Web Search • MCP Server • A2A Protocol • 4,600+ Tests • 100% TypeScript**
+**Chat Completions • Responses API • Embeddings • Reranking • Moderations • Web Search • MCP Server • A2A Protocol • 100% TypeScript**
+
+<br/>
+
+> 🍴 **This is a personal fork of [diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute) that strips out everything not needed for coding.**
+> Image/video/music/audio generation, vision bridge, Redis dependencies — all gone. Plus dozens of correctness, security, and stability fixes. See [Fork Notes](#-fork-notes--whats-different-here) below.
 
 <br/>
 
@@ -81,6 +86,90 @@ _The most complete open-source AI proxy — **one endpoint**, **160+ providers**
 | **Endpoints**  | ![Endpoints](docs/screenshots/09-endpoint.png)    |
 
 </details>
+
+---
+
+---
+
+## 🍴 Fork Notes — What's Different Here
+
+This fork prioritizes a single goal: **make OmniRoute as reliable, lean, and coding-focused as possible**. Everything that doesn't directly support chat-style coding workflows has been removed, and dozens of latent bugs and security issues have been fixed.
+
+### 🧹 Removed (purged from code, tests, config, dependencies)
+
+| Category                         | What's gone                                                                                                                                             | Why                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Image generation**             | `/v1/images/*`, all image handlers, translators, registries, providers (NanoBanana, SD WebUI, ComfyUI, RunwayML)                                        | Not needed for coding                                  |
+| **Video generation**             | `/v1/videos/*`, all video handlers, providers (RunwayML, KIE-AI video)                                                                                  | Not needed for coding                                  |
+| **Music generation**             | `/v1/music/*`, all music handlers, providers (KIE-AI music)                                                                                             | Not needed for coding                                  |
+| **Audio transcription / speech** | `/v1/audio/*`, all audio handlers, providers (Deepgram, AssemblyAI, ElevenLabs, Cartesia, PlayHT, Inworld, AWS Polly)                                   | Not needed for coding                                  |
+| **ChatGPT Web image route**      | `/v1/chatgpt-web/*` image generation endpoints, `chatgptImageCache` service                                                                             | Not needed for coding                                  |
+| **Vision Bridge guardrail**      | `visionBridge.ts`, `visionBridgeHelpers.ts`, defaults, settings tab, 5 Zod schema fields, 7 test files                                                  | OmniRoute is text-only now                             |
+| **Redis dependency**             | `ioredis` package entirely removed; rate limiter rewritten as pure in-memory sliding-window; API-key validation cache moved fully to in-memory + SQLite | One less service to run, no more `[REDIS] Error:` spam |
+| **Dashboard media pages**        | `/dashboard/cache/media/`, media tabs in providers/playground                                                                                           | UI clean-up                                            |
+| **Stale code**                   | `LEGACY_VERSION_SLOT_MIGRATIONS` (dead constant), dead `case "026"` migration branch                                                                    | Code health                                            |
+
+**Net result:** ~15 routes removed, ~30 handler/service/translator/registry files deleted, ~50 tests pruned, ~10 dependencies trimmed. Zero references to image/video/music/audio remain in production code.
+
+### 🛡️ Security Fixes (3.8.0 regressions)
+
+| ID      | Issue                                                                                                                        | Fix                                                                                                                                             |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **R-1** | Redis cache let revoked/deleted/expired API keys keep authenticating for up to **1 hour** across multi-instance deployments  | Removed Redis entirely; in-memory cache now invalidates immediately on every mutation path (delete/revoke/expire/regenerate/update-permissions) |
+| **R-2** | ioredis singleton became permanently dead after 10 reconnects, causing all rate-limiting to fail-open                        | N/A — Redis removed; new in-memory limiter has no transient-failure mode                                                                        |
+| **S-1** | Skill sandbox had no stdout/stderr cap; a custom skill emitting MBs of output could OOM the parent process                   | Hard byte cap on captured child output                                                                                                          |
+| **S-2** | Skill sandbox only sent `SIGTERM`; a skill that traps it survived the timeout                                                | `SIGTERM → grace period → SIGKILL` escalation                                                                                                   |
+| **E-1** | Encryption auto-migration on every legacy ciphertext decrypt had no circuit breaker, was tied to the 3.7.8 CPU-loop incident | Circuit breaker + counter                                                                                                                       |
+
+### 🐛 Correctness Fixes
+
+| Area                                 | What was broken                                                                                                                                                                                                                         | What's fixed                                                                                                                                                                                                                               |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **AutoCombo scoring**                | All four mode packs (fast/cheap/quality/balanced) missing `tierAffinity` + `specificityMatch` → NaN scores → silent comparator fallback                                                                                                 | All weights added; mode switching now actually re-orders routing                                                                                                                                                                           |
+| **Responses API**                    | `responsesHandler` passed an incomplete object to `handleChatCore`, dropping `onStreamFailure`, `apiKeyInfo`, `cachedSettings`, and 5 other params → stream-failure callbacks lost, per-key cost tracking lost, semantic cache disabled | Full param forwarding                                                                                                                                                                                                                      |
+| **Cursor agent Connect-RPC**         | `iterateConnectFrames` did unguarded `zlib.gunzipSync()` — one corrupted frame killed the generator irrecoverably                                                                                                                       | Per-frame try/catch + safe sentinel emission                                                                                                                                                                                               |
+| **Cursor agent model sync**          | New cursor-agent CLI (2026.05+) wraps every model line in ANSI SGR escape codes, breaking the old parser. Also moved from `--model --help` trick to `--list-models`                                                                     | ANSI strip + new flag + dual-format parser                                                                                                                                                                                                 |
+| **Claude OAuth refresh loop**        | `invalid_grant` errors triggered infinite 3-retry-with-backoff loops instead of marking the account as needing re-auth                                                                                                                  | Detect `invalid_grant`/`invalid_request`/"expired" and throw `unrecoverable_refresh_error` (matches Codex pattern)                                                                                                                         |
+| **Anthropic tool prefix**            | Combo prefix `cc/` stripped from top-level `body.model` but NOT from nested `tool.model` fields → `400: tools.29.model: cc/claude-opus-4-7` from real Claude Code traffic                                                               | Shared `stripToolModelPrefixes` helper now runs in both `translateRequest` and Claude-passthrough paths                                                                                                                                    |
+| **ZlibError on response forwarding** | Node's `fetch()` auto-decompresses upstream gzip/br/zstd bodies but leaves `Content-Encoding: gzip` header intact; clients then `gunzip()` plain text → `ZlibError fetching "http://localhost:20128/v1/messages?beta=true"`             | Centralized `sanitizeUpstreamHeaders()` helper — strips `content-encoding`, `content-length`, and all 8 RFC 7230 hop-by-hop headers. Applied at every upstream-forward site (chatCore, combo, github, glm, qoder, antigravity, embeddings) |
+| **Guardrails registry**              | Handlers typed `void \| GuardrailResult` but registry blindly read `.modifiedPayload`/`.meta`/`.block`/etc. → `TypeError: Cannot read properties of undefined` on any void return                                                       | Narrow returns before property access (12 sites)                                                                                                                                                                                           |
+| **Compression scheduler**            | Module-level `setInterval(1h)` with no captured handle and no `.unref()` — kept the Node process alive forever                                                                                                                          | Captured + `.unref()`-ed                                                                                                                                                                                                                   |
+
+### 🔧 Type-Safety Fixes (22 production bugs)
+
+Hidden by the gated `typecheck:core` (which only validates ~20 hand-picked files). Each one is a real, reachable runtime crash in production code paths:
+
+- `EmbeddingHandlerOptions` was imported but never exported (TS2459 + verbatim-module-syntax build failure)
+- `FileRecord` snake/camel-case mismatch (UI showed `undefined` dates)
+- `ValidationFailure.response` accessed on a type that doesn't have it across 6 settings/tunnels routes (returned `undefined` → Next.js 500 instead of formatted 400)
+- Success-variant `.error` accessed without discriminating tagged unions in 4 routes (error messages became the string "undefined")
+- `ApiKeyView` cast silently dropped lifecycle fields (banned/expired keys invisible to combo tests)
+- 4 strict-null bugs in `src/sse/services/auth.ts` (`credentials.connectionId` possibly undefined)
+- `unknown.startsWith` / `unknown.length` / `unknown.map` in `chatHelpers` + `model` service
+- `never.length` dead branch in skills injection
+- Qoder over-arg call to `transformRequest`
+- OpenCode `.tools` access on unconstrained `object`
+- `ResolvedComboTarget.allowedConnectionIds` flow through combo handlers
+- `ClaudeToolCard.tsx` emitted broken `ANTHROPIC_AUTH_TOKEN` config typing (setup hint produced unconfigured CLI)
+- `RegistryModel` schema widened to allow `apiFormat?` + `supportedEndpoints?`
+- 11 Next 16 route signature drifts (params-as-Promise migration)
+- `Buffer<ArrayBufferLike>` vs `Buffer<ArrayBuffer>` after `@types/node ^25`
+- Compression `lite.ts` flatMap return-type union
+- RTK filterSchema strict overload
+- Web-search fallback unconstrained generic `.tool_choice` access
+
+### 🏗️ Infrastructure / Hygiene
+
+- **No Redis service in docker-compose** — both `docker-compose.yml` and `docker-compose.prod.yml` cleaned up (service, env vars, volume removed)
+- **`.env.example` and `.env`** — Redis sections removed
+- **MCP tool count verified** — 25 + 3 (memory) + 4 (skills) + 5 (compression) = 37, matches docs
+- **Electron security defaults audited** — `contextIsolation: true`, `nodeIntegration: false`, `webSecurity: true`, `webviewTag: false` ✓; `ipcMain.handle("open-external")` re-validates protocol; renderer surface is minimal
+- **All four CI gates clean** — `typecheck:core` 0 errors, `typecheck:noimplicit:core` 0 strict-null errors, `lint` 0 errors, `check:cycles` clean
+- **Full production tsc** — 0 errors across `src/` and `open-sse/` (excluding tests/stories)
+
+### 🎯 What this fork is for
+
+OmniRoute, but **strictly for AI coding workflows**. Chat, embeddings, web search, MCP tools, A2A skills, memory, compression, OAuth refresh, combo routing — all preserved and hardened. Use it with Claude Code, Codex, Cursor, Gemini CLI, Cline, Continue, Kilo Code, OpenClaw, Aider, and every other AI coding tool. If you need image/audio/video AI features, use the upstream [diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute) instead.
 
 ---
 
@@ -225,8 +314,6 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
 ✅ **Multi-account** — round-robin between accounts per provider
 ✅ **Format translation** — OpenAI ↔ Claude ↔ Gemini ↔ Responses API, any tool works
 ✅ **3-level proxy** — bypass geo-blocks with global, per-provider, and per-key proxies
-✅ **10 multi-modal APIs** — chat, images, video, music, audio, search in one endpoint
-✅ **MCP + A2A** — 30 MCP tools + agent-to-agent protocol, production-ready
 ✅ **Universal** — works with Claude Code, Codex, Gemini CLI, Cursor, Cline, OpenClaw, any CLI tool
 
 ---
@@ -374,7 +461,7 @@ OmniRoute works seamlessly with **16+ AI coding tools** — one config, all tool
 <details>
 <summary><b>...and 90+ more providers</b></summary>
 
-Alibaba · Amazon Q · AssemblyAI · Baidu Qianfan · Baseten · Black Forest Labs · Blackbox · Brave Search · Bytez · CablyAI · Cartesia · ChatGPT Web · Chutes.ai · Clarifai · Codestral · CrofAI · DataRobot · Deepgram · ElevenLabs · Empower · Exa Search · Fal.ai · Featherless AI · FenayAI · FriendliAI · Galadriel · GigaChat · GitLab Duo · GLHF Chat · GoAPI · Heroku AI · Hyperbolic · IBM watsonx · Inference.net · Inworld · Jina AI · Kilo Gateway · Lambda AI · LaoZhang · Linkup Search · LlamaGate · Maritalk · Modal · Moonshot AI · Morph · Muse Spark · NanoBanana · NanoGPT · NLP Cloud · Nous Research · Novita AI · nScale · OCI · Ollama Cloud · OVHcloud · PiAPI · PlayHT · Poe · Predibase · PublicAI · Qwen Code · Recraft · Reka · Runway · SAP · Scaleway · SearchAPI · SearXNG · Serper · Stability AI · Synthetic · Tavily · TheB.AI · Topaz · Upstage · v0 (Vercel) · Vercel AI Gateway · Volcengine · Voyage AI · W&B Inference · Xiaomi MiMo · You.com · Z.AI · + OpenAI/Anthropic-compatible custom endpoints
+Alibaba · Amazon Q · Baidu Qianfan · Baseten · Blackbox · Brave Search · Bytez · CablyAI · ChatGPT Web · Chutes.ai · Clarifai · Codestral · CrofAI · DataRobot · Empower · Exa Search · Featherless AI · FenayAI · FriendliAI · Galadriel · GigaChat · GitLab Duo · GLHF Chat · Heroku AI · Hyperbolic · IBM watsonx · Inference.net · Jina AI · Kilo Gateway · Lambda AI · LaoZhang · Linkup Search · LlamaGate · Maritalk · Modal · Moonshot AI · Morph · Muse Spark · NanoGPT · NLP Cloud · Nous Research · Novita AI · nScale · OCI · Ollama Cloud · OVHcloud · Poe · Predibase · PublicAI · Qwen Code · Reka · SAP · Scaleway · SearchAPI · SearXNG · Serper · Synthetic · Tavily · TheB.AI · Upstage · v0 (Vercel) · Vercel AI Gateway · Volcengine · Voyage AI · W&B Inference · Xiaomi MiMo · You.com · Z.AI · + OpenAI/Anthropic-compatible custom endpoints
 
 </details>
 
@@ -456,7 +543,7 @@ Every request passes through the compression pipeline **transparently** — no c
 | Mode                      | Savings | Technique                                                                                       | Best For                               |
 | ------------------------- | ------- | ----------------------------------------------------------------------------------------------- | -------------------------------------- |
 | **Off**                   | 0%      | No compression                                                                                  | When you need exact prompts            |
-| **🪶 Lite**               | ~15%    | Whitespace collapse, dedup system prompts, image URL shortening                                 | Always-on safe default                 |
+| **🪶 Lite**               | ~15%    | Whitespace collapse, dedup system prompts, redundant content removal                            | Always-on safe default                 |
 | **🪨 Standard (Caveman)** | ~30%    | 30+ regex rules: filler removal, context condensation, structural compression, multi-turn dedup | Daily coding with Claude/Codex         |
 | **⚡ Aggressive**         | ~50%    | All standard + progressive message aging + tool result summarization + LLM-based compression    | Long sessions with many tool calls     |
 | **🔥 Ultra**              | ~75%    | All aggressive + heuristic token pruning + stopword removal + score-based filtering             | Maximum savings when tokens are scarce |
@@ -510,7 +597,7 @@ Request Body
   │
   ├─ strategySelector.ts ─── Picks mode (config / combo override / auto-trigger)
   │
-  ├─ lite.ts ─────────────── Whitespace, dedup, image URLs, redundant content
+  ├─ lite.ts ─────────────── Whitespace, dedup, redundant content
   ├─ caveman.ts ──────────── 30+ regex rules via cavemanRules.ts
   │   └─ preservation.ts ─── Protects code blocks, URLs, JSON from compression
   ├─ engines/rtk/ ────────── Command detection + JSON DSL filters + raw-output recovery
@@ -570,29 +657,29 @@ Compression combos can also assign a named compression pipeline to routing combo
 <details>
 <summary><b>📖 See all 31 problems OmniRoute solves</b></summary>
 
-| #   | Problem                                       | Solution                                                                                           |
-| --- | --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| 11  | Deploying/maintaining is complex              | npm global, Docker multi-arch, Electron, Termux — deploy anywhere                                  |
-| 12  | Interface is English-only                     | 40+ languages with RTL support                                                                     |
-| 13  | Need more than chat (images, audio, video)    | 10 multi-modal APIs: embeddings, images, video, music, TTS, STT, moderation, rerank, search, batch |
-| 14  | No way to test/compare models                 | LLM Evals, Translator Playground, Chat Tester, Live Monitor                                        |
-| 15  | Need to scale without losing performance      | Semantic cache, request dedup, rate limit detection, queue & pacing                                |
-| 16  | Want to control model behavior globally       | System prompt injection, thinking budget, wildcard routing                                         |
-| 17  | Need MCP tools as first-class features        | 30 MCP tools, 2 transports (stdio + Streamable HTTP with SSE mode), 16 scopes, audit trail         |
-| 18  | Need A2A orchestration                        | JSON-RPC 2.0 + SSE streaming, task lifecycle, sync + stream paths                                  |
-| 19  | Need real MCP process health                  | Runtime heartbeat, PID tracking, UI status cards                                                   |
-| 20  | Need auditable MCP execution                  | SQLite-backed audit with filters, pagination, stats                                                |
-| 21  | Need scoped MCP permissions                   | 16 granular scopes per integration                                                                 |
-| 22  | Need operational controls without redeploying | Combo switches, resilience tuning, breaker resets from dashboard                                   |
-| 23  | Need A2A task lifecycle visibility            | Task listing/filtering, drill-down, cancellation                                                   |
-| 24  | Need active stream metrics                    | Active stream counters, per-state counts, A2A dashboard cards                                      |
-| 25  | Need standard agent discovery                 | Agent Card at `/.well-known/agent.json`                                                            |
-| 26  | Need protocol discoverability                 | Consolidated Endpoints page with Proxy, MCP, A2A, API tabs                                         |
-| 27  | Need E2E protocol validation                  | Real MCP SDK + A2A client flows in `test:protocols:e2e`                                            |
-| 28  | Need unified observability                    | Health + audit + telemetry across OpenAI, MCP, and A2A layers                                      |
-| 29  | Need one runtime for proxy + tools + agents   | OpenAI proxy + MCP + A2A in one stack with shared auth/resilience                                  |
-| 30  | Need agentic workflows without glue-code      | Unified endpoint, protocol UIs, production-ready foundations                                       |
-| 31  | Long sessions crash with context limits       | Proactive context compression, structural integrity guards, multi-layer dropping                   |
+| #   | Problem                                       | Solution                                                                         |
+| --- | --------------------------------------------- | -------------------------------------------------------------------------------- |
+| 11  | Deploying/maintaining is complex              | npm global, Docker multi-arch, Electron, Termux — deploy anywhere                |
+| 12  | Interface is English-only                     | 40+ languages with RTL support                                                   |
+| 13  | Need protocol breadth                         | Chat + Embeddings + Reranking + Moderations + Web Search + Batch in one endpoint |
+| 14  | No way to test/compare models                 | LLM Evals, Translator Playground, Chat Tester, Live Monitor                      |
+| 15  | Need to scale without losing performance      | Semantic cache, request dedup, rate limit detection, queue & pacing              |
+| 16  | Want to control model behavior globally       | System prompt injection, thinking budget, wildcard routing                       |
+| 17  | Need MCP tools as first-class features        | 37 MCP tools, 3 transports (stdio/SSE/HTTP), 10 scopes, audit trail              |
+| 18  | Need A2A orchestration                        | JSON-RPC 2.0 + SSE streaming, task lifecycle, sync + stream paths                |
+| 19  | Need real MCP process health                  | Runtime heartbeat, PID tracking, UI status cards                                 |
+| 20  | Need auditable MCP execution                  | SQLite-backed audit with filters, pagination, stats                              |
+| 21  | Need scoped MCP permissions                   | 10 granular scopes per integration                                               |
+| 22  | Need operational controls without redeploying | Combo switches, resilience tuning, breaker resets from dashboard                 |
+| 23  | Need A2A task lifecycle visibility            | Task listing/filtering, drill-down, cancellation                                 |
+| 24  | Need active stream metrics                    | Active stream counters, per-state counts, A2A dashboard cards                    |
+| 25  | Need standard agent discovery                 | Agent Card at `/.well-known/agent.json`                                          |
+| 26  | Need protocol discoverability                 | Consolidated Endpoints page with Proxy, MCP, A2A, API tabs                       |
+| 27  | Need E2E protocol validation                  | Real MCP SDK + A2A client flows in `test:protocols:e2e`                          |
+| 28  | Need unified observability                    | Health + audit + telemetry across OpenAI, MCP, and A2A layers                    |
+| 29  | Need one runtime for proxy + tools + agents   | OpenAI proxy + MCP + A2A in one stack with shared auth/resilience                |
+| 30  | Need agentic workflows without glue-code      | Unified endpoint, protocol UIs, production-ready foundations                     |
+| 31  | Long sessions crash with context limits       | Proactive context compression, structural integrity guards, multi-layer dropping |
 
 </details>
 
@@ -938,45 +1025,20 @@ ModelScope · Tencent Hunyuan · Volcengine · ChatAnywhere · InternAI · Bigmo
 
 ---
 
-## 🎙️ Free Transcription Combo
-
-> Transcribe any audio/video for **$0** — Deepgram leads with $200 free, AssemblyAI $50 fallback, Groq Whisper as unlimited emergency backup.
-
-| Provider          | Free Credits           | Best Model                                   | Rate Limit                   |
-| ----------------- | ---------------------- | -------------------------------------------- | ---------------------------- |
-| 🟢 **Deepgram**   | **$200 free** (signup) | `nova-3` — best accuracy, 30+ languages      | No RPM limit on free credits |
-| 🔵 **AssemblyAI** | **$50 free** (signup)  | `universal-3-pro` — chapters, sentiment, PII | No RPM limit on free credits |
-| 🔴 **Groq**       | **Free forever**       | `whisper-large-v3` — OpenAI Whisper          | 30 RPM (rate limited)        |
-
----
-
-**Suggested combo in `/dashboard/combos`:**
-
-```
-Name: free-transcription
-Strategy: Priority
-Nodes:
-  [1] deepgram/nova-3          → uses $200 free first
-  [2] assemblyai/universal-3-pro → fallback when Deepgram credits run out
-  [3] groq/whisper-large-v3    → free forever, emergency fallback
-```
-
-Then in `/dashboard/media` → **Transcription** tab: upload any audio or video file → select your combo endpoint → get transcription in supported formats.
-
 ## 💡 Key Features
 
 > **4,690+ automated tests** across 517 test files. Not just a relay — a full operational platform.
 
-| Feature                                                                                              | Why It Matters                   |
-| ---------------------------------------------------------------------------------------------------- | -------------------------------- |
-| 🧠 **Smart 4-Tier Fallback** — Subscription → API → Cheap → Free                                     | Never stop coding, zero downtime |
-| 🔄 **Format Translation** — OpenAI ↔ Claude ↔ Gemini ↔ Responses API                                 | Works with ANY CLI tool          |
-| 🗜️ **Prompt Compression** — 7 options including Caveman, RTK, and stacked pipelines                  | Save 15-95% eligible tokens      |
-| 🤖 **MCP Server** — 30 tools, 2 transports (stdio + Streamable HTTP with SSE mode), 16 scopes        | IDE/agent tool integration       |
-| 🛡️ **Resilience Engine** — circuit breakers, cooldowns, TLS spoofing, anti-thundering herd           | Auto-recovery from any failure   |
-| 🎵 **10 Multi-Modal APIs** — chat, embed, images, video, music, TTS, STT, moderation, rerank, search | One endpoint for everything      |
-| 🌍 **3-Level Proxy** — global, per-provider, per-key + 1proxy free marketplace                       | Access AI from any country       |
-| 📊 **Full Observability** — unified logs, p50/p95/p99 telemetry, cost tracking, budget controls      | Know exactly what's happening    |
+| Feature                                                                                         | Why It Matters                   |
+| ----------------------------------------------------------------------------------------------- | -------------------------------- |
+| 🧠 **Smart 4-Tier Fallback** — Subscription → API → Cheap → Free                                | Never stop coding, zero downtime |
+| 🔄 **Format Translation** — OpenAI ↔ Claude ↔ Gemini ↔ Responses API                            | Works with ANY CLI tool          |
+| 🗜️ **Prompt Compression** — 7 options including Caveman, RTK, and stacked pipelines             | Save 15-95% eligible tokens      |
+| 🤖 **MCP Server** — 37 tools, 3 transports (stdio/SSE/HTTP), 10 scopes                          | IDE/agent tool integration       |
+| 🛡️ **Resilience Engine** — circuit breakers, cooldowns, TLS spoofing, anti-thundering herd      | Auto-recovery from any failure   |
+| 🧠 **Coding-Only Surface** — chat, embed, web search, moderation, rerank in one endpoint        | Lean, no media bloat             |
+| 🌍 **3-Level Proxy** — global, per-provider, per-key + 1proxy free marketplace                  | Access AI from any country       |
+| 📊 **Full Observability** — unified logs, p50/p95/p99 telemetry, cost tracking, budget controls | Know exactly what's happening    |
 
 <details>
 <summary><b>📋 Complete feature list — 30+ capabilities</b></summary>
@@ -984,7 +1046,7 @@ Then in `/dashboard/media` → **Transcription** tab: upload any audio or video 
 **Routing & Intelligence**
 
 - 13 balancing strategies (priority, weighted, round-robin, P2C, cost-optimized, context-relay...)
-- Task-aware smart routing (coding/vision/analysis) · Context relay session handoffs
+- Task-aware smart routing (coding/analysis) · Context relay session handoffs
 - Thinking budget controls (passthrough/auto/custom) · Wildcard routing · System prompt injection
 
 **Translation & Compatibility**
@@ -1011,7 +1073,7 @@ Then in `/dashboard/media` → **Transcription** tab: upload any audio or video 
 
 **v3.6+ Highlights:**
 V1 WebSocket Bridge · Sync Tokens & Config Bundle · GLM Thinking (glmt) · Hybrid Token Counting ·
-Safe Outbound Fetch · Wait For Cooldown · Runtime Env Validation · Vision Bridge ·
+Safe Outbound Fetch · Wait For Cooldown · Runtime Env Validation ·
 Grok-4 Fast · GLM-5 via Z.AI · MiniMax M2.5 · toolCalling flag ·
 Multilingual Intent Detection · Benchmark-Driven Fallbacks · Request Deduplication
 

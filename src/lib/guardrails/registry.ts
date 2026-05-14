@@ -1,7 +1,11 @@
-import { BaseGuardrail, type GuardrailContext, type GuardrailExecutionResult } from "./base";
+import {
+  BaseGuardrail,
+  type GuardrailContext,
+  type GuardrailExecutionResult,
+  type GuardrailResult,
+} from "./base";
 import { PIIMaskerGuardrail } from "./piiMasker";
 import { PromptInjectionGuardrail } from "./promptInjection";
-import { VisionBridgeGuardrail } from "./visionBridge";
 
 type HeadersLike = Headers | Record<string, unknown> | null | undefined;
 
@@ -127,7 +131,9 @@ export class GuardrailRegistry {
       }
 
       try {
-        const result = await guardrail.preCall(currentPayload, context);
+        const rawResult = await guardrail.preCall(currentPayload, context);
+        const result: GuardrailResult<unknown> | undefined =
+          rawResult && typeof rawResult === "object" ? rawResult : undefined;
         const modified = result?.modifiedPayload !== undefined;
         const meta = result?.meta || null;
 
@@ -200,7 +206,9 @@ export class GuardrailRegistry {
       }
 
       try {
-        const result = await guardrail.postCall(currentResponse, context);
+        const rawResult = await guardrail.postCall(currentResponse, context);
+        const result: GuardrailResult<unknown> | undefined =
+          rawResult && typeof rawResult === "object" ? rawResult : undefined;
         const modified = result?.modifiedResponse !== undefined;
         const meta = result?.meta || null;
 
@@ -263,7 +271,6 @@ let defaultGuardrailsRegistered = false;
 export function registerDefaultGuardrails() {
   if (defaultGuardrailsRegistered) return guardrailRegistry;
 
-  guardrailRegistry.register(new VisionBridgeGuardrail());
   guardrailRegistry.register(new PIIMaskerGuardrail());
   guardrailRegistry.register(new PromptInjectionGuardrail());
   defaultGuardrailsRegistered = true;

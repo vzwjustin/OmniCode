@@ -778,30 +778,9 @@ export const providerModelMutationSchema = z.object({
   modelName: z.string().trim().max(240).optional(),
   source: z.string().trim().max(80).optional(),
   apiFormat: z
-    .enum([
-      "chat-completions",
-      "responses",
-      "embeddings",
-      "rerank",
-      "audio-transcriptions",
-      "audio-speech",
-      "images-generations",
-    ])
+    .enum(["chat-completions", "responses", "embeddings", "rerank"])
     .default("chat-completions"),
-  supportedEndpoints: z
-    .array(
-      z.enum([
-        "chat",
-        "embeddings",
-        "rerank",
-        "images",
-        "audio",
-        "audio-transcriptions",
-        "audio-speech",
-        "images-generations",
-      ])
-    )
-    .default(["chat"]),
+  supportedEndpoints: z.array(z.enum(["chat", "embeddings", "rerank"])).default(["chat"]),
   normalizeToolCallId: z.boolean().optional(),
   preserveOpenAIDeveloperRole: z.boolean().nullable().optional(),
   upstreamHeaders: upstreamHeadersRecordSchema.nullable().optional(),
@@ -1594,16 +1573,7 @@ export const createProviderNodeSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required"),
     prefix: z.string().trim().min(1, "Prefix is required"),
-    apiType: z
-      .enum([
-        "chat",
-        "responses",
-        "embeddings",
-        "audio-transcriptions",
-        "audio-speech",
-        "images-generations",
-      ])
-      .optional(),
+    apiType: z.enum(["chat", "responses", "embeddings"]).optional(),
     baseUrl: z.string().trim().min(1).optional(),
     type: z.enum(["openai-compatible", "anthropic-compatible"]).optional(),
     compatMode: z.enum(["cc"]).optional(),
@@ -1624,16 +1594,7 @@ export const createProviderNodeSchema = z
 export const updateProviderNodeSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   prefix: z.string().trim().min(1, "Prefix is required"),
-  apiType: z
-    .enum([
-      "chat",
-      "responses",
-      "embeddings",
-      "audio-transcriptions",
-      "audio-speech",
-      "images-generations",
-    ])
-    .optional(),
+  apiType: z.enum(["chat", "responses", "embeddings"]).optional(),
   baseUrl: z.string().trim().min(1, "Base URL is required"),
   chatPath: z.string().trim().startsWith("/").max(500).optional().or(z.literal("")),
   modelsPath: z.string().trim().startsWith("/").max(500).optional().or(z.literal("")),

@@ -267,6 +267,39 @@ export async function refreshClaudeOAuthToken(refreshToken, log, proxyConfig: un
 
     if (!response.ok) {
       const errorText = await response.text();
+
+      // Detect unrecoverable "invalid_grant" / "invalid_request" errors from
+      // Anthropic. These mean the refresh token has been revoked, consumed, or
+      // is otherwise permanently invalid — retrying with the same token will
+      // never succeed. Mirror the Codex behavior so tokenHealthCheck.ts can
+      // deactivate the connection and prompt re-authentication.
+      let errorCode: string | null = null;
+      try {
+        const parsed = JSON.parse(errorText);
+        errorCode =
+          parsed?.error?.code || (typeof parsed?.error === "string" ? parsed.error : null);
+      } catch {
+        // not JSON — fall through to status-based heuristic.
+      }
+
+      if (
+        errorCode === "invalid_grant" ||
+        errorCode === "invalid_request" ||
+        errorCode === "invalid_token" ||
+        // 400 with "Refresh token not found or invalid" message body
+        (response.status === 400 && /refresh.*token.*(not\s+found|invalid)/i.test(errorText))
+      ) {
+        log?.error?.(
+          "TOKEN_REFRESH",
+          "Claude refresh token is permanently invalid. Re-authentication required.",
+          {
+            status: response.status,
+            errorCode,
+          }
+        );
+        return { error: "unrecoverable_refresh_error", code: errorCode || "invalid_grant" };
+      }
+
       log?.error?.("TOKEN_REFRESH", "Failed to refresh Claude OAuth token", {
         status: response.status,
         error: errorText,
@@ -1186,6 +1219,17 @@ export async function refreshWithRetry(
 
     try {
       const result = await withTimeout(refreshFn, REFRESH_TIMEOUT_MS);
+      // Short-circuit on unrecoverable errors (invalid_grant, refresh_token_reused,
+      // etc.). Retrying with the same invalid token will never succeed — pass the
+      // signal through so callers (tokenHealthCheck) can deactivate the connection
+      // and prompt re-authentication.
+      if (isUnrecoverableRefreshError(result)) {
+        log?.warn?.(
+          "TOKEN_REFRESH",
+          `Unrecoverable refresh error for ${provider} — re-authentication required`
+        );
+        return result;
+      }
       if (result) {
         recordSuccess(provider);
         return result;

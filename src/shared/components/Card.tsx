@@ -66,7 +66,11 @@ export default function Card({
 }
 
 // Sub-component: Bordered section inside Card
-Card.Section = function CardSection({ children, className, ...props }) {
+Card.Section = function CardSection({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode; className?: string }) {
   return (
     <div
       className={cn(
@@ -83,7 +87,11 @@ Card.Section = function CardSection({ children, className, ...props }) {
 };
 
 // Sub-component: Hoverable row inside Card
-Card.Row = function CardRow({ children, className, ...props }) {
+Card.Row = function CardRow({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode; className?: string }) {
   return (
     <div
       className={cn(
@@ -100,7 +108,16 @@ Card.Row = function CardRow({ children, className, ...props }) {
 };
 
 // Sub-component: List item with hover actions (macOS style)
-Card.ListItem = function CardListItem({ children, actions, className, ...props }) {
+Card.ListItem = function CardListItem({
+  children,
+  actions,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  children?: React.ReactNode;
+  actions?: React.ReactNode;
+  className?: string;
+}) {
   return (
     <div
       className={cn(

@@ -10,7 +10,7 @@ import { v1EmbeddingsSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
 import { getAllCustomModels, getApiKeyMetadata } from "@/lib/localDb";
-import { createEmbeddingResponse, type EmbeddingHandlerOptions } from "@/lib/embeddings/service";
+import { handleValidatedEmbeddingRequestBody, type ValidatedEmbeddingBody } from "./handler";
 import { extractApiKey, isValidApiKey } from "@/sse/services/auth";
 
 function toProviderScopedModelId(providerId: string, modelId: string): string {
@@ -63,15 +63,6 @@ export async function GET() {
   return new Response(JSON.stringify({ object: "list", data }), {
     headers: { "Content-Type": "application/json" },
   });
-}
-
-type ValidatedEmbeddingBody = Record<string, unknown> & { model: string };
-
-export async function handleValidatedEmbeddingRequestBody(
-  body: ValidatedEmbeddingBody,
-  options: EmbeddingHandlerOptions = {}
-) {
-  return createEmbeddingResponse(body, options);
 }
 
 export async function POST(request) {

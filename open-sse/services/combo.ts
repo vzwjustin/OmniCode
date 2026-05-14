@@ -13,6 +13,7 @@ import {
   isProviderFailureCode,
 } from "./accountFallback.ts";
 import { errorResponse, unavailableResponse } from "../utils/error.ts";
+import { sanitizeUpstreamHeaders } from "../utils/responseHeaders.ts";
 import { recordComboIntent, recordComboRequest, getComboMetrics } from "./comboMetrics.ts";
 import { resolveComboConfig, getDefaultComboConfig } from "./comboConfig.ts";
 import { maybeGenerateHandoff, resolveContextRelayConfig } from "./contextHandoff.ts";
@@ -109,18 +110,8 @@ const RESET_AWARE_DEFAULTS = {
   exhaustionGuardPercent: 10,
 };
 
-export type ResolvedComboTarget = {
-  kind: "model";
-  stepId: string;
-  executionKey: string;
-  modelStr: string;
-  provider: string;
-  providerId: string | null;
-  connectionId: string | null;
-  allowedConnectionIds?: string[] | null;
-  weight: number;
-  label: string | null;
-};
+export type { ResolvedComboTarget } from "./comboTypes";
+import type { ResolvedComboTarget } from "./comboTypes";
 
 type ComboRuntimeStep =
   | ResolvedComboTarget
@@ -223,7 +214,7 @@ export async function validateResponseQuality(
     clonedResponse: new Response(text, {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers,
+      headers: sanitizeUpstreamHeaders(response.headers),
     }),
   };
 }
@@ -1502,7 +1493,7 @@ export async function handleComboChat({
               };
               return new Response(JSON.stringify(updatedJson), {
                 status: res.status,
-                headers: res.headers,
+                headers: sanitizeUpstreamHeaders(res.headers),
               });
             }
           } catch {
@@ -1629,8 +1620,10 @@ export async function handleComboChat({
         });
 
         const transformedStream = res.body.pipeThrough(transform).pipeThrough(sanitize);
-        // Add model info as response header for clients that support it
-        const headers = new Headers(res.headers);
+        // Add model info as response header for clients that support it.
+        // Sanitize upstream headers first to strip Content-Encoding (body has
+        // been decompressed by Node fetch) and hop-by-hop headers.
+        const headers = sanitizeUpstreamHeaders(res.headers);
         headers.set("X-OmniRoute-Model", modelStr);
         return new Response(transformedStream, {
           status: res.status,

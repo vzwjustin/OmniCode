@@ -22,9 +22,16 @@ const FROM_STDIN = args.has("--from-stdin");
 
 function readSource() {
   if (FROM_STDIN) return readFileSync(0, "utf8");
-  // cursor-agent prints "Available models: ..." to stderr and exits non-zero.
-  const r = spawnSync("cursor-agent", ["--model", "--help"], { encoding: "utf8" });
-  return `${r.stdout || ""}\n${r.stderr || ""}`;
+  // cursor-agent 2026.05+ supports `--list-models` (prints to stdout, exits 0).
+  // Older builds need the legacy `--model --help` trick that printed "Available
+  // models: ..." to stderr with a non-zero exit. We try the new flag first.
+  let r = spawnSync("cursor-agent", ["--list-models"], { encoding: "utf8" });
+  let text = `${r.stdout || ""}\n${r.stderr || ""}`;
+  if (!/Available models/i.test(text)) {
+    r = spawnSync("cursor-agent", ["--model", "--help"], { encoding: "utf8" });
+    text = `${r.stdout || ""}\n${r.stderr || ""}`;
+  }
+  return text;
 }
 
 // `auto` is a CLI-side abstraction (cursor-agent resolves it locally before
@@ -38,14 +45,53 @@ function isUnsupportedChatModel(id) {
 }
 
 function parseModelIds(text) {
-  const m = text.match(/Available models:\s*([^\n]+)/);
-  if (!m) throw new Error("Could not find 'Available models:' line in cursor-agent output");
   const includeUnsupported = args.has("--include-unsupported");
-  return m[1]
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .filter((id) => includeUnsupported || !isUnsupportedChatModel(id));
+  const out = [];
+  const seen = new Set();
+
+  // cursor-agent emits ANSI SGR escape codes around the header and around each
+  // model id. Strip them before parsing.
+  const ansiStripped = text.replace(/\u001b\[[0-9;]*[A-Za-z]/g, "");
+
+  // New cursor-agent format (2026.05+): "Available models" (no colon) followed
+  // by blank line and then `<id> - <name>` per line until a blank line or "Tip:".
+  const headerIdx = ansiStripped.search(/Available models\b/i);
+  if (headerIdx !== -1) {
+    const lines = ansiStripped.slice(headerIdx).split(/\r?\n/);
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) {
+        if (out.length > 0) break;
+        continue;
+      }
+      if (/^Tip\b/i.test(line)) break;
+      const m = line.match(/^([A-Za-z0-9][A-Za-z0-9._-]*)(?:\s*[-\u2014]\s*.+)?$/);
+      if (!m) {
+        if (out.length > 0) break;
+        continue;
+      }
+      const id = m[1];
+      if (seen.has(id)) continue;
+      if (!includeUnsupported && isUnsupportedChatModel(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
+    if (out.length > 0) return out;
+  }
+
+  // Legacy format (pre-2026.05): comma-separated after `Available models:`.
+  const legacy = ansiStripped.match(/Available models:\s*([^\n]+)/);
+  if (!legacy) {
+    throw new Error("Could not find 'Available models' line in cursor-agent output");
+  }
+  for (const raw of legacy[1].split(",")) {
+    const id = raw.trim();
+    if (!id || seen.has(id)) continue;
+    if (!includeUnsupported && isUnsupportedChatModel(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
 }
 
 const SEGMENT_OVERRIDES = {

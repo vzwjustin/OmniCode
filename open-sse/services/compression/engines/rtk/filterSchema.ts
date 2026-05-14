@@ -77,8 +77,8 @@ export const rtkFilterPackSchema = z
     category: rtkFilterCategorySchema,
     priority: z.number().int().min(0).max(100).default(50),
     match: rtkFilterMatchSchema,
-    rules: rtkFilterRulesSchema.default({}),
-    preserve: rtkFilterPreserveSchema.default({}),
+    rules: rtkFilterRulesSchema.default(() => rtkFilterRulesSchema.parse({})),
+    preserve: rtkFilterPreserveSchema.default(() => rtkFilterPreserveSchema.parse({})),
     tests: z.array(rtkInlineTestSchema).default([]),
   })
   .strict();

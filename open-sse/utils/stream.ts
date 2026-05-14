@@ -737,7 +737,9 @@ export function createSSEStream(options: StreamOptions = {}) {
     controller: TransformStreamDefaultController,
     finalUsage: UsageTokenRecord | Record<string, unknown> | null | undefined
   ) => {
-    const costUsd = finalUsage ? await calculateCost(provider, model, finalUsage) : 0;
+    const costUsd = finalUsage
+      ? await calculateCost(provider, model, finalUsage as Record<string, number | undefined>)
+      : 0;
     const comment = buildOmniRouteSseMetadataComment({
       provider,
       model,

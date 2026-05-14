@@ -96,15 +96,6 @@ export {
   getAllEmbeddingModels,
 } from "./config/embeddingRegistry.ts";
 
-// Image Generation
-export { handleImageGeneration } from "./handlers/imageGeneration.ts";
-export {
-  IMAGE_PROVIDERS,
-  getImageProvider,
-  parseImageModel,
-  getAllImageModels,
-} from "./config/imageRegistry.ts";
-
 // Think Tag Parser
 export {
   hasThinkTags,
@@ -122,19 +113,6 @@ export {
   getAllRerankModels,
 } from "./config/rerankRegistry.ts";
 
-// Audio (Transcription + Speech)
-export { handleAudioTranscription } from "./handlers/audioTranscription.ts";
-export { handleAudioSpeech } from "./handlers/audioSpeech.ts";
-export {
-  AUDIO_TRANSCRIPTION_PROVIDERS,
-  AUDIO_SPEECH_PROVIDERS,
-  getTranscriptionProvider,
-  getSpeechProvider,
-  parseTranscriptionModel,
-  parseSpeechModel,
-  getAllAudioModels,
-} from "./config/audioRegistry.ts";
-
 // Moderations
 export { handleModeration } from "./handlers/moderations.ts";
 export {
@@ -143,24 +121,6 @@ export {
   parseModerationModel,
   getAllModerationModels,
 } from "./config/moderationRegistry.ts";
-
-// Video Generation
-export { handleVideoGeneration } from "./handlers/videoGeneration.ts";
-export {
-  VIDEO_PROVIDERS,
-  getVideoProvider,
-  parseVideoModel,
-  getAllVideoModels,
-} from "./config/videoRegistry.ts";
-
-// Music Generation
-export { handleMusicGeneration } from "./handlers/musicGeneration.ts";
-export {
-  MUSIC_PROVIDERS,
-  getMusicProvider,
-  parseMusicModel,
-  getAllMusicModels,
-} from "./config/musicRegistry.ts";
 
 // Registry Utilities
 export {

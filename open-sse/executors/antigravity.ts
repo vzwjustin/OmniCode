@@ -17,6 +17,7 @@ import {
 } from "../services/antigravityCredits.ts";
 import { persistCreditBalance, getAllPersistedCreditBalances } from "@/lib/db/creditBalance";
 import { obfuscateSensitiveWords } from "../services/antigravityObfuscation.ts";
+import { sanitizeUpstreamHeaders } from "../utils/responseHeaders.ts";
 import {
   getCachedAntigravityVersion,
   resolveAntigravityVersion,
@@ -1026,7 +1027,7 @@ export class AntigravityExecutor extends BaseExecutor {
             const modifiedBody = JSON.stringify(obj);
             const modifiedResponse = new Response(modifiedBody, {
               status: response.status,
-              headers: response.headers,
+              headers: sanitizeUpstreamHeaders(response.headers),
             });
             return {
               response: modifiedResponse,
@@ -1155,7 +1156,7 @@ export class AntigravityExecutor extends BaseExecutor {
           const tappedResponse = new Response(tappedBody, {
             status: response.status,
             statusText: response.statusText,
-            headers: response.headers,
+            headers: sanitizeUpstreamHeaders(response.headers),
           });
           return {
             response: tappedResponse,

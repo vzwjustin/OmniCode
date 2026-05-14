@@ -72,7 +72,7 @@ async function getAutoSyncConnections(): Promise<
           ? conn.providerSpecificData
           : {};
       return psd.autoSync === true;
-    });
+    }) as Array<{ id: string; provider: string; name?: string }>;
   } catch (err) {
     console.warn("[ModelSync] Failed to load connections:", (err as Error).message);
     return [];

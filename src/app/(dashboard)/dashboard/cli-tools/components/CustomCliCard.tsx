@@ -36,7 +36,7 @@ export default function CustomCliCard({
   const translateOrFallback = useCallback(
     (key: string, fallback: string, values?: Record<string, unknown>) => {
       try {
-        const translated = t(key, values);
+        const translated = t(key, values as Record<string, string | number | Date>);
         return translated === key || translated === `cliTools.${key}` ? fallback : translated;
       } catch {
         return fallback;

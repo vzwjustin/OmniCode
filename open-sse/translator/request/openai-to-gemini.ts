@@ -262,7 +262,7 @@ function openaiToGeminiBase(model, body, stream, toolNameOptions: GeminiToolName
           }
         }
       } else if (role === "user" || (role === "system" && body.messages.length === 1)) {
-        const parts = convertOpenAIContentToParts(content);
+        const parts = convertOpenAIContentToParts(content) as GeminiPart[];
         if (parts.length > 0) {
           result.contents.push({ role: "user", parts });
         }

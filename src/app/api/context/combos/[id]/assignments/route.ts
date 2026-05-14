@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   getAssignmentsForCompressionCombo,
   getCompressionCombo,
@@ -7,12 +6,7 @@ import {
 } from "@/lib/db/compressionCombos";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
-
-export const assignmentsUpdateSchema = z
-  .object({
-    routingComboIds: z.array(z.string().trim().min(1)),
-  })
-  .strict();
+import { assignmentsUpdateSchema } from "./schema";
 
 export async function GET(request: Request, { params }) {
   const authError = await requireManagementAuth(request);

@@ -41,8 +41,11 @@ export async function GET(request: Request) {
           connectionsByProvider.set(key, existing);
         };
         for (const connection of active) {
-          registerConnectionKey(connection.provider, connection);
-          registerConnectionKey(PROVIDER_ID_TO_ALIAS[connection.provider], connection);
+          registerConnectionKey(String((connection as any).provider ?? ""), connection);
+          registerConnectionKey(
+            PROVIDER_ID_TO_ALIAS[String((connection as any).provider ?? "")],
+            connection
+          );
         }
         const getConnectionsForProvider = (...keys: Array<string | null | undefined>) => {
           const seen = new Set<string>();
@@ -50,8 +53,9 @@ export async function GET(request: Request) {
           for (const key of keys) {
             if (!key) continue;
             for (const connection of connectionsByProvider.get(key) || []) {
-              if (!connection?.id || seen.has(connection.id)) continue;
-              seen.add(connection.id);
+              const connId = String((connection as any)?.id ?? "");
+              if (!connId || seen.has(connId)) continue;
+              seen.add(connId);
               collected.push(connection);
             }
           }

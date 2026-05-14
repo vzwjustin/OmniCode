@@ -27,6 +27,19 @@
 
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync, createHash } from "crypto";
 
+/**
+ * Thrown when ciphertext was encrypted with a different STORAGE_ENCRYPTION_KEY
+ * than the one currently configured. Callers can catch this to surface a clear
+ * "encryption key changed" diagnostic instead of treating it as data corruption.
+ */
+export class EncryptionKeyMismatchError extends Error {
+  public readonly code = "ENCRYPTION_KEY_MISMATCH";
+  constructor(message = "Encryption key mismatch: ciphertext cannot be decrypted with the current STORAGE_ENCRYPTION_KEY") {
+    super(message);
+    this.name = "EncryptionKeyMismatchError";
+  }
+}
+
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
 const KEY_LENGTH = 32;
@@ -36,63 +49,80 @@ const STATIC_SALT = "omniroute-field-encryption-v1";
 let _staticKey: Buffer | null = null;
 let _legacyDynamicKey: Buffer | null = null;
 
-/**
- * Failure tracker for the auth-tag mismatch circuit breaker.
- * If we see more than 5 decryption failures in a 60s window, we assume the
- * STORAGE_ENCRYPTION_KEY is misconfigured and stop attempting further decrypts
- * to avoid runaway CPU usage and log spam.
- */
-declare global {
-  var __encryptionFailureCount: number | undefined;
-  var __encryptionFailureWindowStart: number | undefined;
-  var __encryptionShortCircuited: boolean | undefined;
-}
+// ── Encryption health circuit breaker ─────────────────────────────────────
+// Tracks decrypt/encrypt failures so a misconfigured STORAGE_ENCRYPTION_KEY
+// surfaces operationally rather than silently corrupting auth flows. After
+// HEALTH_DEGRADED_THRESHOLD consecutive failures we emit a single elevated
+// log line; subsequent failures stay rate-limited until we see a success.
+const HEALTH_DEGRADED_THRESHOLD = 25;
+const HEALTH_LOG_INTERVAL_MS = 60_000;
+const _encryptionHealth = {
+  consecutiveDecryptFailures: 0,
+  consecutiveEncryptFailures: 0,
+  lastDecryptFailureAt: 0,
+  lastEncryptFailureAt: 0,
+  totalDecryptFailures: 0,
+  totalEncryptFailures: 0,
+  degradedLoggedAt: 0,
+};
 
-const FAILURE_WINDOW_MS = 60_000;
-const FAILURE_THRESHOLD = 5;
-
-/**
- * Custom error thrown when an `enc:v1:` ciphertext fails GCM auth-tag verification.
- * This is a strong signal that the wrong key is in use.
- */
-export class EncryptionKeyMismatchError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "EncryptionKeyMismatchError";
-  }
-}
-
-function recordEncryptionFailure(): void {
-  const now = Date.now();
-  const windowStart = globalThis.__encryptionFailureWindowStart ?? 0;
-  if (now - windowStart > FAILURE_WINDOW_MS) {
-    globalThis.__encryptionFailureWindowStart = now;
-    globalThis.__encryptionFailureCount = 1;
-    return;
-  }
-  globalThis.__encryptionFailureCount = (globalThis.__encryptionFailureCount ?? 0) + 1;
+function recordDecryptFailure(): void {
+  _encryptionHealth.consecutiveDecryptFailures += 1;
+  _encryptionHealth.totalDecryptFailures += 1;
+  _encryptionHealth.lastDecryptFailureAt = Date.now();
   if (
-    (globalThis.__encryptionFailureCount ?? 0) > FAILURE_THRESHOLD &&
-    !globalThis.__encryptionShortCircuited
+    _encryptionHealth.consecutiveDecryptFailures >= HEALTH_DEGRADED_THRESHOLD &&
+    Date.now() - _encryptionHealth.degradedLoggedAt > HEALTH_LOG_INTERVAL_MS
   ) {
-    globalThis.__encryptionShortCircuited = true;
+    _encryptionHealth.degradedLoggedAt = Date.now();
     console.error(
-      "[Encryption] CRITICAL: STORAGE_ENCRYPTION_KEY appears wrong; refusing further decrypts " +
-        `(>${FAILURE_THRESHOLD} auth-tag failures in ${FAILURE_WINDOW_MS}ms). ` +
-        "Reset globalThis.__encryptionShortCircuited to false after fixing the key."
+      `[Encryption] DEGRADED: ${_encryptionHealth.consecutiveDecryptFailures} consecutive ` +
+        `decrypt failures. STORAGE_ENCRYPTION_KEY may have been rotated, lost, or corrupted. ` +
+        `Auth, OAuth refresh, and provider credentials will all fail until this is resolved.`
     );
   }
 }
 
-function isEncryptionShortCircuited(): boolean {
-  return globalThis.__encryptionShortCircuited === true;
+function recordDecryptSuccess(): void {
+  _encryptionHealth.consecutiveDecryptFailures = 0;
 }
 
-function isPlaintextStorageAllowed(): boolean {
-  const raw = process.env.OMNIROUTE_ALLOW_PLAINTEXT_STORAGE;
-  if (!raw) return false;
-  return new Set(["1", "true", "yes", "on"]).has(raw.trim().toLowerCase());
+function recordEncryptFailure(): void {
+  _encryptionHealth.consecutiveEncryptFailures += 1;
+  _encryptionHealth.totalEncryptFailures += 1;
+  _encryptionHealth.lastEncryptFailureAt = Date.now();
 }
+
+function recordEncryptSuccess(): void {
+  _encryptionHealth.consecutiveEncryptFailures = 0;
+}
+
+/**
+ * Snapshot of encryption health. Exposed for telemetry / db_health_check MCP
+ * tool / dashboard panels.
+ */
+export function getEncryptionHealth(): Readonly<{
+  configured: boolean;
+  consecutiveDecryptFailures: number;
+  consecutiveEncryptFailures: number;
+  lastDecryptFailureAt: number;
+  lastEncryptFailureAt: number;
+  totalDecryptFailures: number;
+  totalEncryptFailures: number;
+  degraded: boolean;
+}> {
+  return {
+    configured: isEncryptionEnabled(),
+    consecutiveDecryptFailures: _encryptionHealth.consecutiveDecryptFailures,
+    consecutiveEncryptFailures: _encryptionHealth.consecutiveEncryptFailures,
+    lastDecryptFailureAt: _encryptionHealth.lastDecryptFailureAt,
+    lastEncryptFailureAt: _encryptionHealth.lastEncryptFailureAt,
+    totalDecryptFailures: _encryptionHealth.totalDecryptFailures,
+    totalEncryptFailures: _encryptionHealth.totalEncryptFailures,
+    degraded: _encryptionHealth.consecutiveDecryptFailures >= HEALTH_DEGRADED_THRESHOLD,
+  };
+}
+
 /** Connection object with potentially encrypted credential fields. */
 export interface ConnectionFields {
   apiKey?: string | null;
@@ -162,15 +192,6 @@ export function encrypt(plaintext: string | null | undefined): string | null | u
 
   const key = getStaticKey();
   if (!key) {
-    // Production safety: refuse to silently store plaintext unless the operator
-    // has explicitly opted-in via OMNIROUTE_ALLOW_PLAINTEXT_STORAGE=true.
-    if (process.env.NODE_ENV === "production" && !isPlaintextStorageAllowed()) {
-      throw new Error(
-        "[Encryption] STORAGE_ENCRYPTION_KEY is not set in production. " +
-          "Set a valid key (openssl rand -base64 32) or explicitly opt-in to plaintext " +
-          "storage with OMNIROUTE_ALLOW_PLAINTEXT_STORAGE=true."
-      );
-    }
     console.warn(
       "[Encryption] STORAGE_ENCRYPTION_KEY not set. Storing plaintext (passthrough mode)."
     );
@@ -188,8 +209,10 @@ export function encrypt(plaintext: string | null | undefined): string | null | u
     encrypted += cipher.final("hex");
     const authTag = cipher.getAuthTag().toString("hex");
 
+    recordEncryptSuccess();
     return `${PREFIX}${iv.toString("hex")}:${encrypted}:${authTag}`;
   } catch (err: unknown) {
+    recordEncryptFailure();
     const message = err instanceof Error ? err.message : String(err);
     console.error(
       `[Encryption] Encryption failed: ${message}. ` +
@@ -212,11 +235,6 @@ export function decrypt(ciphertext: string | null | undefined): string | null | 
 
   // Not encrypted — return as-is (legacy plaintext or passthrough mode)
   if (!ciphertext.startsWith(PREFIX)) return ciphertext;
-
-  // Circuit-broken: refuse further decrypts until operator resets the sentinel.
-  if (isEncryptionShortCircuited()) {
-    return null;
-  }
 
   const staticKey = getStaticKey();
   if (!staticKey) {
@@ -250,19 +268,30 @@ export function decrypt(ciphertext: string | null | undefined): string | null | 
     }
   };
 
-  // PRIMARY: Try static-salt key first (canonical derivation)
-  const decrypted = tryDecryptWithKey(staticKey);
-  if (decrypted !== null) {
-    return decrypted;
-  }
+  try {
+    // PRIMARY: Try static-salt key first (canonical derivation)
+    const decrypted = tryDecryptWithKey(staticKey);
+    if (decrypted !== null) {
+      recordDecryptSuccess();
+      return decrypted;
+    }
 
-  // Auth-tag failure: signal a key mismatch to callers via a typed error so they
-  // can surface the misconfiguration rather than silently nulling out fields.
-  recordEncryptionFailure();
-  throw new EncryptionKeyMismatchError(
-    `Decryption failed — likely STORAGE_ENCRYPTION_KEY mismatch. ` +
-      `Ciphertext prefix: ${ciphertext.slice(0, 30)}...`
-  );
+    recordDecryptFailure();
+    console.error(
+      `[Encryption] Decryption failed. Ciphertext prefix: ${ciphertext.slice(0, 30)}... ` +
+        `Auth tag validation likely failed.`
+    );
+    throw new EncryptionKeyMismatchError(
+      `Decryption failed for ciphertext starting with "${ciphertext.slice(0, 30)}…". ` +
+        `STORAGE_ENCRYPTION_KEY likely changed since this row was written.`
+    );
+  } catch (err: unknown) {
+    if (err instanceof EncryptionKeyMismatchError) throw err;
+    recordDecryptFailure();
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[Encryption] Decryption failed:", message);
+    return null;
+  }
 }
 
 /**
@@ -282,36 +311,10 @@ export function encryptConnectionFields<T extends ConnectionFields | null | unde
 }
 
 /**
- * Safe wrapper around decrypt() that catches EncryptionKeyMismatchError so a
- * single bad field doesn't corrupt the whole connection row. Logs a
- * high-severity message and returns null for that field. Also feeds the
- * shared failure-rate circuit breaker — if too many auth-tag failures occur
- * in a short window, the breaker trips and decrypt() short-circuits to null.
- */
-function safeDecryptField(
-  value: string | null | undefined,
-  fieldName: string
-): string | null | undefined {
-  try {
-    return decrypt(value);
-  } catch (err: unknown) {
-    if (err instanceof EncryptionKeyMismatchError) {
-      console.error(
-        `[Encryption] HIGH SEVERITY: auth-tag failure decrypting field "${fieldName}". ` +
-          `STORAGE_ENCRYPTION_KEY may be wrong or rotated. Returning null for this field. ` +
-          `Details: ${err.message}`
-      );
-      return null;
-    }
-    // Unknown error — surface it; we should not silently swallow.
-    throw err;
-  }
-}
-
-/**
  * Decrypt sensitive fields in a connection row (returns new object).
- * Per-field auth-tag failures degrade to null rather than throwing so that a
- * single bad ciphertext does not poison the entire row.
+ * Note: If any field was decrypted using the legacy key, the migration
+ * flag is set. The calling code should check isMigrationNeeded() and
+ * trigger a re-encrypt (write-back) to migrate those tokens to the static key.
  */
 export function decryptConnectionFields<T extends ConnectionFields | null | undefined>(row: T): T {
   if (!row) return row;
@@ -319,10 +322,10 @@ export function decryptConnectionFields<T extends ConnectionFields | null | unde
 
   return {
     ...row,
-    apiKey: safeDecryptField(row.apiKey, "apiKey"),
-    accessToken: safeDecryptField(row.accessToken, "accessToken"),
-    refreshToken: safeDecryptField(row.refreshToken, "refreshToken"),
-    idToken: safeDecryptField(row.idToken, "idToken"),
+    apiKey: decrypt(row.apiKey),
+    accessToken: decrypt(row.accessToken),
+    refreshToken: decrypt(row.refreshToken),
+    idToken: decrypt(row.idToken),
   };
 }
 

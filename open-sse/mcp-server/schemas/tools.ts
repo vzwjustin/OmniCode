@@ -358,7 +358,7 @@ export const costReportTool: McpToolDefinition<typeof costReportInput, typeof co
 export const listModelsCatalogInput = z.object({
   provider: z.string().optional().describe("Filter by provider name"),
   capability: z
-    .enum(["chat", "embedding", "image", "audio", "video", "rerank", "moderation"])
+    .enum(["chat", "embedding", "rerank", "moderation"])
     .optional()
     .describe("Filter by model capability"),
 });

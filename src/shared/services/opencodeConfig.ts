@@ -1,4 +1,4 @@
-import { applyEdits, modify, parse } from "jsonc-parser";
+import { applyEdits, modify, parse, type ParseError } from "jsonc-parser";
 
 type OpenCodeConfigInput = {
   baseUrl?: string;
@@ -113,7 +113,7 @@ export const mergeOpenCodeConfigText = (
     return JSON.stringify(buildOpenCodeConfigDocument(input), null, 2);
   }
 
-  const errors: { error: number }[] = [];
+  const errors: ParseError[] = [];
   const parsed = parse(content, errors, { allowTrailingComma: true, disallowComments: false });
 
   if (errors.length > 0 || !parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

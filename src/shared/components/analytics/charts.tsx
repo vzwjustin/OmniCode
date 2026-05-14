@@ -262,8 +262,13 @@ export function ActivityHeatmap({ activityMap }) {
         <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">Activity</h3>
         <span className="text-xs text-text-muted">
           {Object.keys(activityMap || {}).length} active days ·{" "}
-          {fmt(Object.values(activityMap || {}).reduce((a: number, b: number) => a + b, 0))} tokens
-          · 365 days
+          {fmt(
+            Object.values(activityMap || {}).reduce<number>(
+              (a, b) => a + (typeof b === "number" ? b : 0),
+              0
+            )
+          )}{" "}
+          tokens · 365 days
         </span>
       </div>
 

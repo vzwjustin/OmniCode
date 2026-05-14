@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       protocol: searchParams.get("protocol") || undefined,
       countryCode: searchParams.get("countryCode") || undefined,
       minQuality: searchParams.get("minQuality") || undefined,
-      limit: searchParams.get("limit") || undefined,
+      maxProxies: searchParams.get("limit") || searchParams.get("maxProxies") || undefined,
     });
 
     if (isValidationFailure(filterValidation)) {
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       protocol: filterValidation.data.protocol,
       countryCode: filterValidation.data.countryCode,
       minQuality: filterValidation.data.minQuality,
-      limit: filterValidation.data.limit,
+      limit: filterValidation.data.maxProxies,
     });
 
     return Response.json({ items: proxies, total: proxies.length });

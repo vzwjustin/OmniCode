@@ -68,7 +68,7 @@ export function buildPrecisionComboModelStep({
   connectionId?: string | null;
   connectionLabel?: string | null;
   weight?: number;
-}): ComboModelStep {
+}): Omit<ComboModelStep, "id"> {
   const normalizedProviderId = toTrimmedString(providerId) || "provider";
   const normalizedModelId = toTrimmedString(modelId) || "model";
   const normalizedConnectionId = toTrimmedString(connectionId);
@@ -119,7 +119,7 @@ export function buildManualComboModelStep({
   value: unknown;
   providers?: ComboBuilderProviderIdentity[];
   weight?: number;
-}): ComboModelStep | null {
+}): Omit<ComboModelStep, "id"> | null {
   const parsed = parseQualifiedModel(value);
   if (!parsed) return null;
 

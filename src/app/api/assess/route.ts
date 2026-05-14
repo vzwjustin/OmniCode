@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.json();
     const validation = validateBody(assessmentPostSchema, rawBody);
-    if (!validation.success) {
+    if (validation.success !== true) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 

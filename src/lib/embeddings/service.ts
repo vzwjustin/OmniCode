@@ -7,6 +7,7 @@ import {
   type EmbeddingProvider,
 } from "@omniroute/open-sse/config/embeddingRegistry.ts";
 import { errorResponse, unavailableResponse } from "@omniroute/open-sse/utils/error.ts";
+import { sanitizeUpstreamHeaders } from "@omniroute/open-sse/utils/responseHeaders.ts";
 import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import * as log from "@/sse/utils/logger";
 import { toJsonErrorPayload } from "@/shared/utils/upstreamError";
@@ -15,7 +16,7 @@ import { getProviderNodes } from "@/lib/localDb";
 
 type ValidatedEmbeddingBody = Record<string, unknown> & { model: string };
 
-interface EmbeddingHandlerOptions {
+export interface EmbeddingHandlerOptions {
   clientRawRequest?: {
     endpoint: string;
     body: Record<string, unknown>;
@@ -140,7 +141,10 @@ export async function createEmbeddingResponse(
     connectionId: options.connectionId || null,
   });
 
-  const responseHeaders = new Headers(result.headers);
+  // Strip Content-Encoding from upstream headers — Node fetch already
+  // decompressed the body, so forwarding the original header would cause
+  // ZlibError on the client.
+  const responseHeaders = sanitizeUpstreamHeaders(result.headers);
 
   if (result.success) {
     if (credentials) await clearRecoveredProviderState(credentials);

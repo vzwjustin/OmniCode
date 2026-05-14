@@ -39,7 +39,7 @@ export async function POST(request) {
     const allCombos = await getCombos();
     const normalizedModels = normalizeComboModels(validation.data.models, {
       comboName: validation.data.name,
-      allCombos,
+      allCombos: allCombos as unknown as Parameters<typeof normalizeComboModels>[1]["allCombos"],
     });
     const comboInput = {
       ...validation.data,
@@ -47,7 +47,7 @@ export async function POST(request) {
     };
     const { name, strategy, config } = comboInput;
     const compositeValidation = validateCompositeTiersConfig(comboInput);
-    if (!compositeValidation.success) {
+    if (compositeValidation.success !== true) {
       return NextResponse.json({ error: compositeValidation.error }, { status: 400 });
     }
 

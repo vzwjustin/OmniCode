@@ -23,9 +23,6 @@ import {
 /** Larger limit for backup/import routes: 100 MB */
 export const MAX_BODY_BYTES_IMPORT = 100 * 1024 * 1024;
 
-/** Larger limit for audio transcription uploads: 100 MB */
-export const MAX_BODY_BYTES_AUDIO = 100 * 1024 * 1024;
-
 /** Configured limit — reads from env or falls back to 10 MB */
 export const MAX_BODY_BYTES = parseRequestBodyLimitBytes(process.env.MAX_BODY_SIZE_BYTES);
 
@@ -33,7 +30,6 @@ type BodySizeRule = { prefix: string; limit: number };
 
 const ROUTE_LIMITS: BodySizeRule[] = [
   { prefix: "/api/db-backups/import", limit: MAX_BODY_BYTES_IMPORT },
-  { prefix: "/api/v1/audio/transcriptions", limit: MAX_BODY_BYTES_AUDIO },
 ];
 
 export function getDefaultRequestBodyLimitMb(): number {

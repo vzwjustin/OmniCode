@@ -262,9 +262,9 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
   // Guardrail pre-call pipeline — prompt injection, PII masking, and future custom rules.
   telemetry.startPhase("validate");
   const preCallGuardrails = await guardrailRegistry.runPreCallHooks(body, {
-    apiKeyInfo,
+    apiKeyInfo: apiKeyInfo as unknown as Record<string, unknown> | null,
     disabledGuardrails: resolveDisabledGuardrails({
-      apiKeyInfo: apiKeyInfo as Record<string, unknown> | null,
+      apiKeyInfo: apiKeyInfo as unknown as Record<string, unknown> | null,
       body,
       headers: request.headers,
     }),
@@ -421,6 +421,7 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
           connectionId?: string | null;
           executionKey?: string | null;
           stepId?: string | null;
+          allowedConnectionIds?: string[] | null;
         }
       ) =>
         handleSingleModelChat(
@@ -593,6 +594,7 @@ async function handleSingleModelChat(
           connectionId?: string | null;
           executionKey?: string | null;
           stepId?: string | null;
+          allowedConnectionIds?: string[] | null;
         }
       ) =>
         handleSingleModelChat(

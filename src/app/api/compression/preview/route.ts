@@ -1,28 +1,12 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
-import { compressionPreviewConfigSchema } from "@/shared/validation/compressionConfigSchemas";
 import { applyCompression } from "@omniroute/open-sse/services/compression/strategySelector";
 import type {
   CompressionConfig,
   CompressionMode,
 } from "@omniroute/open-sse/services/compression/types";
 import { buildCompressionPreviewDiff } from "@omniroute/open-sse/services/compression/diffHelper";
-
-export const PreviewCompressionConfigSchema = compressionPreviewConfigSchema;
-
-export const PreviewRequestSchema = z.object({
-  messages: z
-    .array(
-      z.object({
-        role: z.string(),
-        content: z.union([z.string(), z.array(z.unknown())]),
-      })
-    )
-    .min(1),
-  mode: z.enum(["off", "lite", "standard", "aggressive", "ultra", "rtk", "stacked"]),
-  config: PreviewCompressionConfigSchema.optional(),
-});
+import { PreviewRequestSchema } from "./schema";
 
 function countTokens(text: string): number {
   return Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.33);
@@ -57,7 +41,7 @@ export async function POST(req: Request) {
   }
 
   const { messages, mode, config } = parsed.data;
-  const originalText = messagesToText(messages);
+  const originalText = messagesToText(messages as Array<{ role: string; content: unknown }>);
   const originalTokens = countTokens(originalText);
 
   try {

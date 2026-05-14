@@ -207,14 +207,6 @@ test("providers route accepts managed local, audio, web-cookie and search provid
       },
     },
     {
-      provider: "runwayml",
-      body: {
-        provider: "runwayml",
-        apiKey: "runway-key",
-        name: "Runway Primary",
-      },
-    },
-    {
       provider: "voyage-ai",
       body: {
         provider: "voyage-ai",
@@ -228,16 +220,6 @@ test("providers route accepts managed local, audio, web-cookie and search provid
         provider: "jina-ai",
         apiKey: "jina-key",
         name: "Jina AI Primary",
-      },
-    },
-    {
-      provider: "sdwebui",
-      body: {
-        provider: "sdwebui",
-        name: "SD WebUI Local",
-        providerSpecificData: {
-          baseUrl: "http://localhost:7860",
-        },
       },
     },
     {
@@ -317,26 +299,6 @@ test("providers route accepts managed local, audio, web-cookie and search provid
         name: "oobabooga Local",
         providerSpecificData: {
           baseUrl: "http://localhost:5000/v1",
-        },
-      },
-    },
-    {
-      provider: "assemblyai",
-      body: {
-        provider: "assemblyai",
-        apiKey: "aa-key",
-        name: "AssemblyAI Primary",
-      },
-    },
-    {
-      provider: "aws-polly",
-      body: {
-        provider: "aws-polly",
-        apiKey: "aws-secret-key",
-        name: "AWS Polly Primary",
-        providerSpecificData: {
-          accessKeyId: "AKIA_TEST",
-          region: "us-east-1",
         },
       },
     },

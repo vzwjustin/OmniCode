@@ -26,8 +26,6 @@ import {
   buildGlmCodingHeaders,
   buildGlmModelsUrl,
 } from "@omniroute/open-sse/config/glmProvider.ts";
-import { getImageProvider } from "@omniroute/open-sse/config/imageRegistry.ts";
-import { getVideoProvider } from "@omniroute/open-sse/config/videoRegistry.ts";
 import { resolveAntigravityVersion } from "@omniroute/open-sse/services/antigravityVersion.ts";
 import {
   AZURE_AI_DEFAULT_BASE_URL,
@@ -58,10 +56,6 @@ import {
 import { getEmbeddingProvider } from "@omniroute/open-sse/config/embeddingRegistry.ts";
 import { getRerankProvider } from "@omniroute/open-sse/config/rerankRegistry.ts";
 import {
-  getSpeechProvider,
-  getTranscriptionProvider,
-} from "@omniroute/open-sse/config/audioRegistry.ts";
-import {
   getCachedDiscoveredModels,
   isAutoFetchModelsEnabled,
   persistDiscoveredModels,
@@ -73,7 +67,7 @@ type LocalCatalogModel = {
   id: string;
   name?: string;
   apiFormat?: string;
-  supportedEndpoints?: string[];
+  supportedEndpoints?: readonly string[];
 };
 
 const antigravityDiscoveryInflight = new Map<
@@ -361,22 +355,6 @@ const KIMI_CODING_MODELS_CONFIG: ProviderModelsConfigEntry = {
 
 // Providers that return hardcoded models (no remote /models API)
 const STATIC_MODEL_PROVIDERS: Record<string, () => Array<{ id: string; name: string }>> = {
-  deepgram: () => [
-    { id: "nova-3", name: "Nova 3 (Transcription)" },
-    { id: "nova-2", name: "Nova 2 (Transcription)" },
-    { id: "whisper-large", name: "Whisper Large (Transcription)" },
-    { id: "aura-asteria-en", name: "Aura Asteria EN (TTS)" },
-    { id: "aura-luna-en", name: "Aura Luna EN (TTS)" },
-    { id: "aura-stella-en", name: "Aura Stella EN (TTS)" },
-  ],
-  assemblyai: () => [
-    { id: "universal-3-pro", name: "Universal 3 Pro (Transcription)" },
-    { id: "universal-2", name: "Universal 2 (Transcription)" },
-  ],
-  nanobanana: () => [
-    { id: "nanobanana-flash", name: "NanoBanana Flash (Gemini 2.5 Flash)" },
-    { id: "nanobanana-pro", name: "NanoBanana Pro (Gemini 3 Pro)" },
-  ],
   antigravity: () => ANTIGRAVITY_PUBLIC_MODELS.map((model) => ({ ...model })),
   claude: () => [
     { id: "claude-opus-4-7", name: "Claude Opus 4.7" },
@@ -453,26 +431,6 @@ export function getStaticModelsForProvider(provider: string): LocalCatalogModel[
       apiFormat: "rerank",
       supportedEndpoints: ["rerank"],
     });
-  }
-
-  const imageProvider = getImageProvider(provider);
-  if (imageProvider) {
-    appendModels(imageProvider.models);
-  }
-
-  const videoProvider = getVideoProvider(provider);
-  if (videoProvider) {
-    appendModels(videoProvider.models);
-  }
-
-  const speechProvider = getSpeechProvider(provider);
-  if (speechProvider) {
-    appendModels(speechProvider.models);
-  }
-
-  const transcriptionProvider = getTranscriptionProvider(provider);
-  if (transcriptionProvider) {
-    appendModels(transcriptionProvider.models);
   }
 
   return specialtyModels.length > 0 ? specialtyModels : undefined;
@@ -902,7 +860,10 @@ export async function GET(
       }
     ) => {
       const status = getSafeOutboundFetchErrorStatus(error);
-      if (status === 400) return null;
+      // Historically reserved for validation-class upstream errors. Today
+      // `getSafeOutboundFetchErrorStatus` only returns 503/504/null so this
+      // branch is dormant but preserved for forward compatibility.
+      if ((status as number | null) === 400) return null;
       return buildDiscoveryFallbackResponse(warnings);
     };
 
@@ -1417,8 +1378,10 @@ export async function GET(
 
       const psd = asRecord(connection.providerSpecificData);
       const baseUrl = getProviderBaseUrl(psd) || OCI_DEFAULT_BASE_URL;
-      const projectId =
-        connection.projectId || toNonEmptyString(psd.projectId) || toNonEmptyString(psd.project);
+      const projectId: string | null =
+        toNonEmptyString(connection.projectId) ||
+        toNonEmptyString(psd.projectId) ||
+        toNonEmptyString(psd.project);
 
       let response: Response;
       try {

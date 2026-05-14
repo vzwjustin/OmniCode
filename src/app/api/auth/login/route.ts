@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
 import { getSettings } from "@/lib/localDb";
 import { SignJWT } from "jose";
-import { cookies } from "next/headers";
 import {
   ensurePersistentManagementPasswordHash,
   getStoredManagementPassword,
@@ -13,6 +12,7 @@ import {
 import { loginSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { checkLoginGuard, clearLoginAttempts, recordLoginFailure } from "@/server/auth/loginGuard";
+import { authRouteInternals } from "./internals";
 
 // SECURITY: No hardcoded fallback — JWT_SECRET must be configured.
 if (!process.env.JWT_SECRET) {
@@ -31,11 +31,6 @@ function getSessionTtlDays(): number {
   }
   return 7;
 }
-
-// Test seam for cookie store injection without affecting runtime behavior.
-export const authRouteInternals = {
-  getCookieStore: cookies,
-};
 
 export async function POST(request) {
   const auditContext = getAuditRequestContext(request);

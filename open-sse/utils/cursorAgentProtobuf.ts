@@ -320,7 +320,25 @@ export function* iterateConnectFrames(stream: Buffer): Generator<ConnectFrame> {
     const length = stream.readUInt32BE(pos + 1);
     if (pos + 5 + length > stream.length) return;
     const raw = stream.subarray(pos + 5, pos + 5 + length);
-    const payload = flags & FLAG_GZIP ? zlib.gunzipSync(raw) : raw;
+    let payload: Buffer;
+    if (flags & FLAG_GZIP) {
+      try {
+        payload = zlib.gunzipSync(raw);
+      } catch (err) {
+        // Corrupted gzip frame — yield an empty payload with the flags
+        // preserved so consumers can detect and skip it without the generator
+        // becoming permanently `done`. Logging to stderr keeps the failure
+        // visible in dev/prod without crashing the stream.
+        console.error(
+          "[cursorAgentProtobuf] gunzip failed for frame at offset",
+          pos,
+          err instanceof Error ? err.message : err
+        );
+        payload = Buffer.alloc(0);
+      }
+    } else {
+      payload = raw;
+    }
     yield { flags, payload };
     pos += 5 + length;
   }
@@ -636,7 +654,7 @@ export function decodeKvServerEvent(payload: Buffer): KvServerEvent | null {
 
     if (getBlobArgs) {
       // GetBlobArgs { blob_id (1): bytes }
-      let blobId = Buffer.alloc(0);
+      let blobId: Buffer = Buffer.alloc(0);
       for (const f of decodeFields(getBlobArgs)) {
         if (f.fieldNumber === GBA_BLOB_ID && f.wireType === 2) {
           blobId = f.bytes;
@@ -646,8 +664,8 @@ export function decodeKvServerEvent(payload: Buffer): KvServerEvent | null {
     }
     if (setBlobArgs) {
       // SetBlobArgs { blob_id (1): bytes, blob_data (2): bytes }
-      let blobId = Buffer.alloc(0);
-      let blobData = Buffer.alloc(0);
+      let blobId: Buffer = Buffer.alloc(0);
+      let blobData: Buffer = Buffer.alloc(0);
       for (const f of decodeFields(setBlobArgs)) {
         if (f.fieldNumber === SBA_BLOB_ID && f.wireType === 2) {
           blobId = f.bytes;

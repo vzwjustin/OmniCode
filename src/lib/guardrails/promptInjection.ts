@@ -172,7 +172,7 @@ export function evaluatePromptInjection(
   }
 
   if (mode === "block" && shouldBlock(result.detections, threshold)) {
-    logger.warn?.("[InjectionGuard] Blocked request with prompt injection:", {
+    logger.warn?.("[InjectionGuard]", "Blocked request with prompt injection", {
       detections: result.detections.map((detection) => ({
         pattern: detection.pattern,
         severity: detection.severity,
@@ -183,7 +183,8 @@ export function evaluatePromptInjection(
 
   if (mode === "warn" || mode === "log") {
     logger[mode === "warn" ? "warn" : "info"]?.(
-      "[InjectionGuard] Detected potential injection patterns:",
+      "[InjectionGuard]",
+      "Detected potential injection patterns",
       {
         detections: result.detections.map((detection) => ({
           pattern: detection.pattern,

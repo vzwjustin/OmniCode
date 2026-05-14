@@ -87,9 +87,12 @@ export async function POST(request) {
     const url = buildProviderUrl(provider, body.model || "test-model", true, {
       baseUrlIndex: 0,
       baseUrl: getProviderBaseUrl(connection.providerSpecificData),
-      providerSpecificData: connection.providerSpecificData,
+      providerSpecificData: (connection.providerSpecificData ?? {}) as Record<string, unknown>,
     });
-    const headers = buildProviderHeaders(provider, credentials, true, body);
+    const headers = buildProviderHeaders(provider, credentials, true, body) as Record<
+      string,
+      string
+    >;
 
     // Send request to provider
     const response = await fetch(url, {

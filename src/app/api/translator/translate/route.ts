@@ -195,9 +195,12 @@ export async function POST(request) {
         const url = buildProviderUrl(provider, model, true, {
           baseUrlIndex: 0,
           baseUrl: getProviderBaseUrl(connection.providerSpecificData),
-          providerSpecificData: connection.providerSpecificData,
+          providerSpecificData: (connection.providerSpecificData ?? {}) as Record<string, unknown>,
         });
-        const headers = buildProviderHeaders(provider, credentials, true, actualBody);
+        const headers = buildProviderHeaders(provider, credentials, true, actualBody) as Record<
+          string,
+          string
+        >;
 
         result = {
           timestamp: new Date().toISOString(),

@@ -53,6 +53,10 @@ export interface RegistryModel {
   unsupportedParams?: readonly string[];
   /** Maximum context window in tokens */
   contextLength?: number;
+  /** API format hint surfaced to the local catalog response shape */
+  apiFormat?: string;
+  /** Endpoints (e.g. "chat", "responses") this model is known to support */
+  supportedEndpoints?: readonly string[];
 }
 
 // Reasoning models reject temperature, top_p, penalties, logprobs, n.

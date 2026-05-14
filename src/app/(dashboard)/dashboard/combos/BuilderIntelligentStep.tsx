@@ -64,7 +64,7 @@ export default function BuilderIntelligentStep({
       ...patch,
       weights: {
         ...normalizedConfig.weights,
-        ...(patch.weights || {}),
+        ...((patch.weights as Record<string, unknown>) || {}),
       },
     });
   };

@@ -20,6 +20,7 @@ import {
 } from "../config/glmProvider.ts";
 import { applyProviderRequestDefaults } from "../services/providerRequestDefaults.ts";
 import { getRotatingApiKey } from "../services/apiKeyRotator.ts";
+import { sanitizeUpstreamHeaders } from "../utils/responseHeaders.ts";
 import { CLAUDE_CLI_STAINLESS_PACKAGE_VERSION } from "../config/anthropicHeaders.ts";
 import {
   getRuntimeVersion,
@@ -83,9 +84,10 @@ function isRetryableGlmFallbackError(error: unknown): boolean {
 }
 
 function cloneHeaders(headers: Headers): Headers {
-  const next = new Headers();
-  headers.forEach((value, key) => next.set(key, value));
-  return next;
+  // Use sanitizeUpstreamHeaders to strip Content-Encoding (body is already
+  // decompressed by Node fetch — keeping it triggers ZlibError on client),
+  // Content-Length (may be wrong after transform), and hop-by-hop headers.
+  return sanitizeUpstreamHeaders(headers);
 }
 
 function isJsonResponse(response: Response): boolean {

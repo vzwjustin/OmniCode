@@ -74,6 +74,7 @@ export async function POST(request: Request) {
       inputFileId: validated.input_file_id,
       metadata: validated.metadata,
       apiKeyId,
+      status: "validating",
       outputExpiresAfterSeconds: validated.output_expires_after?.seconds || null,
       outputExpiresAfterAnchor: validated.output_expires_after?.anchor || null,
     });

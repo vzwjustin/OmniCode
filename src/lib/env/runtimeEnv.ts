@@ -76,7 +76,7 @@ export const webRuntimeEnvSchema = z.object({
 
 export type WebRuntimeEnv = z.infer<typeof webRuntimeEnvSchema>;
 
-function formatZodPath(path: Array<string | number>): string {
+function formatZodPath(path: ReadonlyArray<PropertyKey>): string {
   return path.length > 0 ? String(path[0]) : "env";
 }
 

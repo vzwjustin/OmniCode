@@ -1246,7 +1246,7 @@ test("CodexExecutor maps usage_limit_reached websocket failures without explicit
 
 test("Codex internal websocket bridge secret comparison handles mismatched lengths safely", async () => {
   const { bridgeSecretMatches } =
-    await import("../../src/app/api/internal/codex-responses-ws/route.ts");
+    await import("../../src/app/api/internal/codex-responses-ws/bridgeSecret.ts");
 
   assert.equal(bridgeSecretMatches("bridge-secret", "bridge-secret"), true);
   assert.equal(bridgeSecretMatches("bridge-secret", "bridge-secret-extra"), false);
