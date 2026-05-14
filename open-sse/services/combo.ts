@@ -19,6 +19,7 @@ import { maybeGenerateHandoff, resolveContextRelayConfig } from "./contextHandof
 import { fetchCodexQuota } from "./codexQuotaFetcher.ts";
 import { getQuotaFetcher } from "./quotaPreflight.ts";
 import * as semaphore from "./rateLimitSemaphore.ts";
+import { sanitizeUpstreamResponseHeaders } from "@/shared/constants/upstreamHeaders";
 import { getCircuitBreaker } from "../../src/shared/utils/circuitBreaker";
 import { fisherYatesShuffle, getNextFromDeck } from "../../src/shared/utils/shuffleDeck";
 import { parseModel } from "./model.ts";
@@ -223,7 +224,10 @@ export async function validateResponseQuality(
     clonedResponse: new Response(text, {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers,
+      // Strip `content-encoding` / `content-length` (Node `fetch` already
+      // decompressed the body — leaving these in causes a client ZlibError)
+      // and hop-by-hop headers.
+      headers: sanitizeUpstreamResponseHeaders(response.headers),
     }),
   };
 }
@@ -1502,7 +1506,8 @@ export async function handleComboChat({
               };
               return new Response(JSON.stringify(updatedJson), {
                 status: res.status,
-                headers: res.headers,
+                // Strip decompression-leak + hop-by-hop headers before forwarding.
+                headers: sanitizeUpstreamResponseHeaders(res.headers),
               });
             }
           } catch {

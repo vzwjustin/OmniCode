@@ -179,6 +179,10 @@ import { injectSkills } from "@/lib/skills/injection";
 import { handleToolCallExecution } from "@/lib/skills/interception";
 import { OMNIROUTE_RESPONSE_HEADERS } from "@/shared/constants/headers";
 import {
+  isForbiddenUpstreamResponseHeaderName,
+  sanitizeUpstreamResponseHeaders,
+} from "@/shared/constants/upstreamHeaders";
+import {
   buildClaudeCodeCompatibleRequest,
   isClaudeCodeCompatibleProvider,
   resolveClaudeCodeCompatibleSessionId,
@@ -3181,6 +3185,11 @@ export async function handleChatCore({
                   return res;
                 }
 
+                // Sanitize upstream headers before forwarding: strip
+                // `content-encoding` / `content-length` (Node `fetch` already
+                // decompressed the body — leaving these in causes ZlibError on
+                // the client) and RFC 7230 hop-by-hop headers.
+                const sanitizedHeaders = sanitizeUpstreamResponseHeaders(res.response.headers);
                 return {
                   ...res,
                   response: new Response(
@@ -3188,10 +3197,10 @@ export async function handleChatCore({
                     {
                       status: res.response.status,
                       statusText: res.response.statusText,
-                      headers: res.response.headers,
+                      headers: sanitizedHeaders,
                     }
                   ),
-                  headers: res.response.headers,
+                  headers: sanitizedHeaders,
                 };
               }
 
@@ -3208,7 +3217,8 @@ export async function handleChatCore({
         // Non-stream: release semaphore immediately after reading full response body.
         const status = rawResult.response.status;
         const statusText = rawResult.response.statusText;
-        const headers = new Headers(rawResult.response.headers);
+        // Sanitize upstream headers — see comment in the streaming branch above.
+        const headers = sanitizeUpstreamResponseHeaders(rawResult.response.headers);
         const contentType = (headers.get("content-type") || "").toLowerCase();
         const payload = await readNonStreamingResponseBody(
           rawResult.response,
@@ -4134,7 +4144,10 @@ export async function handleChatCore({
     try {
       const firstChoice = translatedResponse?.choices?.[0];
       const msg = firstChoice?.message;
-      cacheReasoningFromAssistantMessage(msg, provider, model, { requestId: skillRequestId, messageIndex: 0 });
+      cacheReasoningFromAssistantMessage(msg, provider, model, {
+        requestId: skillRequestId,
+        messageIndex: 0,
+      });
     } catch {
       // Cache capture is non-critical — never block the response
     }
@@ -4364,13 +4377,20 @@ export async function handleChatCore({
     await onRequestSuccess();
   }
 
+  // Build SSE response headers from the upstream's, but strip:
+  //   - `content-type` (we set our own `text/event-stream` below)
+  //   - `content-encoding` / `content-length` (Node `fetch` already
+  //     decompressed the body; leaving these in causes ZlibError on the client)
+  //   - all RFC 7230 hop-by-hop headers
   const responseHeaders: Record<string, string> = {
     ...Object.fromEntries(
       (() => {
         const arr: [string, string][] = [];
         providerResponse.headers.forEach((v, k) => arr.push([k, v]));
         return arr;
-      })().filter(([k]) => k.toLowerCase() !== "content-type")
+      })().filter(
+        ([k]) => k.toLowerCase() !== "content-type" && !isForbiddenUpstreamResponseHeaderName(k)
+      )
     ),
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",
@@ -4421,7 +4441,10 @@ export async function handleChatCore({
         const body = streamResponseBody as Record<string, unknown>;
         const choices = body.choices as { message?: Record<string, unknown> }[] | undefined;
         const msg = choices?.[0]?.message;
-        cacheReasoningFromAssistantMessage(msg, provider, model, { requestId: skillRequestId, messageIndex: 0 });
+        cacheReasoningFromAssistantMessage(msg, provider, model, {
+          requestId: skillRequestId,
+          messageIndex: 0,
+        });
       } catch {
         // Cache capture is non-critical — never block the stream
       }

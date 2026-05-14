@@ -28,6 +28,7 @@ import {
   resolveAntigravityVersion,
 } from "../services/antigravityVersion.ts";
 import { resolveAntigravityModelId } from "../config/antigravityModelAliases.ts";
+import { sanitizeUpstreamResponseHeaders } from "@/shared/constants/upstreamHeaders";
 import { cloakAntigravityToolPayload } from "../config/toolCloaking.ts";
 import {
   shouldStripCloudCodeThinking,
@@ -1100,7 +1101,10 @@ export class AntigravityExecutor extends BaseExecutor {
             const modifiedBody = JSON.stringify(obj);
             const modifiedResponse = new Response(modifiedBody, {
               status: response.status,
-              headers: response.headers,
+              // Body was decompressed + rebuilt as JSON — strip the upstream's
+              // `content-encoding` / `content-length` so the client doesn't
+              // try to gunzip plain JSON (ZlibError) and recompute length.
+              headers: sanitizeUpstreamResponseHeaders(response.headers),
             });
             return {
               response: modifiedResponse,
@@ -1230,7 +1234,10 @@ export class AntigravityExecutor extends BaseExecutor {
           const tappedResponse = new Response(tappedBody, {
             status: response.status,
             statusText: response.statusText,
-            headers: response.headers,
+            // Body was decompressed by Node `fetch` and is now piped through
+            // a transform — strip `content-encoding` / `content-length` to
+            // avoid a client-side ZlibError on the re-emitted stream.
+            headers: sanitizeUpstreamResponseHeaders(response.headers),
           });
           return {
             response: tappedResponse,

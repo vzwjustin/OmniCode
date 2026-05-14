@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { REGISTRY } from "../config/providerRegistry.ts";
 import { BaseExecutor, mergeUpstreamExtraHeaders, type ExecuteInput } from "./base.ts";
+import { sanitizeUpstreamResponseHeaders } from "@/shared/constants/upstreamHeaders";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -527,7 +528,11 @@ export class CommandCodeExecutor extends BaseExecutor {
         response: new Response(errorText || `Command Code API error ${upstream.status}`, {
           status: upstream.status,
           statusText: upstream.statusText,
-          headers: upstream.headers,
+          // Strip `content-encoding` / `content-length` and hop-by-hop headers
+          // — the upstream body was decompressed by Node `fetch` and replaced
+          // with a plain error string above, so the original encoding headers
+          // would mismatch the new body and trigger a client ZlibError.
+          headers: sanitizeUpstreamResponseHeaders(upstream.headers),
         }),
         url,
         headers,

@@ -1,4 +1,5 @@
 import { HTTP_STATUS } from "../config/constants.ts";
+import { sanitizeUpstreamResponseHeaders } from "@/shared/constants/upstreamHeaders";
 
 type StreamReadinessLogger = {
   debug?: (tag: string, message: string) => void;
@@ -329,7 +330,10 @@ export async function ensureStreamReadiness(
           response: new Response(prependBufferedChunks(chunks, reader), {
             status: response.status,
             statusText: response.statusText,
-            headers: response.headers,
+            // Strip `content-encoding` / `content-length` and hop-by-hop
+            // headers — Node `fetch` already decompressed the body, so leaving
+            // these in would trigger a client-side ZlibError.
+            headers: sanitizeUpstreamResponseHeaders(response.headers),
           }),
         };
       }
