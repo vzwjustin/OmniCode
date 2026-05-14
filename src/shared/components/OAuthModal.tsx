@@ -618,6 +618,18 @@ export default function OAuthModal({
       size="lg"
     >
       <div className="flex flex-col gap-4">
+        {/* TOS / risk disclaimer for subscription-style OAuth logins */}
+        <div
+          role="note"
+          className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200"
+        >
+          <p className="font-semibold mb-1">
+            <span className="material-symbols-outlined text-sm align-middle mr-1">warning</span>
+            {t("subscriptionDisclaimerTitle")}
+          </p>
+          <p className="opacity-90">{t("subscriptionDisclaimerBody")}</p>
+        </div>
+
         {/* Waiting Step (Localhost - popup mode) */}
         {step === "waiting" && !isDeviceCode && (
           <div className="text-center py-6">
