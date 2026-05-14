@@ -44,9 +44,13 @@ const CLAUDE_CODE_COMPATIBLE_DEFAULT_SYSTEM_BLOCKS = [
     text: "You are a Claude agent, built on Anthropic's Claude Agent SDK.",
   },
 ];
+// Per Anthropic's public docs, the `context-1m-2025-08-07` beta is Sonnet-only.
+// Opus 4.x ships with 200k native context and does NOT accept the 1M beta —
+// sending the flag on an Opus request returns 400 "The long context beta is
+// not yet available for this subscription." (misleading message; the gate is
+// per-model, not per-subscription). Keep this list strictly Sonnet 4.x family.
 const CONTEXT_1M_SUPPORTED_MODELS = [
-  "claude-opus-4-7",
-  "claude-opus-4-6",
+  "claude-sonnet-4-7",
   "claude-sonnet-4-6",
   "claude-sonnet-4-5",
   "claude-sonnet-4",

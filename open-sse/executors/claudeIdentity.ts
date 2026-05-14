@@ -10,6 +10,8 @@
 
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
+import { modelSupportsContext1mBeta } from "../services/claudeCodeCompatible.ts";
+
 // ---------- Versions ------------------------------------------------------
 
 export const CLAUDE_CODE_VERSION = "2.1.131";
@@ -301,11 +303,18 @@ export function selectBetaFlags(body: Record<string, unknown> | null | undefined
     !!(outputCfg && (outputCfg.format as { type?: string } | undefined)?.type === "json_schema") ||
     !!(b.response_format as { type?: string } | undefined)?.type;
   const isFullAgent = hasTools && hasSystem;
+  // The 1M context beta is gated per-model by Anthropic. Sending it on a model
+  // that does not accept it returns 400 "The long context beta is not yet
+  // available for this subscription." (the wording is misleading — the gate is
+  // per-model, not per-subscription). Only attach it when the target model is
+  // on the allow-list (Sonnet 4.x family).
+  const model = typeof b.model === "string" ? b.model : "";
+  const supports1mContext = modelSupportsContext1mBeta(model);
 
   const flags: string[] = [];
   if (isFullAgent) flags.push("claude-code-20250219");
   flags.push("oauth-2025-04-20");
-  if (isFullAgent) flags.push("context-1m-2025-08-07");
+  if (isFullAgent && supports1mContext) flags.push("context-1m-2025-08-07");
   flags.push(
     "interleaved-thinking-2025-05-14",
     "redact-thinking-2026-02-12",
