@@ -221,7 +221,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               {
                 step: "restart",
                 status: "pending",
-                message: "Waiting for OmniRoute to restart with the new version.",
+                message: "Waiting for OmniCode to restart with the new version.",
               },
             ]
           : [
@@ -233,7 +233,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               {
                 step: "restart",
                 status: "pending",
-                message: "Waiting for OmniRoute to restart with the new version.",
+                message: "Waiting for OmniCode to restart with the new version.",
               },
             ];
 
@@ -265,14 +265,14 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               next = mergeUpdateStep(next, {
                 step: "complete",
                 status: "done",
-                message: `OmniRoute is now running v${targetVersion}.`,
+                message: `OmniCode is now running v${targetVersion}.`,
               });
 
               return next;
             });
             setUpdating(false);
             setUpdatePhase("done");
-            notify.success(`OmniRoute updated to v${targetVersion}.`);
+            notify.success(`OmniCode updated to v${targetVersion}.`);
             await fetchData();
             return;
           }
@@ -296,7 +296,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
             next = mergeUpdateStep(next, {
               step: "restart",
               status: "pending",
-              message: `Waiting for OmniRoute to come back on v${targetVersion}.`,
+              message: `Waiting for OmniCode to come back on v${targetVersion}.`,
             });
 
             return next;
@@ -321,7 +321,7 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
             next = mergeUpdateStep(next, {
               step: "restart",
               status: "running",
-              message: "Service restart in progress. Waiting for OmniRoute to come back online...",
+              message: "Service restart in progress. Waiting for OmniCode to come back online...",
             });
 
             return next;
@@ -478,17 +478,17 @@ export default function HomePageClient({ machineId }: HomePageClientProps) {
               <div>
                 <h3 className="text-lg font-bold">
                   {updatePhase === "done"
-                    ? "Update Complete!"
+                    ? "All updated!"
                     : updatePhase === "failed"
-                      ? "Update Failed"
-                      : "Updating OmniRoute..."}
+                      ? "Update didn't go through"
+                      : "Updating OmniCode..."}
                 </h3>
                 <p className="text-xs text-text-muted mt-0.5">
                   {updatePhase === "done"
-                    ? "The page will reload automatically in a few seconds."
+                    ? "We'll reload the page for you in a few seconds."
                     : updatePhase === "failed"
-                      ? "Please try again or update manually via the CLI."
-                      : "Do not close this page. The system will restart automatically."}
+                      ? "Give it another try, or run the update from the CLI if it keeps stalling."
+                      : "Hang tight — keep this page open while we restart."}
                 </p>
               </div>
             </div>
