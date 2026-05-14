@@ -49,7 +49,7 @@ export async function deliverWebhook(
 
   // SSRF guard — resolve DNS and reject private/loopback/IMDS targets up front.
   const urlCheck = await validateOutboundUrl(url, "public-only");
-  if (urlCheck.ok !== true) {
+  if (urlCheck.ok === false) {
     return {
       success: false,
       status: 400,
