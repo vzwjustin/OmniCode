@@ -22,9 +22,9 @@ Every fix is scoped narrowly to the file(s) cited; no broad refactors. Each task
 
 - [x] Task A5. **Constant-time env-key comparison** in `src/sse/services/auth.ts:1725-1733` and `src/lib/db/apiKeys.ts:171-174`. Replace `apiKey === envKey` / `key === envKey` with `crypto.timingSafeEqual`, gating on equal length first (with a dummy compare on length mismatch to keep total work uniform). Pattern already exists at `src/app/api/oauth/[provider]/[action]/route.ts:54` — reuse it as a shared helper in `src/lib/util/secureCompare.ts` (new file is acceptable here because the helper is referenced from multiple modules). Rationale: removes the network-observable timing oracle on the passthrough env-var key.
 
-- [ ] Task A6. **Plan plaintext-key column retirement** in `src/lib/db/apiKeys.ts:265-269`. Split into two sub-steps so the runtime never breaks:
+- [x] Task A6. **Plan plaintext-key column retirement** in `src/lib/db/apiKeys.ts:265-269`. Split into two sub-steps so the runtime never breaks:
   - [x] A6.a. Add a migration (`db/migrations/056_api_keys_hash_only.sql`) that backfills `key_hash` for any row still missing it (hash the existing `key` value), then clears `api_keys.key` to NULL when `key_hash IS NOT NULL`.
-  - [ ] A6.b. Change `_stmtValidateKey` and `_stmtGetKeyMetadata` to `WHERE key_hash = ?` only; pass only `hashedKey` from `validateApiKey()` (line 818) and `getApiKeyMetadata()`. Keep the legacy `WHERE key = ?` clause behind a `OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1` env flag for one release if backwards compatibility is needed.
+  - [x] A6.b. Change `_stmtValidateKey` and `_stmtGetKeyMetadata` to `WHERE key_hash = ?` only; pass only `hashedKey` from `validateApiKey()` (line 818) and `getApiKeyMetadata()`. Keep the legacy `WHERE key = ?` clause behind a `OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1` env flag for one release if backwards compatibility is needed.
   - Rationale: a DB leak today exposes every legacy key directly; the migration brings storage-at-rest in line with hash-only design.
 
 ### Tranche B — High (OAuth correctness, API surface, fail-open)
@@ -74,11 +74,11 @@ Every fix is scoped narrowly to the file(s) cited; no broad refactors. Each task
 
 ### Tranche D — Test & Verification Coverage
 
-- [ ] Task D1. **Unit tests for encryption auto-migration**: extend `tests/unit/` with cases that (a) round-trip with the static key, (b) decrypt a fixture encrypted with the legacy dynamic salt and assert success, (c) assert `encrypt()` throws on key failure (post-A1).
+- [x] Task D1. **Unit tests for encryption auto-migration**: extend `tests/unit/` with cases that (a) round-trip with the static key, (b) decrypt a fixture encrypted with the legacy dynamic salt and assert success, (c) assert `encrypt()` throws on key failure (post-A1).
 
-- [ ] Task D2. **Unit tests for `evaluateToolScopes`**: assert that an empty `authInfo.scopes` plus a `_meta.scopes: ["*"]` payload resolves to `{ allowed: false, source: "none" or "env" }` after Task A4. Tests live under `tests/unit/` or `vitest` MCP suite.
+- [x] Task D2. **Unit tests for `evaluateToolScopes`**: assert that an empty `authInfo.scopes` plus a `_meta.scopes: ["*"]` payload resolves to `{ allowed: false, source: "none" or "env" }` after Task A4. Tests live under `tests/unit/` or `vitest` MCP suite.
 
-- [ ] Task D3. **Timing-safe comparison tests**: assert `isValidApiKey` rejects keys differing only in the final character with identical wall-clock cost (statistical/best-effort) AND that the path uses `timingSafeEqual` (mock spy).
+- [x] Task D3. **Timing-safe comparison tests**: assert `isValidApiKey` rejects keys differing only in the final character with identical wall-clock cost (statistical/best-effort) AND that the path uses `timingSafeEqual` (mock spy).
 
 - [ ] Task D4. **Token-refresh AbortController test**: create a mock `fetch` that never resolves; assert `withTimeout` fires its abort signal and the mock `fetch` receives an `AbortError`.
 
