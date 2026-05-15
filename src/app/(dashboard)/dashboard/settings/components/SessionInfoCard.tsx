@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Card, Button } from "@/shared/components";
+import { Card, Button, ConfirmModal } from "@/shared/components";
 import { useTranslations } from "next-intl";
 
 interface SessionInfo {
@@ -22,6 +22,7 @@ interface SessionInfo {
 export default function SessionInfoCard() {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [clearConfirm, setClearConfirm] = useState(false);
   const t = useTranslations("settings");
 
   useEffect(() => {
@@ -82,12 +83,14 @@ export default function SessionInfoCard() {
     }
   };
 
-  const handleClearStorage = () => {
-    if (confirm(t("clearLocalDataConfirm"))) {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.reload();
-    }
+  const requestClearStorage = () => {
+    setClearConfirm(true);
+  };
+
+  const performClearStorage = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.reload();
   };
 
   if (loading) {
@@ -140,7 +143,7 @@ export default function SessionInfoCard() {
       </div>
 
       <div className="flex gap-3 mt-4 pt-4 border-t border-border/50">
-        <Button variant="secondary" onClick={handleClearStorage}>
+        <Button variant="secondary" onClick={requestClearStorage}>
           {t("clearLocalData")}
         </Button>
         {session?.authenticated && (
@@ -149,6 +152,16 @@ export default function SessionInfoCard() {
           </Button>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={clearConfirm}
+        onClose={() => setClearConfirm(false)}
+        onConfirm={performClearStorage}
+        title={t("clearLocalData")}
+        message={t("clearLocalDataConfirm")}
+        confirmText={t("clearLocalData")}
+        variant="danger"
+      />
     </Card>
   );
 }

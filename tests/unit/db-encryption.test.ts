@@ -99,7 +99,12 @@ test("legacy encryption migration parses ciphertext in canonical payload order",
     "legacy-provider-token"
   );
 
-  assert.equal(encryption.decrypt(legacyCiphertext), null);
+  // Tranche A — Task A2: `decrypt()` falls back to the legacy dynamic-salt
+  // key transparently, so a legacy ciphertext now decrypts successfully
+  // and surfaces the same plaintext that a current-version write would.
+  // The previous expectation (`null`) was tied to the v3.7.8 static-only
+  // behavior and is no longer the contract.
+  assert.equal(encryption.decrypt(legacyCiphertext), "legacy-provider-token");
 
   const migrated = encryption.migrateLegacyEncryptedString(legacyCiphertext);
 

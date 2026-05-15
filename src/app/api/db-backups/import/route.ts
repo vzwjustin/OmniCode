@@ -3,8 +3,9 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 import os from "os";
-import { getDbInstance, resetDbInstance, SQLITE_FILE } from "@/lib/db/core";
+import { resetDbInstance, SQLITE_FILE } from "@/lib/db/core";
 import { backupDbFile } from "@/lib/db/backup";
+import { listTables, getDatabaseTableCounts } from "@/lib/db/databaseSnapshot";
 import { isAuthRequired, isAuthenticated } from "@/shared/utils/apiAuth";
 
 export const runtime = "nodejs";
@@ -99,10 +100,7 @@ export async function POST(request: Request) {
       }
 
       // Validate required tables exist
-      const tables = testDb
-        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
-        .all()
-        .map((row: any) => row.name);
+      const tables = listTables(testDb);
 
       const missingTables = REQUIRED_TABLES.filter((t) => !tables.includes(t));
       if (missingTables.length > 0) {
@@ -145,25 +143,19 @@ export async function POST(request: Request) {
     fs.copyFileSync(tmpPath, SQLITE_FILE!);
 
     // Reopen and verify
-    const db = getDbInstance();
-    const connCount =
-      (db.prepare("SELECT COUNT(*) as cnt FROM provider_connections").get() as any)?.cnt || 0;
-    const nodeCount =
-      (db.prepare("SELECT COUNT(*) as cnt FROM provider_nodes").get() as any)?.cnt || 0;
-    const comboCount = (db.prepare("SELECT COUNT(*) as cnt FROM combos").get() as any)?.cnt || 0;
-    const keyCount = (db.prepare("SELECT COUNT(*) as cnt FROM api_keys").get() as any)?.cnt || 0;
+    const counts = getDatabaseTableCounts();
 
     console.log(
-      `[DB] Imported database from upload: ${connCount} connections, ${nodeCount} nodes, ${comboCount} combos, ${keyCount} API keys`
+      `[DB] Imported database from upload: ${counts.providerConnections} connections, ${counts.providerNodes} nodes, ${counts.combos} combos, ${counts.apiKeys} API keys`
     );
 
     return NextResponse.json({
       imported: true,
       filename: fileName,
-      connectionCount: connCount,
-      nodeCount,
-      comboCount,
-      apiKeyCount: keyCount,
+      connectionCount: counts.providerConnections,
+      nodeCount: counts.providerNodes,
+      comboCount: counts.combos,
+      apiKeyCount: counts.apiKeys,
     });
   } catch (error) {
     console.error("[API] Error importing database:", error);

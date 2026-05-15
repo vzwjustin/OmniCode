@@ -80,8 +80,8 @@ test("rebrand preserves i18n keys that mention the brand name", () => {
   const referencedKeys = [
     ["landing", "installOmniRoute"],
     ["landing", "startingOmniRoute"],
-    ["agents", "flowOmniRoute"],
-    ["agents", "flowDiagramOmniRoute"],
+    ["agents", "flowOmniCoder"],
+    ["agents", "flowDiagramOmniCoder"],
     ["cliTools", "defaultOmnirouteKey"],
     ["cliTools", "usingDefaultOmniroute"],
   ];

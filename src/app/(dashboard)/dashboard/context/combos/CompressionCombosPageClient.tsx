@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { ConfirmModal } from "@/shared/components";
 
 type PipelineStep = { engine: string; intensity?: string };
 type CompressionCombo = {
@@ -44,6 +45,8 @@ export default function CompressionCombosPageClient() {
   const [outputModeIntensity, setOutputModeIntensity] = useState("full");
   const [assignmentIds, setAssignmentIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CompressionCombo | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const refresh = () => {
     fetch("/api/context/combos")
@@ -130,10 +133,19 @@ export default function CompressionCombosPageClient() {
     }
   };
 
-  const deleteCombo = async (combo: CompressionCombo) => {
-    if (!confirm(t("deleteConfirm"))) return;
-    const res = await fetch(`/api/context/combos/${combo.id}`, { method: "DELETE" });
-    if (res.ok) refresh();
+  const deleteCombo = (combo: CompressionCombo) => {
+    setDeleteTarget(combo);
+  };
+
+  const performDelete = async (combo: CompressionCombo) => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/context/combos/${combo.id}`, { method: "DELETE" });
+      if (res.ok) refresh();
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
   };
 
   const setDefault = async (id: string) => {
@@ -386,6 +398,18 @@ export default function CompressionCombosPageClient() {
           </div>
         ))}
       </section>
+
+      <ConfirmModal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) void performDelete(deleteTarget);
+        }}
+        title={t("deleteCombo")}
+        message={t("deleteConfirm")}
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { RelativeTime } from "@/shared/components";
 import { IMAGE_PROVIDERS } from "@omniroute/open-sse/config/imageRegistry.ts";
 import { VIDEO_PROVIDERS } from "@omniroute/open-sse/config/videoRegistry.ts";
 import { MUSIC_PROVIDERS } from "@omniroute/open-sse/config/musicRegistry.ts";
@@ -1028,7 +1029,7 @@ export default function MediaPageClient() {
             </span>
             <h3 className="text-sm font-medium text-text-main">{t("result")}</h3>
             <span className="text-xs text-text-muted ml-auto">
-              {new Date(result.timestamp).toLocaleTimeString()}
+              <RelativeTime value={result.timestamp} />
             </span>
           </div>
 

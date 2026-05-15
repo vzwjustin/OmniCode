@@ -587,10 +587,51 @@ function startNextServer() {
     stdio: "pipe",
   });
 
+  // Tranche B — B9 (EPIPE feedback loop, recent-issues item)
+  //
+  // If Electron's own parent stdio handles ever break (detached terminal,
+  // parent process exits, headless launcher closes its pipe), every write
+  // we attempt to process.stdout / process.stderr below would throw EPIPE.
+  // The previous code re-raised those as `uncaughtException`, the handler
+  // at the bottom of this file called console.error which itself wrote to
+  // a broken stderr, and the loop pegged a core at 99% CPU while pino's
+  // file worker silently appended GBs of JSON-lines to disk. We saw this
+  // exact failure live: 7.4 GB written in 3 minutes.
+  //
+  // Defenses (belt-and-braces because each layer is cheap and the failure
+  // mode is so destructive):
+  //   1. Install `error` handlers on the spawned child's stdout/stderr so
+  //      pipe errors don't bubble up as uncaughtException.
+  //   2. Install `error` handlers on the Electron main process's own
+  //      stdout/stderr so subsequent `console.log`/`console.error` calls
+  //      from anywhere in main.js never raise.
+  //   3. Wrap every relay write in try/catch so a transient write failure
+  //      doesn't propagate.
+  const safeWrite = (stream, prefix, data) => {
+    try {
+      stream.write(`${prefix} ${data}`);
+    } catch {
+      /* parent stdio broken — drop. The server already logs to its own file. */
+    }
+  };
+
+  nextServer.stdout?.on("error", (err) => {
+    // EPIPE is the only one we expect; log unfamiliar errors via console.error
+    // (which is now EPIPE-safe thanks to the process.stdout handler below).
+    if (err?.code !== "EPIPE") {
+      console.error("[Electron] nextServer.stdout error:", err);
+    }
+  });
+  nextServer.stderr?.on("error", (err) => {
+    if (err?.code !== "EPIPE") {
+      console.error("[Electron] nextServer.stderr error:", err);
+    }
+  });
+
   // Capture server output for logging
   nextServer.stdout?.on("data", (data) => {
     const text = data.toString();
-    process.stdout.write(`[Server] ${text}`);
+    safeWrite(process.stdout, "[Server]", text);
 
     // Detect server ready
     if (text.includes("Ready") || text.includes("started") || text.includes("listening")) {
@@ -599,7 +640,7 @@ function startNextServer() {
   });
 
   nextServer.stderr?.on("data", (data) => {
-    process.stderr.write(`[Server:err] ${data}`);
+    safeWrite(process.stderr, "[Server:err]", data);
   });
 
   nextServer.on("error", (err) => {
@@ -755,10 +796,44 @@ app.on("before-quit", async (event) => {
 });
 
 // Global error handlers
+//
+// Tranche B — B9 (EPIPE feedback loop): install `error` handlers on the
+// Electron main process's stdio so a broken parent pipe never produces an
+// `uncaughtException`. Without this, an EPIPE on `process.stdout` would fire
+// uncaughtException, the handler below would call `console.error` which itself
+// writes to a broken stderr → another uncaughtException → infinite loop and
+// 100% CPU. Mirrors the spawned child's stdio guards installed in
+// startNextServer().
+process.stdout?.on?.("error", (err) => {
+  if (err?.code !== "EPIPE") {
+    // Re-raise non-EPIPE errors via a path that doesn't itself depend on
+    // stdout (write to file via Electron's logger if available, else swallow).
+    try {
+      process.stderr.write(`[Electron] stdout error: ${err?.message || err}\n`);
+    } catch {
+      /* both stdio handles are broken — there's nowhere to report */
+    }
+  }
+});
+process.stderr?.on?.("error", () => {
+  /* stderr broken — nowhere left to report; drop. */
+});
+
 process.on("uncaughtException", (error) => {
-  console.error("[Electron] Uncaught Exception:", error);
+  // EPIPE on console writes is benign once the handlers above are installed,
+  // but defend against a stray write race during early init.
+  if (error && error.code === "EPIPE") return;
+  try {
+    console.error("[Electron] Uncaught Exception:", error);
+  } catch {
+    /* console.error itself failed — don't recurse */
+  }
 });
 
 process.on("unhandledRejection", (reason) => {
-  console.error("[Electron] Unhandled Rejection:", reason);
+  try {
+    console.error("[Electron] Unhandled Rejection:", reason);
+  } catch {
+    /* see above */
+  }
 });

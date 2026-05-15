@@ -420,28 +420,58 @@ function listReferencedArtifacts() {
   );
 }
 
+// Tranche C #15: SQLite caps the number of `?` placeholders per statement at
+// SQLITE_MAX_VARIABLE_NUMBER (32766 on modern builds, 999 on older ones). A
+// caller that deletes thousands of call_logs rows in one go used to blow past
+// that limit. We now chunk into safe batches and wrap the whole operation in
+// a single transaction so the call_logs table and the on-disk artifact files
+// stay in sync (artifacts are deleted *after* the SQLite txn commits).
+const SQLITE_DELETE_BATCH_SIZE = 500;
+
 function deleteCallLogRowsByIds(ids: string[]): DeleteResult {
   if (ids.length === 0) {
     return { deletedRows: 0, deletedArtifacts: 0 };
   }
 
   const db = getDbInstance();
-  const placeholders = ids.map(() => "?").join(", ");
-  const rows = db
-    .prepare(`SELECT artifact_relpath FROM call_logs WHERE id IN (${placeholders})`)
-    .all(...ids) as Array<{ artifact_relpath: string | null }>;
 
-  const result = db.prepare(`DELETE FROM call_logs WHERE id IN (${placeholders})`).run(...ids);
+  // Collect artifact references and run the DELETE for every chunk inside a
+  // single transaction so a partial failure rolls back cleanly.
+  const artifactPaths: Array<string | null> = [];
+  let deletedRows = 0;
+
+  const runDelete = db.transaction((batches: string[][]) => {
+    for (const batch of batches) {
+      const placeholders = batch.map(() => "?").join(", ");
+      const rows = db
+        .prepare(`SELECT artifact_relpath FROM call_logs WHERE id IN (${placeholders})`)
+        .all(...batch) as Array<{ artifact_relpath: string | null }>;
+      for (const row of rows) {
+        artifactPaths.push(row.artifact_relpath);
+      }
+      const result = db
+        .prepare(`DELETE FROM call_logs WHERE id IN (${placeholders})`)
+        .run(...batch);
+      deletedRows += result.changes ?? 0;
+    }
+  });
+
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += SQLITE_DELETE_BATCH_SIZE) {
+    batches.push(ids.slice(i, i + SQLITE_DELETE_BATCH_SIZE));
+  }
+  runDelete(batches);
+
   let deletedArtifacts = 0;
-  for (const row of rows) {
-    if (deleteCallArtifact(row.artifact_relpath)) {
+  for (const relpath of artifactPaths) {
+    if (deleteCallArtifact(relpath)) {
       deletedArtifacts++;
     }
   }
   cleanupEmptyCallLogDirs();
 
   return {
-    deletedRows: result.changes,
+    deletedRows,
     deletedArtifacts,
   };
 }

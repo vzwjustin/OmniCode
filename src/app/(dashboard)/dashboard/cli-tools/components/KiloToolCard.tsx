@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, Button, ModelSelectModal, ManualConfigModal } from "@/shared/components";
+import { Card, Button, ModelSelectModal, ManualConfigModal, RelativeTime } from "@/shared/components";
 import Image from "next/image";
 import CliStatusBadge from "./CliStatusBadge";
 import { useTranslations } from "next-intl";
@@ -440,7 +440,7 @@ export default function KiloToolCard({
                             <div className="flex flex-col">
                               <span className="font-medium">{b.originalFile}</span>
                               <span className="text-text-muted">
-                                {new Date(b.createdAt).toLocaleString()}
+                                <RelativeTime value={b.createdAt} />
                               </span>
                             </div>
                             <Button

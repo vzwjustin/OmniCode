@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Card, Button } from "@/shared/components";
+import { Card, Button, ConfirmModal } from "@/shared/components";
 import { useTranslations } from "next-intl";
 
 const PRICING_FIELDS = ["input", "output", "cached", "reasoning", "cache_creation"] as const;
@@ -73,6 +73,10 @@ export default function PricingTab() {
     tone: "success" | "error" | "info";
     message: string;
   } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<
+    { type: "reset"; provider: string } | { type: "clearSync" } | null
+  >(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const t = useTranslations("settings");
 
   const showStatus = useCallback((tone: "success" | "error" | "info", message: string) => {
@@ -270,10 +274,13 @@ export default function PricingTab() {
     [loadData, pricingData, showStatus, t]
   );
 
-  const resetProvider = useCallback(
-    async (providerAlias: string) => {
-      if (!confirm(t("resetPricingConfirm", { provider: providerAlias.toUpperCase() }))) return;
+  const resetProvider = useCallback((providerAlias: string) => {
+    setConfirmAction({ type: "reset", provider: providerAlias });
+  }, []);
 
+  const performResetProvider = useCallback(
+    async (providerAlias: string) => {
+      setConfirmLoading(true);
       try {
         const response = await fetch(`/api/pricing?provider=${providerAlias}`, {
           method: "DELETE",
@@ -298,6 +305,9 @@ export default function PricingTab() {
             reason: error?.message || t("unknownError"),
           })
         );
+      } finally {
+        setConfirmLoading(false);
+        setConfirmAction(null);
       }
     },
     [loadData, showStatus, t]
@@ -335,9 +345,12 @@ export default function PricingTab() {
     }
   }, [loadData, showStatus, t]);
 
-  const clearSyncedPricing = useCallback(async () => {
-    if (!confirm(t("clearSyncedPricingConfirm"))) return;
+  const clearSyncedPricing = useCallback(() => {
+    setConfirmAction({ type: "clearSync" });
+  }, []);
 
+  const performClearSyncedPricing = useCallback(async () => {
+    setConfirmLoading(true);
     setSyncing(true);
     try {
       const response = await fetch("/api/pricing/sync", { method: "DELETE" });
@@ -357,6 +370,8 @@ export default function PricingTab() {
       );
     } finally {
       setSyncing(false);
+      setConfirmLoading(false);
+      setConfirmAction(null);
     }
   }, [loadData, showStatus, t]);
 
@@ -518,6 +533,29 @@ export default function PricingTab() {
           <p>{t("pricingDescFormula")}</p>
         </div>
       </Card>
+
+      <ConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => {
+          if (!confirmLoading) setConfirmAction(null);
+        }}
+        onConfirm={() => {
+          if (!confirmAction) return;
+          if (confirmAction.type === "reset") {
+            void performResetProvider(confirmAction.provider);
+          } else {
+            void performClearSyncedPricing();
+          }
+        }}
+        title={confirmAction?.type === "reset" ? t("resetDefaults") : t("clearSyncedPricing")}
+        message={
+          confirmAction?.type === "reset"
+            ? t("resetPricingConfirm", { provider: confirmAction.provider.toUpperCase() })
+            : t("clearSyncedPricingConfirm")
+        }
+        variant="danger"
+        loading={confirmLoading}
+      />
     </div>
   );
 }

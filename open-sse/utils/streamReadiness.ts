@@ -32,6 +32,12 @@ function hasUsefulValue(value: unknown): boolean {
     "partial_json",
     "arguments",
     "name",
+    // Anthropic extended thinking (Claude 3.7+, Claude 4): SSE events carry
+    // `content_block_delta` frames with `delta: { type: "thinking_delta",
+    // "thinking": "..." }`. Without recognizing `thinking` here, a long
+    // thinking burst before the first text delta caused
+    // STREAM_EARLY_EOF -> 502 -> combo retry loops.
+    "thinking",
     "thought",
     "error",
     "executableCode",

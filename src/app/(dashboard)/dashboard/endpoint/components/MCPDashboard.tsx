@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Card, Button } from "@/shared/components";
+import { Card, Button, ConfirmModal, RelativeTime, CopyButton } from "@/shared/components";
 import { useTranslations } from "next-intl";
 
 type McpStatusResponse = {
@@ -192,6 +192,12 @@ export default function McpDashboardPage() {
     useState<keyof typeof RESILIENCE_PRESETS>("balanced");
   const [actionBusy, setActionBusy] = useState<null | "switch" | "resilience" | "reset">(null);
   const [actionMessage, setActionMessage] = useState<string>("");
+  const [confirmState, setConfirmState] = useState<
+    | { kind: "switch"; combo: Combo; nextState: boolean; actionLabel: string }
+    | { kind: "resilience"; profile: keyof typeof RESILIENCE_PRESETS; profileLabel: string }
+    | { kind: "reset" }
+    | null
+  >(null);
 
   const selectedCombo = useMemo(
     () => combos.find((combo) => combo.id === selectedComboId) || null,
@@ -264,21 +270,18 @@ export default function McpDashboardPage() {
     refreshAudit();
   }, [refreshAudit]);
 
-  const handleSwitchCombo = async () => {
+  const handleSwitchCombo = () => {
     if (!selectedCombo) return;
     const nextState = selectedCombo.isActive === false;
-    const confirmLabel = nextState ? t("activate") : t("deactivate");
-    if (
-      !globalThis.confirm(
-        t("confirmSwitchCombo", { action: confirmLabel, combo: selectedCombo.name })
-      )
-    )
-      return;
+    const actionLabel = nextState ? t("activate") : t("deactivate");
+    setConfirmState({ kind: "switch", combo: selectedCombo, nextState, actionLabel });
+  };
 
+  const performSwitchCombo = async (combo: Combo, nextState: boolean) => {
     setActionBusy("switch");
     setActionMessage("");
     try {
-      const response = await fetch(`/api/combos/${selectedCombo.id}`, {
+      const response = await fetch(`/api/combos/${combo.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: nextState }),
@@ -290,23 +293,32 @@ export default function McpDashboardPage() {
         return;
       }
 
-      setActionMessage(t("switchComboSuccess", { combo: selectedCombo.name }));
+      setActionMessage(t("switchComboSuccess", { combo: combo.name }));
       await refreshSummary();
     } finally {
       setActionBusy(null);
+      setConfirmState(null);
     }
   };
 
-  const handleApplyResilience = async () => {
-    const preset = RESILIENCE_PRESETS[selectedProfile];
+  const handleApplyResilience = () => {
     const profileLabelById: Record<keyof typeof RESILIENCE_PRESETS, string> = {
       aggressive: t("profileAggressive"),
       balanced: t("profileBalanced"),
       conservative: t("profileConservative"),
     };
-    const profileLabel = profileLabelById[selectedProfile];
-    if (!globalThis.confirm(t("confirmApplyProfile", { profile: profileLabel }))) return;
+    setConfirmState({
+      kind: "resilience",
+      profile: selectedProfile,
+      profileLabel: profileLabelById[selectedProfile],
+    });
+  };
 
+  const performApplyResilience = async (
+    profile: keyof typeof RESILIENCE_PRESETS,
+    profileLabel: string
+  ) => {
+    const preset = RESILIENCE_PRESETS[profile];
     setActionBusy("resilience");
     setActionMessage("");
     try {
@@ -326,12 +338,15 @@ export default function McpDashboardPage() {
       await refreshSummary();
     } finally {
       setActionBusy(null);
+      setConfirmState(null);
     }
   };
 
-  const handleResetCircuitBreakers = async () => {
-    if (!globalThis.confirm(t("confirmResetBreakers"))) return;
+  const handleResetCircuitBreakers = () => {
+    setConfirmState({ kind: "reset" });
+  };
 
+  const performResetCircuitBreakers = async () => {
     setActionBusy("reset");
     setActionMessage("");
     try {
@@ -347,6 +362,7 @@ export default function McpDashboardPage() {
       await refreshSummary();
     } finally {
       setActionBusy(null);
+      setConfirmState(null);
     }
   };
 
@@ -425,9 +441,13 @@ export default function McpDashboardPage() {
                 {t("lastCall")}:{" "}
                 <span className="font-mono text-xs">
                   {status?.activity?.lastCallTool || "—"}{" "}
-                  {status?.activity?.lastCallAt
-                    ? `(${new Date(status.activity.lastCallAt).toLocaleString()})`
-                    : ""}
+                  {status?.activity?.lastCallAt ? (
+                    <>
+                      (<RelativeTime value={status.activity.lastCallAt} />)
+                    </>
+                  ) : (
+                    ""
+                  )}
                 </span>
               </p>
               <p>
@@ -519,7 +539,12 @@ export default function McpDashboardPage() {
             <tbody>
               {tools.map((tool) => (
                 <tr key={tool.name} className="border-b border-border/40">
-                  <td className="py-2 pr-2 font-mono text-xs">{tool.name}</td>
+                  <td className="py-2 pr-2 font-mono text-xs">
+                    <span className="inline-flex items-center gap-1">
+                      {tool.name}
+                      <CopyButton value={tool.name} size="xs" label={`Copy ${tool.name}`} />
+                    </span>
+                  </td>
                   <td className="py-2 pr-2 text-xs">{tool.scopes.join(", ") || "—"}</td>
                   <td className="py-2 pr-2">{tool.phase}</td>
                   <td className="py-2">{tool.auditLevel}</td>
@@ -598,7 +623,7 @@ export default function McpDashboardPage() {
                 {auditData.entries.map((entry) => (
                   <tr key={entry.id} className="border-b border-border/40">
                     <td className="py-2 pr-2 text-xs">
-                      {new Date(entry.createdAt).toLocaleString()}
+                      <RelativeTime value={entry.createdAt} />
                     </td>
                     <td className="py-2 pr-2 font-mono text-xs">{entry.toolName}</td>
                     <td className="py-2 pr-2">{entry.durationMs}ms</td>
@@ -638,6 +663,44 @@ export default function McpDashboardPage() {
           </Button>
         </div>
       </Card>
+
+      <ConfirmModal
+        isOpen={confirmState !== null}
+        onClose={() => actionBusy === null && setConfirmState(null)}
+        onConfirm={() => {
+          if (!confirmState) return;
+          if (confirmState.kind === "switch") {
+            performSwitchCombo(confirmState.combo, confirmState.nextState);
+          } else if (confirmState.kind === "resilience") {
+            performApplyResilience(confirmState.profile, confirmState.profileLabel);
+          } else if (confirmState.kind === "reset") {
+            performResetCircuitBreakers();
+          }
+        }}
+        title={
+          confirmState?.kind === "switch"
+            ? t("switchCombo")
+            : confirmState?.kind === "resilience"
+              ? t("applyResilienceProfile")
+              : confirmState?.kind === "reset"
+                ? t("resetCircuitBreakers")
+                : ""
+        }
+        message={
+          confirmState?.kind === "switch"
+            ? t("confirmSwitchCombo", {
+                action: confirmState.actionLabel,
+                combo: confirmState.combo.name,
+              })
+            : confirmState?.kind === "resilience"
+              ? t("confirmApplyProfile", { profile: confirmState.profileLabel })
+              : confirmState?.kind === "reset"
+                ? t("confirmResetBreakers")
+                : ""
+        }
+        variant="danger"
+        loading={actionBusy !== null}
+      />
     </div>
   );
 }

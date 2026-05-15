@@ -1267,6 +1267,276 @@ export const oneproxyStatsTool: McpToolDefinition<
   sourceEndpoints: ["/api/settings/oneproxy"],
 };
 
+// ============ Cloud Agent Tools (7) ============
+//
+// Wrap the REST endpoints under /api/v1/agents/* so MCP clients (Claude
+// Code, Cursor, etc.) can discover, dispatch, and steer Jules / Devin /
+// Codex Cloud tasks without screen-scraping the dashboard.
+//
+// Tools proxy through the REST layer rather than calling JulesAgent /
+// DevinAgent / CodexCloudAgent directly — credential resolution
+// (encrypted `provider_connections`) and per-provider auth refresh live
+// on the REST layer and we don't want to duplicate them.
+//
+// Scopes:
+//   cloud_agent:read   list/get/inspect tasks and sources (4 tools)
+//   cloud_agent:write  create tasks, send messages, approve plans (3 tools)
+
+const CLOUD_AGENT_PROVIDER_ID_VALUES = ["jules", "devin", "codex-cloud"] as const;
+const CLOUD_AGENT_TASK_STATUS_VALUES = [
+  "queued",
+  "running",
+  "awaiting_approval",
+  "completed",
+  "failed",
+  "cancelled",
+] as const;
+
+// --- Cloud agent: list providers ---
+export const cloudAgentListProvidersInput = z.object({}).describe("No parameters required");
+
+export const cloudAgentListProvidersOutput = z.object({
+  providers: z.array(
+    z.object({
+      id: z.enum(CLOUD_AGENT_PROVIDER_ID_VALUES),
+      name: z.string(),
+      provider: z.string(),
+      description: z.string(),
+    })
+  ),
+});
+
+export const cloudAgentListProvidersTool: McpToolDefinition<
+  typeof cloudAgentListProvidersInput,
+  typeof cloudAgentListProvidersOutput
+> = {
+  name: "omniroute_cloud_agent_list_providers",
+  description:
+    "Lists the cloud-agent providers OmniRoute integrates with (Jules, Devin, Codex Cloud). Returns each provider's id, display name, parent organization, and a one-line description. No outbound API calls — this is a static catalog.",
+  inputSchema: cloudAgentListProvidersInput,
+  outputSchema: cloudAgentListProvidersOutput,
+  scopes: ["cloud_agent:read"],
+  auditLevel: "none",
+  phase: 2,
+  sourceEndpoints: [],
+};
+
+// --- Cloud agent: list tasks ---
+export const cloudAgentListTasksInput = z.object({
+  provider: z
+    .enum(CLOUD_AGENT_PROVIDER_ID_VALUES)
+    .optional()
+    .describe("Filter to a single cloud-agent provider (jules, devin, codex-cloud)"),
+  status: z
+    .enum(CLOUD_AGENT_TASK_STATUS_VALUES)
+    .optional()
+    .describe("Filter to tasks in a specific lifecycle state"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(500)
+    .optional()
+    .describe("Maximum number of tasks to return (default 50, max 500)"),
+});
+
+export const cloudAgentListTasksOutput = z.object({
+  data: z.array(z.record(z.string(), z.unknown())),
+});
+
+export const cloudAgentListTasksTool: McpToolDefinition<
+  typeof cloudAgentListTasksInput,
+  typeof cloudAgentListTasksOutput
+> = {
+  name: "omniroute_cloud_agent_list_tasks",
+  description:
+    "Lists cloud-agent tasks (Jules / Devin / Codex Cloud) tracked by OmniRoute, with optional filters for provider and lifecycle status. Returns task metadata and activity history.",
+  inputSchema: cloudAgentListTasksInput,
+  outputSchema: cloudAgentListTasksOutput,
+  scopes: ["cloud_agent:read"],
+  auditLevel: "basic",
+  phase: 2,
+  sourceEndpoints: ["/api/v1/agents/tasks"],
+};
+
+// --- Cloud agent: get task ---
+export const cloudAgentGetTaskInput = z.object({
+  id: z
+    .string()
+    .min(1, "Task id is required")
+    .describe("The task id returned by create_task or list_tasks"),
+});
+
+export const cloudAgentGetTaskOutput = z.object({
+  data: z.record(z.string(), z.unknown()),
+});
+
+export const cloudAgentGetTaskTool: McpToolDefinition<
+  typeof cloudAgentGetTaskInput,
+  typeof cloudAgentGetTaskOutput
+> = {
+  name: "omniroute_cloud_agent_get_task",
+  description:
+    "Returns the latest state of a single cloud-agent task, including status, activity log, plan steps, and (when complete) result fields like prUrl. The REST layer re-syncs with the upstream provider on each call so this reflects live state.",
+  inputSchema: cloudAgentGetTaskInput,
+  outputSchema: cloudAgentGetTaskOutput,
+  scopes: ["cloud_agent:read"],
+  auditLevel: "basic",
+  phase: 2,
+  sourceEndpoints: ["/api/v1/agents/tasks/{id}"],
+};
+
+// --- Cloud agent: list sources ---
+export const cloudAgentListSourcesInput = z.object({
+  provider: z
+    .enum(CLOUD_AGENT_PROVIDER_ID_VALUES)
+    .describe("Cloud-agent provider id to enumerate sources for"),
+});
+
+export const cloudAgentListSourcesOutput = z.object({
+  sources: z.array(
+    z.object({
+      name: z.string(),
+      url: z.string(),
+      branch: z.string().optional(),
+    })
+  ),
+});
+
+export const cloudAgentListSourcesTool: McpToolDefinition<
+  typeof cloudAgentListSourcesInput,
+  typeof cloudAgentListSourcesOutput
+> = {
+  name: "omniroute_cloud_agent_list_sources",
+  description:
+    "Lists the repositories / sources a cloud-agent provider is authorized to act on (e.g. for Jules: every GitHub repo the OAuth grant covers). Use this to discover valid `source.repoName` / `source.repoUrl` values before calling create_task.",
+  inputSchema: cloudAgentListSourcesInput,
+  outputSchema: cloudAgentListSourcesOutput,
+  scopes: ["cloud_agent:read"],
+  auditLevel: "basic",
+  phase: 2,
+  sourceEndpoints: ["/api/v1/agents/sources"],
+};
+
+// --- Cloud agent: create task ---
+export const cloudAgentCreateTaskInput = z.object({
+  providerId: z
+    .enum(CLOUD_AGENT_PROVIDER_ID_VALUES)
+    .describe("Cloud-agent provider that should execute the task"),
+  prompt: z
+    .string()
+    .min(1, "Prompt is required")
+    .max(10000, "Prompt must be 10000 characters or fewer")
+    .describe("Natural-language task description for the agent (e.g. 'Add a README')"),
+  source: z
+    .object({
+      repoName: z.string().min(1).describe("Short repo identifier (e.g. 'omniroute')"),
+      repoUrl: z.string().url().describe("Full HTTPS or SSH-shorthand URL of the repository"),
+      branch: z
+        .string()
+        .optional()
+        .describe("Branch to start from; defaults to the repo's default branch"),
+    })
+    .describe("Source repository the agent should operate on"),
+  options: z
+    .object({
+      autoCreatePr: z
+        .boolean()
+        .optional()
+        .describe("If true, the agent opens a PR automatically when work completes"),
+      planApprovalRequired: z
+        .boolean()
+        .optional()
+        .describe("If true, the agent pauses for human approval after producing a plan"),
+      environment: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe("Optional environment variables to expose to the agent runtime"),
+    })
+    .optional()
+    .describe("Behavior options passed to the agent"),
+});
+
+export const cloudAgentCreateTaskOutput = z.object({
+  data: z.record(z.string(), z.unknown()).nullable(),
+});
+
+export const cloudAgentCreateTaskTool: McpToolDefinition<
+  typeof cloudAgentCreateTaskInput,
+  typeof cloudAgentCreateTaskOutput
+> = {
+  name: "omniroute_cloud_agent_create_task",
+  description:
+    "Dispatches a new cloud-agent task. Requires a configured provider connection (the REST layer resolves credentials from the encrypted provider_connections table). Returns the persisted task row including the local id and the upstream externalId.",
+  inputSchema: cloudAgentCreateTaskInput,
+  outputSchema: cloudAgentCreateTaskOutput,
+  scopes: ["cloud_agent:write"],
+  auditLevel: "full",
+  phase: 2,
+  sourceEndpoints: ["/api/v1/agents/tasks"],
+};
+
+// --- Cloud agent: send message ---
+export const cloudAgentSendMessageInput = z.object({
+  id: z
+    .string()
+    .min(1, "Task id is required")
+    .describe("The task id (from create_task or list_tasks) to send a message to"),
+  message: z
+    .string()
+    .min(1, "Message is required")
+    .max(10000, "Message must be 10000 characters or fewer")
+    .describe("Natural-language message forwarded to the running agent"),
+});
+
+export const cloudAgentSendMessageOutput = z.object({
+  success: z.boolean(),
+  data: z.record(z.string(), z.unknown()).nullable(),
+});
+
+export const cloudAgentSendMessageTool: McpToolDefinition<
+  typeof cloudAgentSendMessageInput,
+  typeof cloudAgentSendMessageOutput
+> = {
+  name: "omniroute_cloud_agent_send_message",
+  description:
+    "Sends a follow-up message to a running cloud-agent task — typically used to steer the agent, answer a clarifying question, or add new context. The activity is appended to the task's activity log.",
+  inputSchema: cloudAgentSendMessageInput,
+  outputSchema: cloudAgentSendMessageOutput,
+  scopes: ["cloud_agent:write"],
+  auditLevel: "full",
+  phase: 2,
+  sourceEndpoints: ["/api/v1/agents/tasks/{id}"],
+};
+
+// --- Cloud agent: approve plan ---
+export const cloudAgentApprovePlanInput = z.object({
+  id: z
+    .string()
+    .min(1, "Task id is required")
+    .describe("The task id (from create_task or list_tasks) whose plan should be approved"),
+});
+
+export const cloudAgentApprovePlanOutput = z.object({
+  success: z.boolean(),
+  data: z.record(z.string(), z.unknown()).nullable(),
+});
+
+export const cloudAgentApprovePlanTool: McpToolDefinition<
+  typeof cloudAgentApprovePlanInput,
+  typeof cloudAgentApprovePlanOutput
+> = {
+  name: "omniroute_cloud_agent_approve_plan",
+  description:
+    "Approves the plan a cloud-agent task is awaiting on (status 'awaiting_approval') so execution can resume. No-op for tasks that don't require plan approval.",
+  inputSchema: cloudAgentApprovePlanInput,
+  outputSchema: cloudAgentApprovePlanOutput,
+  scopes: ["cloud_agent:write"],
+  auditLevel: "full",
+  phase: 2,
+  sourceEndpoints: ["/api/v1/agents/tasks/{id}"],
+};
+
 // ============ Tool Registry ============
 
 /** All MCP tool definitions, ordered by phase then name */
@@ -1301,6 +1571,13 @@ export const MCP_TOOLS = [
   oneproxyFetchTool,
   oneproxyRotateTool,
   oneproxyStatsTool,
+  cloudAgentListProvidersTool,
+  cloudAgentListTasksTool,
+  cloudAgentGetTaskTool,
+  cloudAgentListSourcesTool,
+  cloudAgentCreateTaskTool,
+  cloudAgentSendMessageTool,
+  cloudAgentApprovePlanTool,
 ] as const;
 
 /** Essential tools only (Phase 1) */

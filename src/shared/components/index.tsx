@@ -32,6 +32,9 @@ export { default as NotificationToast } from "./NotificationToast";
 export { default as FilterBar } from "./FilterBar";
 export { default as ColumnToggle } from "./ColumnToggle";
 export { default as DataTable } from "./DataTable";
+export { default as RelativeTime } from "./RelativeTime";
+export { default as CopyButton } from "./CopyButton";
+export { default as Kbd } from "./Kbd";
 
 // Layouts
 export * from "./layouts";

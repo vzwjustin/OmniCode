@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Card } from "@/shared/components";
+import { Card, RelativeTime } from "@/shared/components";
 import { AI_PROVIDERS } from "@/shared/constants/providers";
 import { getProviderDisplayName } from "@/lib/display/names";
 import { useTranslations } from "next-intl";
@@ -32,18 +32,6 @@ function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatRelativeTime(timestamp) {
-  if (!timestamp || !Number.isFinite(timestamp)) return null;
-  const diffMs = Math.max(0, Date.now() - timestamp);
-  const diffMinutes = Math.floor(diffMs / 60000);
-  if (diffMinutes < 1) return "<1m";
-  if (diffMinutes < 60) return `${diffMinutes}m`;
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d`;
 }
 
 const CB_STYLES = {
@@ -609,7 +597,7 @@ export default function HealthPage() {
                     </div>
                   )}
                   <div className="text-[10px] text-[var(--text-muted,#666)] text-right mt-1">
-                    Since {new Date(feat.since).toLocaleTimeString()}
+                    Since <RelativeTime value={feat.since} />
                   </div>
                 </div>
               );
@@ -798,8 +786,7 @@ export default function HealthPage() {
                               )}
                               {cb.lastFailure && (
                                 <span className="ml-2">
-                                  · {t("lastFailure")}:{" "}
-                                  {new Date(cb.lastFailure).toLocaleTimeString()}
+                                  · {t("lastFailure")}: <RelativeTime value={cb.lastFailure} />
                                 </span>
                               )}
                             </div>
@@ -1040,9 +1027,8 @@ export default function HealthPage() {
                             )}
                             {learnedLastUpdated != null && (
                               <p>
-                                {t("lastHeaderUpdate", {
-                                  age: formatRelativeTime(learnedLastUpdated) || t("notAvailable"),
-                                })}
+                                {t("lastHeaderUpdate", { age: "" })}
+                                <RelativeTime value={learnedLastUpdated} />
                               </p>
                             )}
                           </div>

@@ -78,6 +78,20 @@ function toProxyValue(value: unknown): ProxyValue {
 
 // ──────────────── Settings ────────────────
 
+/**
+ * Read a single value from the `key_value` table by namespace + key.
+ *
+ * Returns the raw string value, or `null` if the row does not exist.
+ * Callers that store JSON in `value` are expected to parse it themselves.
+ */
+export function getKeyValue(namespace: string, key: string): string | null {
+  const db = getDbInstance();
+  const row = db
+    .prepare("SELECT value FROM key_value WHERE namespace = ? AND key = ?")
+    .get(namespace, key) as { value?: unknown } | undefined;
+  return typeof row?.value === "string" ? row.value : null;
+}
+
 export async function getSettings() {
   const db = getDbInstance();
   const rows = db.prepare("SELECT key, value FROM key_value WHERE namespace = 'settings'").all();

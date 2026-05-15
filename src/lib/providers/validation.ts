@@ -3198,6 +3198,10 @@ export async function validateProviderApiKey({ provider, apiKey, providerSpecifi
         return { valid: false, error: "Invalid Service Account JSON: " + error.message };
       }
     },
+    // Cloud Agents - no standard validation endpoints; bypass for now
+    jules: async () => ({ valid: true, error: null }),
+    devin: async () => ({ valid: true, error: null }),
+    "codex-cloud": async () => ({ valid: true, error: null }),
     // LongCat AI — does not expose /v1/models; validate via chat completions directly (#592)
     longcat: async ({ apiKey, providerSpecificData }: any) => {
       try {

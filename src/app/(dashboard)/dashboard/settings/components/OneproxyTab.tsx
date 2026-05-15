@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Card } from "@/shared/components";
+import { Button, Card, ConfirmModal, RelativeTime } from "@/shared/components";
 
 type OneproxyItem = {
   id: string;
@@ -47,6 +47,8 @@ export default function OneproxyTab() {
   const [filterProtocol, setFilterProtocol] = useState("");
   const [filterCountry, setFilterCountry] = useState("");
   const [minQuality, setMinQuality] = useState("");
+  const [clearConfirm, setClearConfirm] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -99,13 +101,20 @@ export default function OneproxyTab() {
     }
   };
 
-  const handleClearAll = async () => {
-    if (!confirm("Clear all 1proxy proxies?")) return;
+  const requestClearAll = () => {
+    setClearConfirm(true);
+  };
+
+  const performClearAll = async () => {
+    setClearing(true);
     try {
       await fetch("/api/settings/oneproxy?clearAll=1", { method: "DELETE" });
       await loadData();
     } catch {
       // ignore
+    } finally {
+      setClearing(false);
+      setClearConfirm(false);
     }
   };
 
@@ -150,7 +159,7 @@ export default function OneproxyTab() {
             {syncing ? "Syncing..." : "Sync Now"}
           </Button>
           {proxies.length > 0 && (
-            <Button onClick={handleClearAll} variant="danger">
+            <Button onClick={requestClearAll} variant="danger">
               Clear All
             </Button>
           )}
@@ -187,7 +196,7 @@ export default function OneproxyTab() {
           </Card>
           <Card className="p-4">
             <div className="text-2xl font-bold text-text-main">
-              {status?.lastSyncAt ? new Date(status.lastSyncAt).toLocaleTimeString() : "Never"}
+              {status?.lastSyncAt ? <RelativeTime value={status.lastSyncAt} /> : "Never"}
             </div>
             <div className="text-sm text-text-muted">Last Sync</div>
           </Card>
@@ -325,6 +334,17 @@ export default function OneproxyTab() {
           </div>
         </Card>
       )}
+
+      <ConfirmModal
+        isOpen={clearConfirm}
+        onClose={() => !clearing && setClearConfirm(false)}
+        onConfirm={performClearAll}
+        title="Clear all 1proxy proxies?"
+        message="This permanently removes every 1proxy proxy from the dashboard. You can re-sync to fetch them again."
+        confirmText="Clear All"
+        variant="danger"
+        loading={clearing}
+      />
     </div>
   );
 }

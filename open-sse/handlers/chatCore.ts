@@ -3424,7 +3424,12 @@ export async function handleChatCore({
     !streamOptionsOnlyFailed // Keep constraint if stream options failed originally
   ) {
     const newCredentials = (await refreshWithRetry(
-      () => executor.refreshCredentials(credentials, log),
+      // Tranche B — B1 (Bug review item #5): forward the abort signal so the
+      // refresh fetch is cancelled if the 30s timeout fires. Without this, an
+      // orphaned upstream call could consume the one-time refresh token on
+      // rotating-token providers (Codex/OpenAI, Qwen) and permanently break
+      // the connection with refresh_token_reused.
+      (signal) => executor.refreshCredentials(credentials, log, signal),
       3,
       log,
       provider // Explicitly pass the provider to avoid universally tripping the "unknown" circuit breaker

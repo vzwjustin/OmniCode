@@ -439,13 +439,29 @@ export async function deleteProviderConnections(ids: string[]): Promise<number> 
   if (ids.length === 0) return 0;
   const db = getDbInstance();
 
+  // Tranche C #15: chunk the IN (...) lists to stay under SQLite's
+  // SQLITE_MAX_VARIABLE_NUMBER ceiling (999 on legacy builds, 32766 on
+  // modern). The whole batch still runs in a single transaction so the
+  // quota_snapshots / provider_connections rows commit or roll back together.
+  const PROVIDER_DELETE_BATCH_SIZE = 500;
+  const batches: string[][] = [];
+  for (let i = 0; i < ids.length; i += PROVIDER_DELETE_BATCH_SIZE) {
+    batches.push(ids.slice(i, i + PROVIDER_DELETE_BATCH_SIZE));
+  }
+
   const deletedCount = db.transaction(() => {
-    const placeholders = ids.map(() => "?").join(",");
-    db.prepare(`DELETE FROM quota_snapshots WHERE connection_id IN (${placeholders})`).run(...ids);
-    const result = db
-      .prepare(`DELETE FROM provider_connections WHERE id IN (${placeholders})`)
-      .run(...ids);
-    return result.changes ?? 0;
+    let changes = 0;
+    for (const batch of batches) {
+      const placeholders = batch.map(() => "?").join(",");
+      db.prepare(`DELETE FROM quota_snapshots WHERE connection_id IN (${placeholders})`).run(
+        ...batch
+      );
+      const result = db
+        .prepare(`DELETE FROM provider_connections WHERE id IN (${placeholders})`)
+        .run(...batch);
+      changes += result.changes ?? 0;
+    }
+    return changes;
   })();
 
   backupDbFile("pre-write");

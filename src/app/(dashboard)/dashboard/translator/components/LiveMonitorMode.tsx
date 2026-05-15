@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card, Badge } from "@/shared/components";
+import { Card, Badge, RelativeTime } from "@/shared/components";
 import { FORMAT_META } from "../exampleTemplates";
 
 /**
@@ -233,9 +233,11 @@ export default function LiveMonitorMode() {
                         className="border-b border-border/50 hover:bg-bg-subtle/50 transition-colors"
                       >
                         <td className="py-2 pr-4 text-xs text-text-muted whitespace-nowrap">
-                          {event.timestamp
-                            ? new Date(event.timestamp).toLocaleTimeString()
-                            : notAvailable}
+                          {event.timestamp ? (
+                            <RelativeTime value={event.timestamp} />
+                          ) : (
+                            notAvailable
+                          )}
                         </td>
                         <td className="py-2 pr-4 min-w-[220px]">
                           <div className="flex flex-col gap-1">

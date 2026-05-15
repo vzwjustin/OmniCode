@@ -1,8 +1,35 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Card, Button, Input, Badge } from "@/shared/components";
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  Card,
+  Button,
+  Input,
+  Badge,
+  EmptyState,
+  RelativeTime,
+  CopyButton,
+  Kbd,
+  ConfirmModal,
+} from "@/shared/components";
 import { useTranslations } from "next-intl";
+import { useNotificationStore } from "@/store/notificationStore";
+
+// Real-time refresh tunables. Two cadences because the endpoints have very
+// different cost characteristics:
+//
+//   LIST_POLL_MS — GET /api/v1/agents/tasks is a pure SQLite read; no upstream
+//   API call, no quota burn. Safe to poll aggressively.
+//
+//   DETAIL_POLL_MS — GET /api/v1/agents/tasks/[id] DOES call the upstream
+//   provider (Jules issues two parallel fetches: /sessions/{id} and
+//   /sessions/{id}/activities). Keep this conservative to respect rate limits.
+//
+// Polling auto-stops when the selected task is in a terminal state
+// (completed/failed/cancelled) and pauses while the tab is hidden.
+const LIST_POLL_MS = 5000;
+const DETAIL_POLL_MS = 4000;
+const TERMINAL_STATUSES: readonly CloudAgentTask["status"][] = ["completed", "failed", "cancelled"];
 
 interface CloudAgentTask {
   id: string;
@@ -67,43 +94,212 @@ export default function CloudAgentsPage() {
     autoCreatePr: true,
   });
   const [messageInput, setMessageInput] = useState("");
+  const [taskPendingDelete, setTaskPendingDelete] = useState<CloudAgentTask | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const t = useTranslations("cloudAgents");
+  const notify = useNotificationStore();
+
+  const showApiError = useCallback(
+    async (res: Response, fallback: string) => {
+      let message = fallback;
+      try {
+        const data = await res.clone().json();
+        if (data && typeof data.error === "string" && data.error.trim()) {
+          message = data.error;
+        }
+      } catch {
+        try {
+          const text = await res.clone().text();
+          if (text.trim()) message = text;
+        } catch {
+          /* ignore */
+        }
+      }
+      notify.error(message, `Request failed (${res.status})`);
+    },
+    [notify]
+  );
 
   const upsertTask = useCallback((task: CloudAgentTask) => {
+    const safeTask: CloudAgentTask = {
+      ...task,
+      activities: Array.isArray(task.activities) ? task.activities : [],
+    };
     setTasks((prev) => {
-      const exists = prev.some((current) => current.id === task.id);
+      const exists = prev.some((current) => current.id === safeTask.id);
       return exists
-        ? prev.map((current) => (current.id === task.id ? task : current))
-        : [task, ...prev];
+        ? prev.map((current) => (current.id === safeTask.id ? safeTask : current))
+        : [safeTask, ...prev];
     });
-    setSelectedTask((current) => (current?.id === task.id ? task : current));
+    setSelectedTask((current) => (current?.id === safeTask.id ? safeTask : current));
   }, []);
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      const res = await fetch("/api/v1/agents/tasks");
-      if (res.ok) {
-        const data = await res.json();
-        setTasks(Array.isArray(data.data) ? data.data : []);
+  // Last-successful refresh timestamps for the live indicator. We only update
+  // these on successful fetches so a transient network blip doesn't make the
+  // UI appear fresher than it actually is.
+  const [lastListRefresh, setLastListRefresh] = useState<number | null>(null);
+  const [lastDetailRefresh, setLastDetailRefresh] = useState<number | null>(null);
+
+  // In-flight guards. The list poll is allowed to skip a tick if a previous
+  // fetch is still running; the detail poll uses an AbortController so we can
+  // cancel in-flight upstream requests when the user switches tasks (avoids a
+  // late upstream response clobbering a freshly-selected task's state).
+  const listFetchInFlightRef = useRef(false);
+  const detailFetchAbortRef = useRef<AbortController | null>(null);
+
+  // 1s ticker so the "updated Xs ago" relative timestamp re-renders smoothly
+  // between poll ticks. Tied to a state bump so React picks up the change.
+  const [, setTickerNonce] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTickerNonce((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // `silent` means: don't surface 4xx/5xx as a toast (we don't want every
+  // background poll to spam notifications on transient errors). The initial
+  // load + manual refresh still surface errors so users aren't left guessing.
+  const fetchTasks = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (listFetchInFlightRef.current) return;
+      listFetchInFlightRef.current = true;
+      try {
+        const res = await fetch("/api/v1/agents/tasks");
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data.data) ? (data.data as CloudAgentTask[]) : [];
+          setTasks(
+            list.map((t) => ({
+              ...t,
+              activities: Array.isArray(t.activities) ? t.activities : [],
+            }))
+          );
+          setLastListRefresh(Date.now());
+        } else if (!opts?.silent) {
+          await showApiError(res, "Failed to load cloud agent tasks");
+        }
+      } catch (err) {
+        if (!opts?.silent) {
+          console.error("Failed to fetch tasks:", err);
+          notify.error(
+            err instanceof Error ? err.message : "Network error while loading tasks",
+            "Connection failed"
+          );
+        }
+      } finally {
+        setLoading(false);
+        listFetchInFlightRef.current = false;
       }
-    } catch (err) {
-      console.error("Failed to fetch tasks:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [notify, showApiError]
+  );
 
+  // Single-task refresh — hits the per-id endpoint which, on the server side,
+  // calls agent.getStatus() against the upstream provider (Jules: two parallel
+  // requests to /sessions/{id} + /sessions/{id}/activities). We use an
+  // AbortController so switching tasks immediately cancels the previous
+  // upstream call rather than letting it race the new selection.
+  const fetchSelectedTask = useCallback(
+    async (taskId: string, opts?: { silent?: boolean }) => {
+      // Cancel any prior in-flight detail fetch before starting a new one.
+      detailFetchAbortRef.current?.abort();
+      const controller = new AbortController();
+      detailFetchAbortRef.current = controller;
+      try {
+        const res = await fetch(`/api/v1/agents/tasks/${taskId}`, {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.data) {
+            upsertTask(data.data);
+            setLastDetailRefresh(Date.now());
+          }
+        } else if (!opts?.silent) {
+          await showApiError(res, "Failed to refresh task");
+        }
+      } catch (err) {
+        // AbortError is expected on task-switch / unmount — never surface it.
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (!opts?.silent) {
+          console.error("Failed to fetch task detail:", err);
+        }
+      }
+    },
+    [showApiError, upsertTask]
+  );
+
+  // Initial load. Subsequent refreshes happen in the polling effect below.
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
+  // List polling. Skips silently when the tab is hidden so a backgrounded
+  // dashboard doesn't keep hammering the API.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      fetchTasks({ silent: true });
+    }, LIST_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchTasks]);
+
+  // Detail polling. Only runs when a task is selected AND it's in a
+  // non-terminal state. The cleanup function cancels any in-flight upstream
+  // request when the selected task changes (or when it transitions into a
+  // terminal state, which removes the polling dependency).
+  useEffect(() => {
+    if (!selectedTask) return;
+    if (TERMINAL_STATUSES.includes(selectedTask.status)) return;
+
+    const taskId = selectedTask.id;
+    // Fire one fetch immediately so the user sees fresh data without waiting
+    // up to DETAIL_POLL_MS after selecting a task.
+    fetchSelectedTask(taskId, { silent: true });
+
+    const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      fetchSelectedTask(taskId, { silent: true });
+    }, DETAIL_POLL_MS);
+
+    return () => {
+      clearInterval(id);
+      detailFetchAbortRef.current?.abort();
+    };
+    // We deliberately depend on selectedTask.id AND selectedTask.status only:
+    // re-fetching mid-poll when activities arrive would create a refresh loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTask?.id, selectedTask?.status, fetchSelectedTask]);
+
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedPrompt = newTask.prompt.trim();
+    const trimmedRepoName = newTask.repoName.trim();
+    const trimmedRepoUrl = newTask.repoUrl.trim();
+
+    if (!trimmedPrompt) {
+      notify.error("Please describe what you want the agent to do.", "Task description required");
+      return;
+    }
+    if (!trimmedRepoName || !trimmedRepoUrl) {
+      notify.error("Repository name and URL are both required.", "Repository information missing");
+      return;
+    }
+    try {
+      // Validate URL early so the user gets a clean message instead of a Zod issue dump.
+      new URL(trimmedRepoUrl);
+    } catch {
+      notify.error(
+        "Repository URL must be a valid URL (e.g. https://github.com/owner/repo).",
+        "Invalid repository URL"
+      );
+      return;
+    }
+
     setCreating(true);
     try {
       const source = {
-        repoName: newTask.repoName.trim(),
-        repoUrl: newTask.repoUrl.trim(),
+        repoName: trimmedRepoName,
+        repoUrl: trimmedRepoUrl,
         ...(newTask.branch.trim() ? { branch: newTask.branch.trim() } : {}),
       };
       const res = await fetch("/api/v1/agents/tasks", {
@@ -111,7 +307,7 @@ export default function CloudAgentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           providerId: newTask.providerId,
-          prompt: newTask.prompt,
+          prompt: trimmedPrompt,
           source,
           options: {
             autoCreatePr: newTask.autoCreatePr,
@@ -120,18 +316,31 @@ export default function CloudAgentsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.data) upsertTask(data.data);
+        if (data.data) {
+          upsertTask(data.data);
+          setSelectedTask(data.data);
+          notify.success(
+            `${getAgentInfo(data.data.providerId).name} task created successfully.`,
+            "Task started"
+          );
+        }
         setNewTask({
-          providerId: "jules",
+          providerId: newTask.providerId,
           prompt: "",
           repoName: "",
           repoUrl: "",
           branch: "main",
           autoCreatePr: true,
         });
+      } else {
+        await showApiError(res, "Failed to start cloud agent task");
       }
     } catch (err) {
       console.error("Failed to create task:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while creating task",
+        "Connection failed"
+      );
     } finally {
       setCreating(false);
     }
@@ -152,9 +361,15 @@ export default function CloudAgentsPage() {
         const data = await res.json();
         if (data.data) upsertTask(data.data);
         setMessageInput("");
+      } else {
+        await showApiError(res, "Failed to send message");
       }
     } catch (err) {
       console.error("Failed to send message:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while sending message",
+        "Connection failed"
+      );
     }
   };
 
@@ -169,9 +384,16 @@ export default function CloudAgentsPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.data) upsertTask(data.data);
+        notify.success("Plan approved. Agent is now executing.", "Approved");
+      } else {
+        await showApiError(res, "Failed to approve plan");
       }
     } catch (err) {
       console.error("Failed to approve plan:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while approving plan",
+        "Connection failed"
+      );
     }
   };
 
@@ -185,13 +407,20 @@ export default function CloudAgentsPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.data) upsertTask(data.data);
+      } else {
+        await showApiError(res, "Failed to cancel task");
       }
     } catch (err) {
       console.error("Failed to cancel task:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while cancelling task",
+        "Connection failed"
+      );
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    setDeleting(true);
     try {
       const res = await fetch(`/api/v1/agents/tasks/${taskId}`, {
         method: "DELETE",
@@ -201,9 +430,19 @@ export default function CloudAgentsPage() {
         if (selectedTask?.id === taskId) {
           setSelectedTask(null);
         }
+        notify.success("Task removed from the list.", "Deleted");
+      } else {
+        await showApiError(res, "Failed to delete task");
       }
     } catch (err) {
       console.error("Failed to delete task:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while deleting task",
+        "Connection failed"
+      );
+    } finally {
+      setDeleting(false);
+      setTaskPendingDelete(null);
     }
   };
 
@@ -235,13 +474,85 @@ export default function CloudAgentsPage() {
   };
 
   const getPlanText = (task: CloudAgentTask) => {
-    return task.activities.find((activity) => activity.type === "plan")?.content || "";
+    return (task.activities || []).find((activity) => activity.type === "plan")?.content || "";
+  };
+
+  // Keyboard shortcuts:
+  //   Esc           — clear the selected task (when one is selected)
+  // Cmd/Ctrl+Enter  — submit the create-task form when focus is anywhere on the page
+  //                   (handled at form level, see onKeyDown on the textarea)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedTask && !taskPendingDelete) {
+        const target = e.target as HTMLElement | null;
+        // Don't hijack Esc when the user is inside an input/textarea/contenteditable
+        // (browsers map Esc to "clear/cancel" inside those, and modals own their own Esc)
+        if (
+          target &&
+          (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+        ) {
+          return;
+        }
+        setSelectedTask(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedTask, taskPendingDelete]);
+
+  // Render "live • updated Xs ago" once we have at least one successful poll.
+  // Returns null before the first refresh so we don't flash "updated 0s ago"
+  // during initial mount.
+  const renderLiveIndicator = (timestamp: number | null, active: boolean) => {
+    if (!timestamp) return null;
+    const secondsAgo = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    const label =
+      secondsAgo < 5
+        ? "just now"
+        : secondsAgo < 60
+          ? `${secondsAgo}s ago`
+          : `${Math.floor(secondsAgo / 60)}m ago`;
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[10px] text-text-muted"
+        title={`Last refreshed at ${new Date(timestamp).toLocaleTimeString()}`}
+      >
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${
+            active ? "bg-emerald-500 animate-pulse" : "bg-zinc-500/40"
+          }`}
+          aria-hidden
+        />
+        {active ? "live" : "paused"} · updated {label}
+      </span>
+    );
   };
 
   const formatResult = (result: CloudAgentTask["result"]) => {
     if (!result) return "";
     if (typeof result === "string") return result;
     return JSON.stringify(result, null, 2);
+  };
+
+  // Pull a PR URL out of the result blob when present. Different agents shape
+  // the result differently; we accept the two common keys.
+  const extractPrUrl = (result: CloudAgentTask["result"]): string | null => {
+    if (!result || typeof result !== "object") return null;
+    const r = result as Record<string, unknown>;
+    const candidate =
+      typeof r.prUrl === "string"
+        ? r.prUrl
+        : typeof r.pullRequestUrl === "string"
+          ? r.pullRequestUrl
+          : null;
+    if (!candidate) return null;
+    try {
+      // Reject anything that isn't a real URL — protects against XSS via href
+      const parsed = new URL(candidate);
+      return parsed.protocol === "https:" || parsed.protocol === "http:" ? candidate : null;
+    } catch {
+      return null;
+    }
   };
 
   if (loading) {
@@ -329,6 +640,12 @@ export default function CloudAgentsPage() {
               placeholder={t("taskDescriptionPlaceholder")}
               value={newTask.prompt}
               onChange={(e) => setNewTask({ ...newTask, prompt: e.target.value })}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !creating) {
+                  e.preventDefault();
+                  (e.currentTarget.form?.requestSubmit() as unknown) ?? undefined;
+                }
+              }}
               className="min-h-24 w-full rounded-lg border border-border/50 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               required
             />
@@ -366,7 +683,10 @@ export default function CloudAgentsPage() {
               Auto-create PR
             </label>
           </div>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-3">
+            <span className="text-[11px] text-text-muted hidden sm:inline-flex items-center gap-1">
+              Tip: press <Kbd>⌘</Kbd> + <Kbd>Enter</Kbd> in the description to submit
+            </span>
             <Button type="submit" variant="primary" loading={creating}>
               <span className="material-symbols-outlined text-[16px] mr-1">rocket_launch</span>
               {t("startTask")}
@@ -377,12 +697,16 @@ export default function CloudAgentsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t("tasks")}</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{t("tasks")}</h2>
+            {renderLiveIndicator(lastListRefresh, true)}
+          </div>
           {tasks.length === 0 ? (
-            <div className="text-center py-8 text-text-muted">
-              <span className="material-symbols-outlined text-[40px] mb-2">assignment</span>
-              <p>{t("noTasks")}</p>
-            </div>
+            <EmptyState
+              icon="📝"
+              title={t("noTasks")}
+              description="Start your first task using the form above."
+            />
           ) : (
             tasks.map((task) => {
               const agent = getAgentInfo(task.providerId);
@@ -395,18 +719,21 @@ export default function CloudAgentsPage() {
                   onClick={() => setSelectedTask(task)}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{agent.icon}</span>
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg shrink-0" aria-hidden>
+                        {agent.icon}
+                      </span>
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-text-main line-clamp-1">
                           {task.prompt || t("untitledTask")}
                         </p>
                         <p className="text-xs text-text-muted">
-                          {agent.name} • {new Date(task.createdAt).toLocaleString()}
+                          {agent.name} <span aria-hidden>·</span>{" "}
+                          <RelativeTime value={task.createdAt} />
                         </p>
                       </div>
                     </div>
-                    {getStatusBadge(task.status)}
+                    <div className="shrink-0">{getStatusBadge(task.status)}</div>
                   </div>
                 </Card>
               );
@@ -415,20 +742,32 @@ export default function CloudAgentsPage() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t("taskDetail")}</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{t("taskDetail")}</h2>
+            {selectedTask &&
+              renderLiveIndicator(
+                lastDetailRefresh,
+                !TERMINAL_STATUSES.includes(selectedTask.status)
+              )}
+          </div>
           {selectedTask ? (
             <Card className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{getAgentInfo(selectedTask.providerId).icon}</span>
-                  <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-lg shrink-0" aria-hidden>
+                    {getAgentInfo(selectedTask.providerId).icon}
+                  </span>
+                  <div className="min-w-0">
                     <p className="font-medium">{getAgentInfo(selectedTask.providerId).name}</p>
                     <p className="text-xs text-text-muted">
-                      {t("created")}: {new Date(selectedTask.createdAt).toLocaleString()}
+                      {t("created")} <RelativeTime value={selectedTask.createdAt} />
                     </p>
                   </div>
                 </div>
-                {getStatusBadge(selectedTask.status)}
+                <div className="flex items-center gap-2 shrink-0">
+                  {getStatusBadge(selectedTask.status)}
+                  <CopyButton value={selectedTask.id} size="sm" label="Copy task ID" />
+                </div>
               </div>
 
               {selectedTask.status === "awaiting_approval" && getPlanText(selectedTask) && (
@@ -460,7 +799,7 @@ export default function CloudAgentsPage() {
                 </div>
               )}
 
-              {selectedTask.activities.length > 0 && (
+              {selectedTask.activities && selectedTask.activities.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <p className="text-sm font-medium">{t("conversation")}</p>
                   <div className="flex flex-col gap-2 max-h-64 overflow-auto">
@@ -481,21 +820,45 @@ export default function CloudAgentsPage() {
                 </div>
               )}
 
-              {selectedTask.result && (
-                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-600">
-                      check_circle
-                    </span>
-                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                      {t("result")}
-                    </span>
-                  </div>
-                  <pre className="text-xs text-text-muted whitespace-pre-wrap">
-                    {formatResult(selectedTask.result)}
-                  </pre>
-                </div>
-              )}
+              {selectedTask.result &&
+                (() => {
+                  const prUrl = extractPrUrl(selectedTask.result);
+                  return (
+                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="material-symbols-outlined text-[16px] text-emerald-600">
+                          check_circle
+                        </span>
+                        <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                          {t("result")}
+                        </span>
+                      </div>
+                      {prUrl && (
+                        <div className="flex items-center gap-2 mb-2 p-2 rounded-md bg-emerald-500/10">
+                          <span
+                            className="material-symbols-outlined text-[16px] text-emerald-600"
+                            aria-hidden
+                          >
+                            link
+                          </span>
+                          <a
+                            href={prUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-emerald-700 dark:text-emerald-400 hover:underline truncate flex-1 min-w-0"
+                            title={prUrl}
+                          >
+                            {prUrl}
+                          </a>
+                          <CopyButton value={prUrl} size="sm" label="Copy PR URL" />
+                        </div>
+                      )}
+                      <pre className="text-xs text-text-muted whitespace-pre-wrap">
+                        {formatResult(selectedTask.result)}
+                      </pre>
+                    </div>
+                  );
+                })()}
 
               {selectedTask.error && (
                 <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
@@ -537,7 +900,7 @@ export default function CloudAgentsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDeleteTask(selectedTask.id)}
+                  onClick={() => setTaskPendingDelete(selectedTask)}
                   className="text-red-500 hover:text-red-400"
                 >
                   <span className="material-symbols-outlined text-[14px] mr-1">delete</span>
@@ -546,13 +909,32 @@ export default function CloudAgentsPage() {
               </div>
             </Card>
           ) : (
-            <div className="text-center py-8 text-text-muted border border-dashed border-border/50 rounded-lg">
-              <span className="material-symbols-outlined text-[40px] mb-2">touch_app</span>
-              <p>{t("selectTaskPrompt")}</p>
-            </div>
+            <EmptyState
+              icon="👆"
+              title={t("selectTaskPrompt")}
+              description="Pick a task from the list to see its plan, activities, and result."
+            />
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={taskPendingDelete !== null}
+        onClose={() => !deleting && setTaskPendingDelete(null)}
+        onConfirm={() => taskPendingDelete && handleDeleteTask(taskPendingDelete.id)}
+        title="Delete task?"
+        message={
+          taskPendingDelete
+            ? `This permanently removes "${taskPendingDelete.prompt.slice(0, 80) || "this task"}${
+                taskPendingDelete.prompt.length > 80 ? "\u2026" : ""
+              }" from the dashboard. The task will not be cancelled upstream\u2014you must do that separately if it's still running.`
+            : ""
+        }
+        confirmText="Delete"
+        cancelText="Keep"
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   );
 }

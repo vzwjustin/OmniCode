@@ -12,6 +12,7 @@ import {
 } from "./utils";
 import Card from "@/shared/components/Card";
 import Badge from "@/shared/components/Badge";
+import RelativeTime from "@/shared/components/RelativeTime";
 import { CardSkeleton } from "@/shared/components/Loading";
 import { USAGE_SUPPORTED_PROVIDERS } from "@/shared/constants/providers";
 import { pickMaskedDisplayValue, pickDisplayValue } from "@/shared/utils/maskEmail";
@@ -734,12 +735,6 @@ export default function ProviderLimits() {
                     const stale = quota?.stale;
                     const displayTime = stale?.since || refreshedAt;
                     if (!displayTime) return <span className="text-text-muted">-</span>;
-                    const formatted = new Date(displayTime).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                      hour12: false,
-                    });
                     if (stale) {
                       return (
                         <span
@@ -747,11 +742,15 @@ export default function ProviderLimits() {
                           title={t("staleQuotaTooltip")}
                           aria-label={t("staleQuotaTooltip")}
                         >
-                          {formatted}
+                          <RelativeTime value={displayTime} />
                         </span>
                       );
                     }
-                    return <span className="text-text-muted">{formatted}</span>;
+                    return (
+                      <span className="text-text-muted">
+                        <RelativeTime value={displayTime} />
+                      </span>
+                    );
                   })()}
                 </div>
 

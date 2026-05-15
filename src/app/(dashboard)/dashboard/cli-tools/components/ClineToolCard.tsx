@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, Button, ModelSelectModal, ManualConfigModal } from "@/shared/components";
+import { Card, Button, ModelSelectModal, ManualConfigModal, RelativeTime } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import CliStatusBadge from "./CliStatusBadge";
 import { useTranslations } from "next-intl";
@@ -438,7 +438,7 @@ export default function ClineToolCard({
                             <div className="flex flex-col">
                               <span className="font-medium">{b.originalFile}</span>
                               <span className="text-text-muted">
-                                {new Date(b.createdAt).toLocaleString()}
+                                <RelativeTime value={b.createdAt} />
                               </span>
                             </div>
                             <Button

@@ -16,9 +16,11 @@
 
 import fs from "fs";
 import path from "path";
+import { createHash } from "crypto";
 import { fileURLToPath } from "url";
 import type Database from "better-sqlite3";
 import { DEFAULT_DATABASE_SETTINGS } from "@/types/databaseSettings";
+import { migrateLegacyEncryptedString, isEncryptionEnabled } from "./encryption";
 
 /**
  * Resolve the migrations directory path safely across platforms.
@@ -370,6 +372,111 @@ function applyApiKeyLifecycleMigration(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_api_keys_revoked_at ON api_keys(revoked_at);
     CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at);
   `);
+}
+
+/**
+ * Tranche A — Task A6.a: retire the plaintext `api_keys.key` column for
+ * every row whose `key_hash` is already populated.
+ *
+ * SQLite has no native sha256() so the row-level backfill must run in TS.
+ * The companion SQL file (db/migrations/056_api_keys_hash_only.sql) keeps
+ * a documentation-friendly canonical form of the NULL update so fresh
+ * databases can still exec() the file directly via testing harnesses.
+ *
+ * Step 1: hash any row whose key_hash IS NULL but key IS NOT NULL.
+ * Step 2 (deferred): the plaintext `key` column is intentionally NOT
+ *   NULLed by this sweep. Migration 056 still does that for fresh DBs,
+ *   but on existing deployments we keep the plaintext value around as a
+ *   safety net behind OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1 until the next
+ *   release cuts the legacy code path entirely. Future drop migration
+ *   will retire the column.
+ *
+ * Hotfix 2026-05-14: a downstream incident showed that a separate
+ * migration (`056_usage_history_observability_columns`) had been applied
+ * at version slot 056 on existing deployments BEFORE this branch
+ * renumbered the on-disk file to 056_api_keys_hash_only. Because the
+ * migration runner keys "already applied" by version-only, the renumber
+ * caused this migration to be silently skipped on every existing DB —
+ * leaving plaintext api_keys rows without key_hash and breaking
+ * authentication after A6.b made validation hash-only. The fix is to
+ * promote the body of this migration to an idempotent, table-guarded
+ * boot-time sweep that runs unconditionally regardless of which version
+ * slot the migration runner thinks is applied.
+ */
+function applyApiKeysHashOnlyMigration(db: Database.Database): void {
+  // Ensure the column exists; older databases may not have hit
+  // ensureApiKeysColumns() yet (e.g., when migrations run before
+  // any apiKeys.ts code path has touched the schema).
+  ensureColumn(db, "api_keys", "key_hash", "ALTER TABLE api_keys ADD COLUMN key_hash TEXT");
+
+  // ── Step 1: backfill key_hash for any row still missing it ──
+  const missingHash = db
+    .prepare(
+      "SELECT id, key FROM api_keys WHERE (key_hash IS NULL OR key_hash = '') AND key IS NOT NULL"
+    )
+    .all() as Array<{ id: string; key: string }>;
+
+  if (missingHash.length > 0) {
+    const updateHash = db.prepare("UPDATE api_keys SET key_hash = @keyHash WHERE id = @id");
+    for (const row of missingHash) {
+      if (typeof row.key !== "string" || row.key.length === 0) continue;
+      const keyHash = createHash("sha256").update(row.key).digest("hex");
+      updateHash.run({ id: row.id, keyHash });
+    }
+    console.log(
+      `[Migration] api_keys hash sweep: back-filled key_hash for ${missingHash.length} legacy row(s).`
+    );
+  }
+}
+
+/**
+ * Boot-time idempotent api_keys hash sweep — runs on every getDbInstance()
+ * via runMigrations() regardless of whether migration 056 was dispatched
+ * through the standard pending pipeline.
+ *
+ * Why a separate hook (similar to runLegacyEncryptionSweep): if a different
+ * migration ever lands at version slot 056 on existing deployments, the
+ * version-only "already applied" check in getAppliedVersions() will skip
+ * the dispatch path entirely. This hook closes that hole. Exported so
+ * tests and operational scripts can invoke it explicitly.
+ *
+ * Returns the number of rows whose key_hash was newly back-filled.
+ */
+export function runApiKeysHashSweep(db: Database.Database): number {
+  if (!hasTable(db, "api_keys")) return 0;
+  if (!hasColumn(db, "api_keys", "key_hash")) {
+    // Migration 056 (or this sweep) hasn't run yet — ensure the column
+    // exists before we try to query it.
+    db.exec("ALTER TABLE api_keys ADD COLUMN key_hash TEXT");
+  }
+
+  const rows = db
+    .prepare(
+      "SELECT id, key FROM api_keys WHERE (key_hash IS NULL OR key_hash = '') AND key IS NOT NULL"
+    )
+    .all() as Array<{ id: string; key: string }>;
+
+  if (rows.length === 0) return 0;
+
+  const updateHash = db.prepare("UPDATE api_keys SET key_hash = @keyHash WHERE id = @id");
+  const apply = db.transaction(() => {
+    let n = 0;
+    for (const row of rows) {
+      if (typeof row.key !== "string" || row.key.length === 0) continue;
+      const keyHash = createHash("sha256").update(row.key).digest("hex");
+      updateHash.run({ id: row.id, keyHash });
+      n++;
+    }
+    return n;
+  });
+
+  const migrated = apply();
+  if (migrated > 0) {
+    console.log(
+      `[Migration] api_keys hash sweep back-filled key_hash for ${migrated} row(s) — these previously could not authenticate after A6.b made validation hash-only.`
+    );
+  }
+  return migrated;
 }
 
 function isSearchRequestTypeMigration(migration: { version: string; name: string }): boolean {
@@ -761,7 +868,33 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
   });
 
   if (pending.length === 0) {
-    return 0; // Nothing to do
+    // Tranche A.1 regression fix: the A3 legacy-encryption sweep must run
+    // on every boot, not only when there are pending migrations. Without
+    // this, existing databases (which already have every migration applied)
+    // never get their legacy-salt ciphertexts migrated, reintroducing the
+    // re-encryption-loop / 50% CPU symptom from recent_issues.jsonl #9.
+    try {
+      runLegacyEncryptionSweep(db);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[Migration] Legacy-encryption sweep failed: ${message}`);
+    }
+    // Hotfix 2026-05-14: api_keys hash sweep must also run on every boot.
+    // Migration 056 (api_keys_hash_only) was silently skipped on existing
+    // deployments because version slot 056 had previously been applied as
+    // usage_history_observability_columns. The version-only check in
+    // getAppliedVersions() then treats 056 as already-applied and the
+    // dispatch table never fires. The idempotent sweep here closes that
+    // hole — any plaintext key that still lacks key_hash gets one, and
+    // authentication continues to work after A6.b made validation
+    // hash-only.
+    try {
+      runApiKeysHashSweep(db);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[Migration] api_keys hash sweep failed: ${message}`);
+    }
+    return 0;
   }
 
   // ── Safety Check 2: Mass-migration detection (abort if existing DB + many migrations) ──
@@ -829,6 +962,8 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
         applyCompressionReceiptsMigration(db);
       } else if (migration.version === "042") {
         applyCompressionCombosMigration(db, migration.path);
+      } else if (migration.version === "056" && migration.name === "api_keys_hash_only") {
+        applyApiKeysHashOnlyMigration(db);
       } else {
         const sql = fs.readFileSync(migration.path, "utf-8");
         db.exec(sql);
@@ -877,7 +1012,142 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
     console.error("Error inserting default database settings:", error);
   }
 
+  // ── Post-Migration Hook (Tranche A — Task A3): Legacy-Encryption Sweep ──
+  // Proactively re-encrypt any rows whose encrypted columns still use the
+  // v3.7.7 dynamic-salt key, instead of relying on lazy migration through
+  // decryptWithMigration() (Task A2). Bounded, idempotent, and safe to call
+  // even on a fresh database. Closes recent_issues.jsonl #9.
+  try {
+    runLegacyEncryptionSweep(db);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Migration] Legacy-encryption sweep failed: ${message}`);
+  }
+
+  // ── Post-Migration Hook (Hotfix 2026-05-14): api_keys hash sweep ──
+  // Belt-and-braces: even when migration 056 dispatched correctly via the
+  // pending pipeline, we run the idempotent sweep again so a future
+  // migration renumber that re-uses slot 056 cannot silently strand
+  // plaintext rows in the api_keys table.
+  try {
+    runApiKeysHashSweep(db);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Migration] api_keys hash sweep failed: ${message}`);
+  }
+
   return count;
+}
+
+/**
+ * Post-migration sweep: re-encrypt every legacy-encrypted row in the tables
+ * that hold ciphertext fields. The sweep is a no-op when:
+ *   - encryption is disabled (passthrough mode), OR
+ *   - the legacy dynamic-salt key cannot decrypt anything (fresh install).
+ *
+ * Returns the number of rows rewritten across all tables.
+ *
+ * Exported so tests and operational scripts can re-run the sweep on demand.
+ */
+export function runLegacyEncryptionSweep(db: Database.Database): number {
+  if (!isEncryptionEnabled()) return 0;
+
+  let total = 0;
+  total += sweepProviderConnections(db);
+  total += sweepCommandCodeAuthSessions(db);
+
+  if (total > 0) {
+    console.log(
+      `[Migration] Legacy-encryption sweep migrated ${total} row(s) to the canonical static-salt key.`
+    );
+  }
+  return total;
+}
+
+function sweepProviderConnections(db: Database.Database): number {
+  if (!hasTable(db, "provider_connections")) return 0;
+
+  const rows = db
+    .prepare("SELECT id, api_key, access_token, refresh_token, id_token FROM provider_connections")
+    .all() as Array<{
+    id: string;
+    api_key: string | null;
+    access_token: string | null;
+    refresh_token: string | null;
+    id_token: string | null;
+  }>;
+
+  const update = db.prepare(
+    "UPDATE provider_connections SET api_key = @apiKey, access_token = @accessToken, " +
+      "refresh_token = @refreshToken, id_token = @idToken, updated_at = @updatedAt WHERE id = @id"
+  );
+
+  let migrated = 0;
+  for (const row of rows) {
+    const next = {
+      apiKey: row.api_key,
+      accessToken: row.access_token,
+      refreshToken: row.refresh_token,
+      idToken: row.id_token,
+    };
+    let changed = false;
+
+    for (const field of ["apiKey", "accessToken", "refreshToken", "idToken"] as const) {
+      const current = next[field];
+      if (typeof current !== "string") continue;
+      const { updated, value } = migrateLegacyEncryptedString(current);
+      if (updated) {
+        next[field] = (value ?? null) as string | null;
+        changed = true;
+      }
+    }
+
+    if (!changed) continue;
+
+    update.run({
+      id: row.id,
+      apiKey: next.apiKey ?? null,
+      accessToken: next.accessToken ?? null,
+      refreshToken: next.refreshToken ?? null,
+      idToken: next.idToken ?? null,
+      updatedAt: new Date().toISOString(),
+    });
+    migrated++;
+  }
+
+  return migrated;
+}
+
+function sweepCommandCodeAuthSessions(db: Database.Database): number {
+  if (!hasTable(db, "command_code_auth_sessions")) return 0;
+
+  const rows = db
+    .prepare(
+      "SELECT id, encrypted_api_key FROM command_code_auth_sessions WHERE encrypted_api_key IS NOT NULL"
+    )
+    .all() as Array<{ id: string; encrypted_api_key: string | null }>;
+
+  const update = db.prepare(
+    "UPDATE command_code_auth_sessions SET encrypted_api_key = @encryptedApiKey, " +
+      "updated_at = @updatedAt WHERE id = @id"
+  );
+
+  let migrated = 0;
+  for (const row of rows) {
+    const current = row.encrypted_api_key;
+    if (typeof current !== "string") continue;
+    const { updated, value } = migrateLegacyEncryptedString(current);
+    if (!updated) continue;
+
+    update.run({
+      id: row.id,
+      encryptedApiKey: value ?? null,
+      updatedAt: new Date().toISOString(),
+    });
+    migrated++;
+  }
+
+  return migrated;
 }
 
 function insertDefaultDatabaseSettings(db: Database.Database) {

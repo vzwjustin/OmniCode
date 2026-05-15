@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { Card, Button, Input, Modal, CardSkeleton, SegmentedControl } from "@/shared/components";
+import {
+  Card,
+  Button,
+  Input,
+  Modal,
+  CardSkeleton,
+  SegmentedControl,
+  RelativeTime,
+  CopyButton,
+} from "@/shared/components";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useDisplayBaseUrl } from "@/shared/hooks";
 import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
@@ -2000,9 +2009,11 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
                   <p>
                     {t("protocolLastActivity") || "Last activity"}:{" "}
                     <span className="text-text-main">
-                      {mcpStatus?.activity?.lastCallAt
-                        ? new Date(mcpStatus.activity.lastCallAt).toLocaleString()
-                        : "—"}
+                      {mcpStatus?.activity?.lastCallAt ? (
+                        <RelativeTime value={mcpStatus.activity.lastCallAt} />
+                      ) : (
+                        "—"
+                      )}
                     </span>
                   </p>
                 </div>
@@ -2055,9 +2066,16 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
                 </div>
                 <div className="mt-3 rounded-lg bg-bg p-3 border border-border/70">
                   <p className="text-xs font-semibold mb-1">{t("quickStart") || "Quick Start"}</p>
-                  <code className="text-xs font-mono break-all">
-                    {baseUrl.replace(/\/v1$/, "")}/a2a
-                  </code>
+                  <div className="flex items-center gap-1">
+                    <code className="text-xs font-mono break-all flex-1">
+                      {baseUrl.replace(/\/v1$/, "")}/a2a
+                    </code>
+                    <CopyButton
+                      value={`${baseUrl.replace(/\/v1$/, "")}/a2a`}
+                      size="xs"
+                      label="Copy A2A endpoint"
+                    />
+                  </div>
                 </div>
                 <div className="mt-3">
                   <Link

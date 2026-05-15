@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDbInstance } from "@/lib/db/core";
 import { getComboById, getCombos } from "@/lib/db/combos";
 import { getQuotaSnapshots } from "@/lib/db/quotaSnapshots";
+import {
+  getComboModelUsage,
+  getComboPerformance,
+  getComboTargetHistory,
+} from "@/lib/usage/callLogAggregates";
 import { getComboMetrics } from "@omniroute/open-sse/services/comboMetrics.ts";
 import { resolveNestedComboTargets } from "@omniroute/open-sse/services/combo.ts";
 import type {
@@ -271,19 +275,7 @@ function buildUsageSkew(
   comboModels: string[],
   since: string
 ): ComboHealthMetrics["usageSkew"] {
-  const db = getDbInstance();
-  const rows = db
-    .prepare(
-      `SELECT
-         model,
-         COUNT(*) as requests,
-         SUM(COALESCE(tokens_in, 0) + COALESCE(tokens_out, 0)) as totalTokens
-       FROM call_logs
-       WHERE combo_name = ?
-         AND timestamp >= ?
-       GROUP BY model`
-    )
-    .all(comboName, since) as ModelUsageRow[];
+  const rows = getComboModelUsage(comboName, since) as ModelUsageRow[];
 
   const usageByModel = new Map<string, { requests: number; tokens: number }>();
   for (const model of comboModels) {
@@ -323,18 +315,7 @@ function buildUsageSkew(
 }
 
 function buildPerformance(comboName: string, since: string): ComboHealthMetrics["performance"] {
-  const db = getDbInstance();
-  const row = db
-    .prepare(
-      `SELECT
-         COUNT(*) as totalRequests,
-         SUM(CASE WHEN status >= 200 AND status < 400 THEN 1 ELSE 0 END) as successCount,
-         AVG(duration) as avgLatencyMs
-       FROM call_logs
-       WHERE combo_name = ?
-         AND timestamp >= ?`
-    )
-    .get(comboName, since) as PerformanceRow | undefined;
+  const row = getComboPerformance(comboName, since) as PerformanceRow | undefined;
 
   const totalRequests = toSafeNumber(row?.totalRequests);
   const successCount = toSafeNumber(row?.successCount);
@@ -370,22 +351,7 @@ function getHistoricalTargetMetrics(
   comboName: string,
   since: string
 ): Map<string, HistoricalTargetMetricView> {
-  const db = getDbInstance();
-  const rows = db
-    .prepare(
-      `SELECT
-         combo_execution_key,
-         combo_step_id,
-         status,
-         duration,
-         timestamp
-       FROM call_logs
-       WHERE combo_name = ?
-         AND timestamp >= ?
-         AND COALESCE(NULLIF(combo_execution_key, ''), NULLIF(combo_step_id, '')) IS NOT NULL
-       ORDER BY combo_execution_key ASC, combo_step_id ASC, timestamp DESC`
-    )
-    .all(comboName, since) as HistoricalTargetUsageRow[];
+  const rows = getComboTargetHistory(comboName, since) as HistoricalTargetUsageRow[];
 
   const metrics = new Map<
     string,

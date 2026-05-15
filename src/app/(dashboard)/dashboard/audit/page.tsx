@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, SegmentedControl } from "@/shared/components";
+import { Card, SegmentedControl, CopyButton, RelativeTime } from "@/shared/components";
 import ComplianceTab from "./ComplianceTab";
 
 type McpAuditEntry = {
@@ -168,7 +168,7 @@ function McpAuditTab() {
                 {data.entries.map((entry) => (
                   <tr key={entry.id} className="transition-colors hover:bg-sidebar/30">
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-text-muted">
-                      {new Date(entry.createdAt).toLocaleString()}
+                      <RelativeTime value={entry.createdAt} />
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-text-main">{entry.toolName}</td>
                     <td className="px-4 py-3 text-text-muted">{entry.durationMs}ms</td>
@@ -184,7 +184,16 @@ function McpAuditTab() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-text-muted">
-                      {entry.apiKeyId || t("notAvailable")}
+                      {entry.apiKeyId ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="truncate max-w-[120px]" title={entry.apiKeyId}>
+                            {entry.apiKeyId}
+                          </span>
+                          <CopyButton value={entry.apiKeyId} label={t("apiKey")} size="xs" />
+                        </span>
+                      ) : (
+                        t("notAvailable")
+                      )}
                     </td>
                     <td className="max-w-[280px] truncate px-4 py-3 text-xs text-text-muted">
                       {entry.outputSummary || t("notAvailable")}

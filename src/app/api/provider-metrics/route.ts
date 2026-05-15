@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDbInstance } from "@/lib/db/core";
-
-type JsonRecord = Record<string, unknown>;
+import { getProviderMetrics } from "@/lib/usage/callLogAggregates";
 
 function toNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -18,19 +16,7 @@ function toNumber(value: unknown): number {
  */
 export async function GET() {
   try {
-    const db = getDbInstance();
-    const rows = db
-      .prepare(
-        `SELECT
-          provider,
-          COUNT(*) as totalRequests,
-          SUM(CASE WHEN status >= 200 AND status < 400 THEN 1 ELSE 0 END) as totalSuccesses,
-          ROUND(AVG(duration)) as avgLatencyMs
-        FROM call_logs
-        WHERE provider IS NOT NULL AND provider != '-'
-        GROUP BY provider`
-      )
-      .all() as JsonRecord[];
+    const rows = getProviderMetrics();
 
     const metrics: Record<
       string,

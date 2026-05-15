@@ -5,6 +5,7 @@ import {
   createCloudAgentTaskTable,
   insertCloudAgentTask,
   getAllCloudAgentTasks,
+  getCloudAgentTaskById,
   getCloudAgentTasksByProvider,
   getCloudAgentTasksByStatus,
   deleteCloudAgentTask,
@@ -93,20 +94,30 @@ export async function POST(request: NextRequest) {
     if (!credentials) {
       return NextResponse.json(
         {
-          error: `No active credentials configured for cloud agent provider: ${validated.providerId}`,
+          error: `No active credentials configured for cloud agent provider "${validated.providerId}". Add an API key on the Providers page first.`,
         },
         { status: 400, headers: getCloudAgentCorsHeaders(request) }
       );
     }
 
-    const task = await agent.createTask(
-      {
-        prompt: validated.prompt,
-        source: validated.source,
-        options: validated.options || {},
-      },
-      credentials
-    );
+    let task;
+    try {
+      task = await agent.createTask(
+        {
+          prompt: validated.prompt,
+          source: validated.source,
+          options: validated.options || {},
+        },
+        credentials
+      );
+    } catch (err) {
+      logger.error({ err, providerId: validated.providerId }, "Cloud agent createTask failed");
+      const message = err instanceof Error ? err.message : "Failed to start cloud agent task";
+      return NextResponse.json(
+        { error: message },
+        { status: 502, headers: getCloudAgentCorsHeaders(request) }
+      );
+    }
 
     createCloudAgentTaskTable();
     insertCloudAgentTask({
@@ -125,18 +136,10 @@ export async function POST(request: NextRequest) {
       completed_at: null,
     });
 
+    const inserted = getCloudAgentTaskById(task.id);
     return NextResponse.json(
       {
-        data: {
-          id: task.id,
-          providerId: task.providerId,
-          externalId: task.externalId,
-          status: task.status,
-          prompt: task.prompt,
-          source: task.source,
-          options: task.options,
-          createdAt: task.createdAt,
-        },
+        data: inserted ? serializeCloudAgentTask(inserted) : null,
       },
       { status: 201, headers: getCloudAgentCorsHeaders(request) }
     );

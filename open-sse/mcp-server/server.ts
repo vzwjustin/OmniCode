@@ -45,6 +45,13 @@ import {
   oneproxyFetchInput,
   oneproxyRotateInput,
   oneproxyStatsInput,
+  cloudAgentListProvidersInput,
+  cloudAgentListTasksInput,
+  cloudAgentGetTaskInput,
+  cloudAgentListSourcesInput,
+  cloudAgentCreateTaskInput,
+  cloudAgentSendMessageInput,
+  cloudAgentApprovePlanInput,
 } from "./schemas/tools.ts";
 import { startMcpHeartbeat } from "./runtimeHeartbeat.ts";
 
@@ -73,6 +80,15 @@ import {
   handleOneproxyRotate,
   handleOneproxyStats,
 } from "./tools/advancedTools.ts";
+import {
+  handleCloudAgentListProviders,
+  handleCloudAgentListTasks,
+  handleCloudAgentGetTask,
+  handleCloudAgentListSources,
+  handleCloudAgentCreateTask,
+  handleCloudAgentSendMessage,
+  handleCloudAgentApprovePlan,
+} from "./tools/cloudAgentTools.ts";
 import { memoryTools } from "./tools/memoryTools.ts";
 import { skillTools } from "./tools/skillTools.ts";
 import { compressionTools } from "./tools/compressionTools.ts";
@@ -914,6 +930,97 @@ export function createMcpServer(): McpServer {
     },
     withScopeEnforcement("omniroute_oneproxy_stats", (args) =>
       handleOneproxyStats(oneproxyStatsInput.parse(args))
+    )
+  );
+
+  // ── Cloud Agent Tools ─────────────────────────
+  // Wrap the REST endpoints under /api/v1/agents/* so MCP clients can
+  // discover, dispatch, and steer Jules / Devin / Codex Cloud tasks
+  // without going through the dashboard. See
+  // open-sse/mcp-server/tools/cloudAgentTools.ts for handler details.
+
+  server.registerTool(
+    "omniroute_cloud_agent_list_providers",
+    {
+      description:
+        "Lists the cloud-agent providers OmniRoute integrates with (Jules, Devin, Codex Cloud). Static catalog — no outbound API call.",
+      inputSchema: cloudAgentListProvidersInput,
+    },
+    withScopeEnforcement("omniroute_cloud_agent_list_providers", async (args, extra) => {
+      cloudAgentListProvidersInput.parse(args ?? {});
+      return handleCloudAgentListProviders({}, extra);
+    })
+  );
+
+  server.registerTool(
+    "omniroute_cloud_agent_list_tasks",
+    {
+      description:
+        "Lists cloud-agent tasks tracked by OmniRoute, with optional filters for provider and lifecycle status.",
+      inputSchema: cloudAgentListTasksInput,
+    },
+    withScopeEnforcement("omniroute_cloud_agent_list_tasks", (args, extra) =>
+      handleCloudAgentListTasks(cloudAgentListTasksInput.parse(args ?? {}), extra)
+    )
+  );
+
+  server.registerTool(
+    "omniroute_cloud_agent_get_task",
+    {
+      description:
+        "Returns the latest state of a single cloud-agent task, including status, activity log, plan steps, and result fields.",
+      inputSchema: cloudAgentGetTaskInput,
+    },
+    withScopeEnforcement("omniroute_cloud_agent_get_task", (args, extra) =>
+      handleCloudAgentGetTask(cloudAgentGetTaskInput.parse(args), extra)
+    )
+  );
+
+  server.registerTool(
+    "omniroute_cloud_agent_list_sources",
+    {
+      description:
+        "Lists repositories / sources a cloud-agent provider is authorized to act on. Use this to discover valid source values before create_task.",
+      inputSchema: cloudAgentListSourcesInput,
+    },
+    withScopeEnforcement("omniroute_cloud_agent_list_sources", (args, extra) =>
+      handleCloudAgentListSources(cloudAgentListSourcesInput.parse(args), extra)
+    )
+  );
+
+  server.registerTool(
+    "omniroute_cloud_agent_create_task",
+    {
+      description:
+        "Dispatches a new cloud-agent task on the chosen provider with the given repo source and options (autoCreatePr / planApprovalRequired).",
+      inputSchema: cloudAgentCreateTaskInput,
+    },
+    withScopeEnforcement("omniroute_cloud_agent_create_task", (args, extra) =>
+      handleCloudAgentCreateTask(cloudAgentCreateTaskInput.parse(args), extra)
+    )
+  );
+
+  server.registerTool(
+    "omniroute_cloud_agent_send_message",
+    {
+      description:
+        "Sends a follow-up message to a running cloud-agent task (steer the agent / answer a clarifying question / add new context).",
+      inputSchema: cloudAgentSendMessageInput,
+    },
+    withScopeEnforcement("omniroute_cloud_agent_send_message", (args, extra) =>
+      handleCloudAgentSendMessage(cloudAgentSendMessageInput.parse(args), extra)
+    )
+  );
+
+  server.registerTool(
+    "omniroute_cloud_agent_approve_plan",
+    {
+      description:
+        "Approves the plan a cloud-agent task is awaiting on (status 'awaiting_approval') so execution can resume.",
+      inputSchema: cloudAgentApprovePlanInput,
+    },
+    withScopeEnforcement("omniroute_cloud_agent_approve_plan", (args, extra) =>
+      handleCloudAgentApprovePlan(cloudAgentApprovePlanInput.parse(args), extra)
     )
   );
 

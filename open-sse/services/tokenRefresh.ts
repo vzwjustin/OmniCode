@@ -1,13 +1,26 @@
 // @ts-nocheck
 import { PROVIDERS, OAUTH_ENDPOINTS } from "../config/constants.ts";
 import { getGitHubCopilotRefreshHeaders } from "../config/providerHeaderProfiles.ts";
-import { pbkdf2Sync } from "node:crypto";
+import { createHash } from "node:crypto";
 import { runWithProxyContext } from "../utils/proxyFetch.ts";
 
 // Token expiry buffer (refresh if expires within 5 minutes)
 export const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
-const CACHE_SECRET = "omniroute-token-cache";
+/**
+ * Tranche B — B3 (Bug review item #20)
+ *
+ * Validate that a token response actually contains a usable access_token before
+ * we return it to callers. Previously the refresh helpers returned
+ * `{ accessToken: undefined, refreshToken: ... }` on any 200 OK with a missing
+ * access_token field. Callers persisted that, downstream code saw "no
+ * credentials" and triggered re-auth on the very next request. Returning null
+ * here forces refreshWithRetry to back off and eventually surface a clean
+ * "re-auth required" state instead of silently corrupting the connection row.
+ */
+function isUsableAccessToken(token: unknown): token is string {
+  return typeof token === "string" && token.length > 0;
+}
 
 // In-flight refresh promise cache to prevent race conditions
 // Key: "provider:sha256(refreshToken)" → Value: Promise<result>
@@ -35,8 +48,20 @@ function buildFormParams(entries: Record<string, unknown>): URLSearchParams {
   return params;
 }
 
-function getRefreshCacheKey(provider, refreshToken) {
-  const tokenHash = pbkdf2Sync(refreshToken, CACHE_SECRET, 1000, 32, "sha256").toString("hex");
+// Tranche C #22: this is a cache key for an in-memory Map, not a credential
+// hash. PBKDF2(1000 rounds, sha256, 32 bytes) was wasted CPU on the refresh
+// hot path. A plain sha256 of `provider:refreshToken` gives the same uniqueness
+// guarantees we actually need (avoid collisions across providers and avoid
+// putting raw tokens into log-grep-able cache keys) at a tiny fraction of the
+// cost. Exported for the Tranche C regression test in
+// `tests/unit/tranche-c-fixes.test.ts` (#22 suite) — not part of the public
+// runtime surface; treat as test-only.
+export function getRefreshCacheKey(provider, refreshToken) {
+  const tokenHash = createHash("sha256")
+    .update(provider)
+    .update(":")
+    .update(refreshToken)
+    .digest("hex");
   return `${provider}:${tokenHash}`;
 }
 
@@ -48,7 +73,8 @@ export async function refreshAccessToken(
   refreshToken,
   credentials,
   log,
-  proxyConfig: unknown = null
+  proxyConfig: unknown = null,
+  signal?: AbortSignal
 ) {
   const config = PROVIDERS[provider];
 
@@ -69,7 +95,14 @@ export async function refreshAccessToken(
       refresh_token: refreshToken,
     });
     if (config.clientId) params.set("client_id", config.clientId);
-    if (config.clientSecret) params.set("client_secret", config.clientSecret);
+    // Tranche B — B5 (Bug review item #16): only send client_secret when the
+    // provider hasn't explicitly opted out (public/PKCE clients reject it with
+    // invalid_client, which then trips our circuit breaker). Unknown providers
+    // default to the legacy behavior of sending it — set `publicClient: true`
+    // on the provider config in `open-sse/config/constants.ts` to opt out.
+    if (config.clientSecret && config.publicClient !== true) {
+      params.set("client_secret", config.clientSecret);
+    }
 
     const response = await runWithProxyContext(proxyConfig, () =>
       fetch(refreshEndpoint, {
@@ -79,6 +112,7 @@ export async function refreshAccessToken(
           Accept: "application/json",
         },
         body: params,
+        signal,
       })
     );
 
@@ -92,6 +126,17 @@ export async function refreshAccessToken(
     }
 
     const tokens = await response.json();
+
+    if (!isUsableAccessToken(tokens.access_token)) {
+      log?.error?.(
+        "TOKEN_REFRESH",
+        `Provider ${provider} returned 200 OK with no usable access_token; refusing to persist.`,
+        {
+          keys: Object.keys(tokens || {}),
+        }
+      );
+      return null;
+    }
 
     log?.info?.("TOKEN_REFRESH", `Successfully refreshed token for ${provider}`, {
       hasNewAccessToken: !!tokens.access_token,
@@ -324,7 +369,12 @@ export async function refreshKimiCodingToken(refreshToken, log, proxyConfig: unk
 /**
  * Specialized refresh for Claude OAuth tokens
  */
-export async function refreshClaudeOAuthToken(refreshToken, log, proxyConfig: unknown = null) {
+export async function refreshClaudeOAuthToken(
+  refreshToken,
+  log,
+  proxyConfig: unknown = null,
+  signal?: AbortSignal
+) {
   try {
     // Standard OAuth2 token refresh uses form-urlencoded (not JSON)
     const params = buildFormParams({
@@ -342,6 +392,7 @@ export async function refreshClaudeOAuthToken(refreshToken, log, proxyConfig: un
           "anthropic-beta": "oauth-2025-04-20",
         },
         body: params.toString(),
+        signal,
       })
     );
 
@@ -355,6 +406,14 @@ export async function refreshClaudeOAuthToken(refreshToken, log, proxyConfig: un
     }
 
     const tokens = await response.json();
+
+    if (!isUsableAccessToken(tokens.access_token)) {
+      log?.error?.(
+        "TOKEN_REFRESH",
+        "Claude returned 200 OK with no usable access_token; refusing to persist."
+      );
+      return null;
+    }
 
     log?.info?.("TOKEN_REFRESH", "Successfully refreshed Claude OAuth token", {
       hasNewAccessToken: !!tokens.access_token,
@@ -381,7 +440,8 @@ export async function refreshGoogleToken(
   clientId,
   clientSecret,
   log,
-  proxyConfig: unknown = null
+  proxyConfig: unknown = null,
+  signal?: AbortSignal
 ) {
   const response = await runWithProxyContext(proxyConfig, () =>
     fetch(OAUTH_ENDPOINTS.google.token, {
@@ -396,6 +456,7 @@ export async function refreshGoogleToken(
         client_id: clientId,
         client_secret: clientSecret,
       }),
+      signal,
     })
   );
 
@@ -410,6 +471,14 @@ export async function refreshGoogleToken(
 
   const tokens = await response.json();
 
+  if (!isUsableAccessToken(tokens.access_token)) {
+    log?.error?.(
+      "TOKEN_REFRESH",
+      "Google returned 200 OK with no usable access_token; refusing to persist."
+    );
+    return null;
+  }
+
   log?.info?.("TOKEN_REFRESH", "Successfully refreshed Google token", {
     hasNewAccessToken: !!tokens.access_token,
     hasNewRefreshToken: !!tokens.refresh_token,
@@ -423,7 +492,12 @@ export async function refreshGoogleToken(
   };
 }
 
-export async function refreshQwenToken(refreshToken, log, proxyConfig: unknown = null) {
+export async function refreshQwenToken(
+  refreshToken,
+  log,
+  proxyConfig: unknown = null,
+  signal?: AbortSignal
+) {
   const endpoint = OAUTH_ENDPOINTS.qwen.token;
 
   try {
@@ -439,11 +513,20 @@ export async function refreshQwenToken(refreshToken, log, proxyConfig: unknown =
           refresh_token: refreshToken,
           client_id: PROVIDERS.qwen.clientId,
         }),
+        signal,
       })
     );
 
     if (response.status === 200) {
       const tokens = await response.json();
+
+      if (!isUsableAccessToken(tokens.access_token)) {
+        log?.error?.(
+          "TOKEN_REFRESH",
+          "Qwen returned 200 OK with no usable access_token; refusing to persist."
+        );
+        return null;
+      }
 
       log?.info?.("TOKEN_REFRESH", "Successfully refreshed Qwen token", {
         hasNewAccessToken: !!tokens.access_token,
@@ -503,7 +586,12 @@ export async function refreshQwenToken(refreshToken, log, proxyConfig: unknown =
  * Returns { error: 'unrecoverable_refresh_error', code } when the token has already been
  * consumed or is invalid, so callers can stop retrying and request re-authentication.
  */
-export async function refreshCodexToken(refreshToken, log, proxyConfig: unknown = null) {
+export async function refreshCodexToken(
+  refreshToken,
+  log,
+  proxyConfig: unknown = null,
+  signal?: AbortSignal
+) {
   try {
     const response = await runWithProxyContext(proxyConfig, () =>
       fetch(OAUTH_ENDPOINTS.openai.token, {
@@ -518,6 +606,7 @@ export async function refreshCodexToken(refreshToken, log, proxyConfig: unknown 
           client_id: PROVIDERS.codex.clientId,
           scope: "openid profile email offline_access",
         }),
+        signal,
       })
     );
 
@@ -561,6 +650,14 @@ export async function refreshCodexToken(refreshToken, log, proxyConfig: unknown 
     }
 
     const tokens = await response.json();
+
+    if (!isUsableAccessToken(tokens.access_token)) {
+      log?.error?.(
+        "TOKEN_REFRESH",
+        "Codex returned 200 OK with no usable access_token; refusing to persist."
+      );
+      return null;
+    }
 
     log?.info?.("TOKEN_REFRESH", "Successfully refreshed Codex token", {
       hasNewAccessToken: !!tokens.access_token,
@@ -826,27 +923,46 @@ export async function refreshCopilotToken(githubAccessToken, log, proxyConfig: u
 /**
  * Get access token for a specific provider (internal, does the actual work)
  */
-async function _getAccessTokenInternal(provider, credentials, log, proxyConfig: unknown = null) {
+async function _getAccessTokenInternal(
+  provider,
+  credentials,
+  log,
+  proxyConfig: unknown = null,
+  signal?: AbortSignal
+) {
   switch (provider) {
     case "gemini":
     case "gemini-cli":
-    case "antigravity":
+    case "antigravity": {
+      // Tranche B — B4 (Bug review item #17): guard against missing provider
+      // config so that an unknown/lazy-loaded provider id surfaces a clean
+      // null instead of a TypeError that increments the circuit breaker.
+      const cfg = PROVIDERS[provider];
+      if (!cfg) {
+        log?.warn?.(
+          "TOKEN_REFRESH",
+          `_getAccessTokenInternal: missing PROVIDERS config for ${provider}; skipping refresh`
+        );
+        return null;
+      }
       return await refreshGoogleToken(
         credentials.refreshToken,
-        PROVIDERS[provider].clientId,
-        PROVIDERS[provider].clientSecret,
+        cfg.clientId,
+        cfg.clientSecret,
         log,
-        proxyConfig
+        proxyConfig,
+        signal
       );
+    }
 
     case "claude":
-      return await refreshClaudeOAuthToken(credentials.refreshToken, log, proxyConfig);
+      return await refreshClaudeOAuthToken(credentials.refreshToken, log, proxyConfig, signal);
 
     case "codex":
-      return await refreshCodexToken(credentials.refreshToken, log, proxyConfig);
+      return await refreshCodexToken(credentials.refreshToken, log, proxyConfig, signal);
 
     case "qwen":
-      return await refreshQwenToken(credentials.refreshToken, log, proxyConfig);
+      return await refreshQwenToken(credentials.refreshToken, log, proxyConfig, signal);
 
     case "qoder":
       return await refreshQoderToken(credentials.refreshToken, log, proxyConfig);
@@ -880,7 +996,14 @@ async function _getAccessTokenInternal(provider, credentials, log, proxyConfig: 
 
     default:
       // Fallback to generic OAuth refresh for unknown providers
-      return refreshAccessToken(provider, credentials.refreshToken, credentials, log, proxyConfig);
+      return refreshAccessToken(
+        provider,
+        credentials.refreshToken,
+        credentials,
+        log,
+        proxyConfig,
+        signal
+      );
   }
 }
 
@@ -940,7 +1063,13 @@ export function isUnrecoverableRefreshError(result) {
  * whether another process already refreshed the token. If the DB token is still valid it is
  * returned immediately without a new upstream call.
  */
-export async function getAccessToken(provider, credentials, log, proxyConfig: unknown = null) {
+export async function getAccessToken(
+  provider,
+  credentials,
+  log,
+  proxyConfig: unknown = null,
+  signal?: AbortSignal
+) {
   if (!credentials || !credentials.refreshToken || typeof credentials.refreshToken !== "string") {
     log?.warn?.("TOKEN_REFRESH", `No valid refresh token available for provider: ${provider}`);
     return null;
@@ -966,7 +1095,8 @@ export async function getAccessToken(provider, credentials, log, proxyConfig: un
       provider,
       credentials,
       log,
-      proxyConfig
+      proxyConfig,
+      signal
     ).finally(() => {
       connectionRefreshMutex.delete(connectionId);
     });
@@ -982,11 +1112,15 @@ export async function getAccessToken(provider, credentials, log, proxyConfig: un
     return refreshPromiseCache.get(cacheKey);
   }
 
-  const refreshPromise = _getAccessTokenInternal(provider, credentials, log, proxyConfig).finally(
-    () => {
-      refreshPromiseCache.delete(cacheKey);
-    }
-  );
+  const refreshPromise = _getAccessTokenInternal(
+    provider,
+    credentials,
+    log,
+    proxyConfig,
+    signal
+  ).finally(() => {
+    refreshPromiseCache.delete(cacheKey);
+  });
 
   refreshPromiseCache.set(cacheKey, refreshPromise);
   return refreshPromise;
@@ -996,7 +1130,20 @@ export async function getAccessToken(provider, credentials, log, proxyConfig: un
  * Internal helper: performs the DB staleness check then calls the actual refresh.
  * Only called from the per-connection mutex path (Layer 1 above).
  */
-async function _getAccessTokenWithStalenessCheck(provider, credentials, log, proxyConfig) {
+async function _getAccessTokenWithStalenessCheck(
+  provider,
+  credentials,
+  log,
+  proxyConfig,
+  signal?: AbortSignal
+) {
+  // Tranche B — B2 (Bug review item #6): never mutate the credentials object
+  // passed in by the caller. Other concurrent callers (sessionManager,
+  // accountFallback, executor caches) may hold the same reference and observe
+  // a different token mid-flight. Bind a NEW local that we forward downstream
+  // and leave the input untouched.
+  let activeCredentials = credentials;
+
   // RACE CONDITION PREVENTION:
   // If the credentials object in memory is stale (e.g. it waited in a semaphore while another
   // request refreshed the token), using its OLD refreshToken will cause the provider (e.g. OpenAI)
@@ -1029,9 +1176,14 @@ async function _getAccessTokenWithStalenessCheck(provider, credentials, log, pro
             expiresIn: dbConnection.expiresIn,
           };
         } else {
-          // DB token is also expired, but it's the NEWEST one. We must use it to refresh.
-          credentials.refreshToken = dbConnection.refreshToken;
-          credentials.accessToken = dbConnection.accessToken;
+          // DB token is also expired, but it's the NEWEST one. We must use it
+          // to refresh. Build a fresh object so the caller's reference is
+          // never observed in a half-rewritten state.
+          activeCredentials = {
+            ...credentials,
+            refreshToken: dbConnection.refreshToken,
+            accessToken: dbConnection.accessToken,
+          };
         }
       }
     } catch (e) {
@@ -1042,7 +1194,7 @@ async function _getAccessTokenWithStalenessCheck(provider, credentials, log, pro
     }
   }
 
-  return _getAccessTokenInternal(provider, credentials, log, proxyConfig);
+  return _getAccessTokenInternal(provider, activeCredentials, log, proxyConfig, signal);
 }
 
 /**
@@ -1235,20 +1387,57 @@ function recordFailure(provider: string, log: RefreshLoggerLike | null = null) {
 
 /**
  * Execute a function with a timeout.
+ *
+ * Tranche B — B1 (Bug review item #5)
+ *
+ * Previously this resolved null on timeout while the underlying refresh fetch
+ * kept running to completion. For rotating-token providers (Codex/OpenAI,
+ * Qwen) the orphaned fetch consumed the one-time refresh token at the
+ * upstream; the next retry then used the now-stale token and got back
+ * `refresh_token_reused`, tripping the circuit breaker permanently.
+ *
+ * Fix: create an AbortController, pass `signal` to `fn`, and call
+ * `controller.abort()` when the timeout fires. Closures that thread the
+ * signal into their `fetch()` call (Codex, Qwen, Claude, Google, generic
+ * `refreshAccessToken`, and any executor `refreshCredentials` that forwards
+ * it through `getAccessToken`) will have their upstream cancelled before it
+ * mutates remote refresh-token state.
+ *
+ * Closures that ignore the signal (Kiro/Qoder/GitHub/Cline/KimiCoding/Windsurf
+ * — non-rotating providers) keep the old behavior: the orphan resolves into
+ * `resolve(null)` which the already-resolved outer promise discards.
  */
-async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number): Promise<T | null> {
+async function withTimeout<T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number
+): Promise<T | null> {
   return await new Promise<T | null>((resolve, reject) => {
-    const timer = setTimeout(() => resolve(null), timeoutMs);
+    const controller = new AbortController();
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try {
+        controller.abort();
+      } catch {
+        /* AbortController.abort never throws in node>=20, but be defensive */
+      }
+      resolve(null);
+    }, timeoutMs);
     if (typeof timer === "object" && "unref" in timer) {
       (timer as { unref?: () => void }).unref?.();
     }
 
-    fn().then(
+    fn(controller.signal).then(
       (result) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
         resolve(result);
       },
       (error) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
         reject(error);
       }
@@ -1276,7 +1465,10 @@ export async function refreshWithRetry(
     }
 
     try {
-      const result = await withTimeout(refreshFn, REFRESH_TIMEOUT_MS);
+      // refreshFn may accept the abort signal (signal-aware closures from
+      // chatCore/executor) or ignore it (legacy closures, tests). Either way
+      // the call shape is the same: refreshFn(signal).
+      const result = await withTimeout((signal) => refreshFn(signal), REFRESH_TIMEOUT_MS);
       if (result) {
         recordSuccess(provider);
         return result;

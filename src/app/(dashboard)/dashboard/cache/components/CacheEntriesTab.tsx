@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/shared/components";
+import { Button, CopyButton, RelativeTime } from "@/shared/components";
 import { useTranslations } from "next-intl";
 
 interface CacheEntry {
@@ -78,10 +78,6 @@ export default function CacheEntriesTab() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString();
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
@@ -128,7 +124,10 @@ export default function CacheEntriesTab() {
                 {entries.map((entry) => (
                   <tr key={entry.id} className="border-b border-border/20">
                     <td className="py-2 pr-4 font-mono text-xs">
-                      {entry.signature.slice(0, 12)}...
+                      <span className="inline-flex items-center gap-1">
+                        <span title={entry.signature}>{entry.signature.slice(0, 12)}...</span>
+                        <CopyButton value={entry.signature} label={t("signature")} size="xs" />
+                      </span>
                     </td>
                     <td className="py-2 pr-4">{entry.model}</td>
                     <td className="py-2 pr-4 tabular-nums">{entry.hit_count}</td>
@@ -136,10 +135,10 @@ export default function CacheEntriesTab() {
                       {(entry.tokens_saved ?? 0).toLocaleString()}
                     </td>
                     <td className="py-2 pr-4 text-xs text-text-muted">
-                      {formatDate(entry.created_at)}
+                      <RelativeTime value={entry.created_at} />
                     </td>
                     <td className="py-2 pr-4 text-xs text-text-muted">
-                      {formatDate(entry.expires_at)}
+                      <RelativeTime value={entry.expires_at} />
                     </td>
                     <td className="py-2">
                       <button

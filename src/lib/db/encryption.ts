@@ -35,6 +35,23 @@ const STATIC_SALT = "omniroute-field-encryption-v1";
 
 let _staticKey: Buffer | null = null;
 let _legacyDynamicKey: Buffer | null = null;
+
+/**
+ * Typed error thrown when a runtime crypto fault prevents encryption.
+ * Callers MUST NOT swallow this — the row should fail to persist instead
+ * of being demoted to plaintext-at-rest. Boot-time configuration problems
+ * are still surfaced earlier by `validateEncryptionConfig()`.
+ */
+export class EncryptionError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message);
+    this.name = "EncryptionError";
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
+}
+
 /** Connection object with potentially encrypted credential fields. */
 export interface ConnectionFields {
   apiKey?: string | null;
@@ -124,11 +141,18 @@ export function encrypt(plaintext: string | null | undefined): string | null | u
     return `${PREFIX}${iv.toString("hex")}:${encrypted}:${authTag}`;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    // FAIL-CLOSED (Tranche A — Task A1): a runtime crypto fault must NEVER
+    // demote the row to plaintext-at-rest. Throw so the calling DB write
+    // is aborted by the surrounding transaction / statement, and surface a
+    // typed error so callers can quarantine the failure if they choose.
+    // Configuration validity is still checked at boot via
+    // validateEncryptionConfig(); this branch only fires on genuine
+    // runtime crypto failures (extremely rare).
     console.error(
-      `[Encryption] Encryption failed: ${message}. ` +
+      `[Encryption] Encryption failed (fail-closed): ${message}. ` +
         `Check your STORAGE_ENCRYPTION_KEY — generate one with: openssl rand -base64 32`
     );
-    return plaintext; // fallback to plaintext rather than crashing
+    throw new EncryptionError(`Field encryption failed: ${message}`, { cause: err });
   }
 }
 
@@ -141,24 +165,45 @@ export function encrypt(plaintext: string | null | undefined): string | null | u
  * static-salt key, gradually migrating the database.
  */
 export function decrypt(ciphertext: string | null | undefined): string | null | undefined {
-  if (!ciphertext || typeof ciphertext !== "string") return ciphertext;
+  return decryptWithMigration(ciphertext).value;
+}
+
+/**
+ * Decrypt a ciphertext string and report whether the legacy dynamic-salt key
+ * was used. When `migrationNeeded === true`, the caller should write the
+ * decrypted plaintext back through `encrypt()` so the row migrates to the
+ * canonical static-salt key (closes recent_issues.jsonl #9 — the v3.7.8
+ * re-encryption loop).
+ *
+ * Returns `{ value: null, migrationNeeded: false }` for unrecoverable
+ * ciphertexts (malformed, wrong key, tampered authTag).
+ */
+export function decryptWithMigration(ciphertext: string | null | undefined): {
+  value: string | null | undefined;
+  migrationNeeded: boolean;
+} {
+  if (!ciphertext || typeof ciphertext !== "string") {
+    return { value: ciphertext, migrationNeeded: false };
+  }
 
   // Not encrypted — return as-is (legacy plaintext or passthrough mode)
-  if (!ciphertext.startsWith(PREFIX)) return ciphertext;
+  if (!ciphertext.startsWith(PREFIX)) {
+    return { value: ciphertext, migrationNeeded: false };
+  }
 
   const staticKey = getStaticKey();
   if (!staticKey) {
     console.warn(
       "[Encryption] Found encrypted data but STORAGE_ENCRYPTION_KEY is not set. Cannot decrypt."
     );
-    return null;
+    return { value: null, migrationNeeded: false };
   }
 
   const body = ciphertext.slice(PREFIX.length);
   const parts = body.split(":");
   if (parts.length !== 3) {
     console.error("[Encryption] Malformed encrypted value");
-    return null;
+    return { value: null, migrationNeeded: false };
   }
 
   const [ivHex, encryptedHex, authTagHex] = parts;
@@ -182,18 +227,33 @@ export function decrypt(ciphertext: string | null | undefined): string | null | 
     // PRIMARY: Try static-salt key first (canonical derivation)
     const decrypted = tryDecryptWithKey(staticKey);
     if (decrypted !== null) {
-      return decrypted;
+      return { value: decrypted, migrationNeeded: false };
+    }
+
+    // LEGACY FALLBACK (Tranche A — Task A2): try the v3.7.7 dynamic-salt key.
+    // If it succeeds the row was encrypted by the legacy code path; signal
+    // to the caller that the plaintext should be re-encrypted with the
+    // canonical static key. Closes recent_issues.jsonl #9.
+    const legacyKey = getLegacyDynamicKey();
+    if (legacyKey) {
+      const legacyDecrypted = tryDecryptWithKey(legacyKey);
+      if (legacyDecrypted !== null) {
+        console.warn(
+          "[Encryption] Decrypted with LEGACY dynamic-salt key; row marked for re-encryption."
+        );
+        return { value: legacyDecrypted, migrationNeeded: true };
+      }
     }
 
     console.error(
       `[Encryption] Decryption failed. Ciphertext prefix: ${ciphertext.slice(0, 30)}... ` +
         `Auth tag validation likely failed.`
     );
-    return null;
+    return { value: null, migrationNeeded: false };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[Encryption] Decryption failed:", message);
-    return null;
+    return { value: null, migrationNeeded: false };
   }
 }
 
