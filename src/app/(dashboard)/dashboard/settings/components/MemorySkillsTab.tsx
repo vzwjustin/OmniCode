@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card } from "@/shared/components";
+import { Card, CopyButton } from "@/shared/components";
 import { useTranslations } from "next-intl";
 import type { SkillsProvider } from "@/lib/skills/providerSettings";
 
@@ -673,7 +673,10 @@ export default function MemorySkillsTab() {
               {qdrantResults.map((r) => (
                 <div key={r.id} className="p-3 rounded-lg bg-background/40 border border-border/40">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-text-muted">{r.id}</span>
+                    <span className="text-xs font-mono text-text-muted inline-flex items-center gap-1">
+                      {r.id}
+                      <CopyButton value={r.id} size="xs" label="Copy id" />
+                    </span>
                     <span className="text-xs font-mono text-emerald-400">
                       score {r.score.toFixed(4)}
                     </span>

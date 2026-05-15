@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Button } from "@/shared/components";
+import { Card, Button, CopyButton, RelativeTime } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useTranslations } from "next-intl";
 
@@ -122,9 +122,10 @@ export default function PoliciesPanel() {
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[16px] text-red-400">lock</span>
                     <span className="font-mono text-sm text-text-main">{identifier}</span>
+                    <CopyButton value={identifier} size="xs" label="Copy identifier" />
                     {typeof id === "object" && id.lockedAt && (
                       <span className="text-xs text-text-muted">
-                        since {new Date(id.lockedAt).toLocaleString()}
+                        <RelativeTime value={id.lockedAt} prefix="since" />
                       </span>
                     )}
                   </div>

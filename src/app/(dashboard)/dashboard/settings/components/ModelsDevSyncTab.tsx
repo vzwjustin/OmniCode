@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card } from "@/shared/components";
+import { Card, RelativeTime } from "@/shared/components";
 import { useTranslations } from "next-intl";
 
 interface ModelsDevStatus {
@@ -168,19 +168,6 @@ export default function ModelsDevSyncTab() {
     );
   }
 
-  const formatLastSync = (iso: string | null) => {
-    if (!iso) return t("never");
-    const d = new Date(iso);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return t("justNow");
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-    return d.toLocaleDateString();
-  };
-
   return (
     <div className="flex flex-col gap-6">
       {/* Main sync card */}
@@ -277,7 +264,7 @@ export default function ModelsDevSyncTab() {
           </button>
           {status?.lastSync && (
             <span className="text-xs text-text-muted">
-              {t("lastSync")}: {formatLastSync(status.lastSync)}
+              {t("lastSync")}: <RelativeTime value={status.lastSync} />
             </span>
           )}
         </div>
@@ -327,7 +314,7 @@ export default function ModelsDevSyncTab() {
 
           {status.lastSync && (
             <div className="mt-4 text-xs text-text-muted text-center">
-              {t("lastSyncFull")}: {new Date(status.lastSync).toLocaleString()}
+              {t("lastSyncFull")}: <RelativeTime value={status.lastSync} absolute />
             </div>
           )}
         </Card>

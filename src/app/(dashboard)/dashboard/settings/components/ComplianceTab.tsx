@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, DataTable, FilterBar, ColumnToggle } from "@/shared/components";
+import { Card, DataTable, FilterBar, ColumnToggle, RelativeTime } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useTranslations } from "next-intl";
 
@@ -67,7 +67,7 @@ export default function ComplianceTab() {
         case "timestamp":
           return (
             <span className="font-mono text-xs text-text-muted whitespace-nowrap">
-              {row.timestamp ? new Date(row.timestamp).toLocaleString() : "—"}
+              <RelativeTime value={row.timestamp} />
             </span>
           );
         case "action":

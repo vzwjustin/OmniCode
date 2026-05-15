@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card } from "@/shared/components";
+import { Card, ConfirmModal, RelativeTime } from "@/shared/components";
 
 const TRANSPARENT_MITM_PORT = 443;
 
@@ -54,15 +54,6 @@ function emptyStatus(): MitmStatus {
   };
 }
 
-function formatDate(value: string | null) {
-  if (!value) return "-";
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
-    return value;
-  }
-}
-
 export default function MitmProxyTab() {
   const t = useTranslations("mitm");
   const [status, setStatus] = useState<MitmStatus>(emptyStatus);
@@ -74,6 +65,7 @@ export default function MitmProxyTab() {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
     null
   );
+  const [regenerateConfirm, setRegenerateConfirm] = useState(false);
 
   const loadStatus = useCallback(async () => {
     setLoading(true);
@@ -144,9 +136,11 @@ export default function MitmProxyTab() {
     );
   };
 
-  const regenerateCertificate = async () => {
-    if (!confirm(t("regenerateConfirm"))) return;
+  const requestRegenerateCertificate = () => {
+    setRegenerateConfirm(true);
+  };
 
+  const performRegenerateCertificate = async () => {
     setSaving(true);
     setFeedback(null);
     try {
@@ -166,6 +160,7 @@ export default function MitmProxyTab() {
       });
     } finally {
       setSaving(false);
+      setRegenerateConfirm(false);
     }
   };
 
@@ -313,7 +308,7 @@ export default function MitmProxyTab() {
                 {t("downloadCert")}
               </a>
               <button
-                onClick={regenerateCertificate}
+                onClick={requestRegenerateCertificate}
                 disabled={saving || status.running}
                 className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-main transition-colors hover:bg-sidebar disabled:opacity-40"
               >
@@ -366,7 +361,7 @@ export default function MitmProxyTab() {
               {t("lastIntercept")}
             </p>
             <p className="mt-1 text-sm text-text-main">
-              {formatDate(status.stats.lastInterceptAt)}
+              <RelativeTime value={status.stats.lastInterceptAt} />
             </p>
           </div>
         </div>
@@ -424,6 +419,17 @@ export default function MitmProxyTab() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={regenerateConfirm}
+        onClose={() => !saving && setRegenerateConfirm(false)}
+        onConfirm={performRegenerateCertificate}
+        title={t("regenerateCert")}
+        message={t("regenerateConfirm")}
+        confirmText={t("regenerateCert")}
+        variant="danger"
+        loading={saving}
+      />
     </Card>
   );
 }
