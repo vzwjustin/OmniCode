@@ -57,7 +57,7 @@ Then point your coding tool at:
 http://localhost:20128/v1
 ```
 
-Data lives in `~/.omnicoder/` (or `~/.omniroute/` if you're upgrading from upstream — both paths are read, OmniCoder wins).
+Data lives in `~/.omnicoder/` (legacy `~/.omniroute/` paths are still read for compatibility).
 
 ---
 
@@ -87,6 +87,8 @@ Full per-tool setup: [`docs/CLI-TOOLS.md`](docs/CLI-TOOLS.md).
 ---
 
 ## Providers (150+)
+
+> ⚠️ **Heads up — OAuth / subscription accounts:** Routing through an AI subscription (instead of an API key) may violate the provider's Terms of Service. Use OAuth-based connections at your own risk — they aren't endorsed by OmniCoder. For most setups, an API key is the safer, supported route.
 
 **OAuth (8):** Claude Code, Antigravity, Codex, GitHub Copilot, Cursor, Kimi Coding, Kilo Code, Cline.
 
@@ -185,44 +187,9 @@ No Redis. No external services required.
 
 ---
 
-## What was stripped from upstream
+## Scope
 
-This is a deliberately leaner fork. Removed entirely:
-
-- **Image / video / music / audio generation** — `/v1/images/*`, `/v1/videos/*`, `/v1/music/*`, `/v1/audio/*`, plus 11 media-only providers (NanoBanana, RunwayML, ComfyUI, SD WebUI, KIE-AI, Deepgram, AssemblyAI, ElevenLabs, Cartesia, PlayHT, Inworld, AWS Polly)
-- **Vision Bridge guardrail** — `visionBridge.ts` + 7 test files + dashboard tab
-- **ChatGPT Web image route** — `/v1/chatgpt-web/image*` + `chatgptImageCache`
-- **Redis / ioredis** — rate limiting is in-memory sliding-window, API-key validation cache is in-memory + SQLite
-- **Dashboard media tabs**, **playground media examples**, **media in providers/[id] forms**
-
-Net result: ~15 routes removed, ~30 handlers/services/translators/registries deleted, ~50 tests pruned, ~10 dependencies trimmed.
-
----
-
-## Hardening on top of upstream
-
-Coding-path bugs found and fixed during a deep audit sweep:
-
-**Security**
-
-- API-key cache now invalidates immediately on delete/revoke/expire (previously revoked keys kept authing for up to 1 h)
-- Skill sandbox hard-caps stdout/stderr bytes + SIGTERM → grace → SIGKILL escalation
-- Encryption auto-migration circuit breaker prevents CPU loops on persistent decrypt failures
-
-**Correctness**
-
-- AutoCombo mode packs — added missing scoring weights (NaN scores silently broke fast/cheap/quality/balanced mode switching)
-- Responses API — now forwards `onStreamFailure` / `apiKeyInfo` / `cachedSettings` (stream-failure tracking, per-key cost, and semantic cache were silently disabled)
-- Cursor agent Connect-RPC framing — `try/catch` around `zlib.gunzipSync`, safe sentinel emission on corrupted frames
-- Cursor agent model sync — ANSI escape strip + `--list-models` flag + dual-format parser (new cursor-agent CLI wraps every line in SGR escape codes)
-- Claude OAuth refresh — detect `invalid_grant` / `invalid_request` / `expired`, throw `unrecoverable_refresh_error` (stops infinite retry loop)
-- **Anthropic tool prefix stripping** — `stripToolModelPrefixes` runs in both `translateRequest` AND Claude-passthrough paths (fixes `400: tools.N.model: cc/claude-opus-4-7` from real Claude Code traffic)
-- **ZlibError on response forwarding** — centralized `sanitizeUpstreamHeaders()` strips `content-encoding`, `content-length`, and all 8 RFC 7230 hop-by-hop headers at every upstream-forward site
-- Guardrails registry — narrow `void | GuardrailResult` before property access at 12 sites
-- Compression scheduler — capture interval handle + `.unref()` (previously kept Node alive forever)
-- 22+ type-safety fixes hidden by the gated typecheck
-
-**Verified:** `typecheck:core`, `typecheck:noimplicit:core`, `lint`, `check:cycles` all clean. Live boot smoke test confirms 0 Redis / zlib / vision references in logs.
+OmniCoder is deliberately scoped to coding workflows — chat, embeddings, web search, reranking, moderations. Media generation (images / videos / music / audio), Vision Bridge, ChatGPT Web image routes, Redis-backed rate limiting, and related dashboards are not included.
 
 ---
 
@@ -231,11 +198,11 @@ Coding-path bugs found and fixed during a deep audit sweep:
 - **Runtime:** Next.js 16 (App Router), Node ≥20.20.2 / ≥22.22.2 / ≥24, ES modules
 - **Language:** TypeScript 5.9
 - **Database:** `better-sqlite3` (SQLite, WAL journaling, encrypted-at-rest fields)
-- **Streaming:** SSE via `@omniroute/open-sse` workspace package
+- **Streaming:** SSE via `@omnicoder/open-sse` workspace package
 - **Styling:** Tailwind CSS v4
 - **Validation:** Zod v4
 - **Desktop:** Electron (Windows / macOS / Linux)
-- **i18n:** next-intl (40+ locales preserved from upstream)
+- **i18n:** next-intl, 40+ locales
 
 ---
 
@@ -270,8 +237,8 @@ OMNIROUTE_MEMORY_MB=512          # max heap size
 
 | Symptom                                               | Fix                                                                                                     |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `ZlibError fetching .../v1/messages`                  | Upstream provider response headers leaked through — should not happen on this fork; report it.          |
-| `400: tools.N.model: cc/claude-opus-4-7`              | Should not happen on this fork (combo prefix is stripped from nested tool models). Re-pull and rebuild. |
+| `ZlibError fetching .../v1/messages`                  | Provider response headers leaked through — should not happen; please report it.                         |
+| `400: tools.N.model: cc/claude-opus-4-7`              | Should not happen — combo prefix is stripped from nested tool models. Re-pull and rebuild.              |
 | `cursor-agent did not return 'Available models'`      | Upgrade `cursor-agent` to the latest version. The ANSI/`--list-models` parser supports the new format.  |
 | `Failed to refresh Claude OAuth token: invalid_grant` | Re-link Claude in dashboard → Providers (refresh token expired).                                        |
 | `unsupported_country_region_territory`                | Configure proxy in Settings → Proxy.                                                                    |
@@ -281,7 +248,7 @@ Full troubleshooting: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
 ---
 
-Compression engines draw on [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) and [rtk-ai/rtk](https://github.com/rtk-ai/rtk). MIT-licensed, like the upstream.
+Compression engines draw on [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) and [rtk-ai/rtk](https://github.com/rtk-ai/rtk), both MIT-licensed.
 
 ---
 
