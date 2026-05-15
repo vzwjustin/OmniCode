@@ -24,7 +24,11 @@ test("resolveCallerScopeContext prioritizes authInfo scopes", () => {
   assert.deepEqual(context.scopes, ["read:health", "read:combos"]);
 });
 
-test("resolveCallerScopeContext falls back to _meta scopes", () => {
+test("resolveCallerScopeContext rejects client-supplied _meta scopes (A4)", () => {
+  // Tranche A — Task A4: _meta is client-controlled on stdio/SSE/streamable
+  // transports. Setting `_meta.scopes` MUST NOT grant any privilege; the
+  // resolver must fall through to env fallback (empty here) and surface
+  // source: "none" with an empty scope list.
   const context = resolveCallerScopeContext(
     {
       _meta: {
@@ -32,12 +36,12 @@ test("resolveCallerScopeContext falls back to _meta scopes", () => {
       },
       sessionId: "session-meta",
     },
-    ["read:usage"]
+    []
   );
 
   assert.equal(context.callerId, "session-meta");
-  assert.equal(context.source, "meta");
-  assert.deepEqual(context.scopes, ["read:quota", "read:models"]);
+  assert.equal(context.source, "none");
+  assert.deepEqual(context.scopes, []);
 });
 
 test("resolveCallerScopeContext uses env fallback when caller has no scopes", () => {

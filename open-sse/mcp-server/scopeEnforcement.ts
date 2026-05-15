@@ -11,7 +11,7 @@ export type McpToolExtraLike = {
   _meta?: unknown;
 };
 
-export type ScopeSource = "authInfo" | "meta" | "env" | "none";
+export type ScopeSource = "authInfo" | "env" | "none";
 
 export interface CallerScopeContext {
   callerId: string;
@@ -36,26 +36,39 @@ function normalizeScopeList(raw: unknown): string[] {
   return Array.from(new Set(normalized));
 }
 
-function extractMetaScopeList(meta: unknown): string[] {
+/**
+ * Detect whether the client tried to grant itself scopes via `_meta.scopes`,
+ * `_meta.auth.scopes`, or `_meta.omniroute.scopes`. Any of these are CLIENT-
+ * CONTROLLED inputs and MUST NEVER be honored — they were the privilege-
+ * escalation vector documented in Tranche A — Task A4.
+ *
+ * Returns the offending paths so we can emit a single deprecation log per
+ * tool call (INFO-level, with remediation guidance).
+ */
+function detectClientControlledMetaScopes(meta: unknown): string[] {
   if (!meta || typeof meta !== "object") return [];
   const metaRecord = meta as Record<string, unknown>;
+  const offenders: string[] = [];
 
-  const direct = normalizeScopeList(metaRecord.scopes);
-  if (direct.length > 0) return direct;
+  if (normalizeScopeList(metaRecord.scopes).length > 0) {
+    offenders.push("_meta.scopes");
+  }
 
   const auth = metaRecord.auth;
   if (auth && typeof auth === "object") {
-    const authScopes = normalizeScopeList((auth as Record<string, unknown>).scopes);
-    if (authScopes.length > 0) return authScopes;
+    if (normalizeScopeList((auth as Record<string, unknown>).scopes).length > 0) {
+      offenders.push("_meta.auth.scopes");
+    }
   }
 
   const omni = metaRecord.omniroute;
   if (omni && typeof omni === "object") {
-    const omniScopes = normalizeScopeList((omni as Record<string, unknown>).scopes);
-    if (omniScopes.length > 0) return omniScopes;
+    if (normalizeScopeList((omni as Record<string, unknown>).scopes).length > 0) {
+      offenders.push("_meta.omniroute.scopes");
+    }
   }
 
-  return [];
+  return offenders;
 }
 
 function scopeMatches(grantedScope: string, requiredScope: string): boolean {
@@ -78,14 +91,27 @@ export function resolveCallerScopeContext(
     (typeof extra?.sessionId === "string" && extra.sessionId.trim()) ||
     "anonymous";
 
+  // SECURITY (Tranche A — Task A4): `_meta` is CLIENT-CONTROLLED on every
+  // MCP transport (stdio, SSE, streamable-http). Honoring `_meta.scopes`,
+  // `_meta.auth.scopes`, or `_meta.omniroute.scopes` lets any caller
+  // escalate to "*" by setting them in their tool call. We deliberately
+  // ignore the entire `_meta` namespace for scope resolution. Only
+  // server-attested `authInfo.scopes` (from the transport's auth layer)
+  // or the env-configured fallback grant privileges.
+  //
+  // Clients that previously relied on `_meta.scopes` should configure
+  // scopes via OAuth/authInfo or set OMNIROUTE_MCP_SCOPES on the server.
+  const clientControlledMetaPaths = detectClientControlledMetaScopes(extra?._meta);
+  if (clientControlledMetaPaths.length > 0) {
+    console.info(
+      `[MCP] Ignoring client-controlled scope grant in ${clientControlledMetaPaths.join(", ")} ` +
+        `(caller=${callerId}). Configure scopes via authInfo or OMNIROUTE_MCP_SCOPES env.`
+    );
+  }
+
   const authScopes = normalizeScopeList(extra?.authInfo?.scopes);
   if (authScopes.length > 0) {
     return { callerId, scopes: authScopes, source: "authInfo" };
-  }
-
-  const metaScopes = extractMetaScopeList(extra?._meta);
-  if (metaScopes.length > 0) {
-    return { callerId, scopes: metaScopes, source: "meta" };
   }
 
   const fallback = normalizeScopeList(fallbackScopes);
