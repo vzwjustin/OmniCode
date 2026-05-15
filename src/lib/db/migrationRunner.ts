@@ -384,11 +384,24 @@ function applyApiKeyLifecycleMigration(db: Database.Database): void {
  * databases can still exec() the file directly via testing harnesses.
  *
  * Step 1: hash any row whose key_hash IS NULL but key IS NOT NULL.
- * Step 2: NULL out `key` for every row whose key_hash IS NOT NULL.
+ * Step 2 (deferred): the plaintext `key` column is intentionally NOT
+ *   NULLed by this sweep. Migration 056 still does that for fresh DBs,
+ *   but on existing deployments we keep the plaintext value around as a
+ *   safety net behind OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1 until the next
+ *   release cuts the legacy code path entirely. Future drop migration
+ *   will retire the column.
  *
- * The legacy column itself is preserved in this PR; a future migration
- * will drop it once one release of backwards-compat (gated by
- * OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1) has shipped.
+ * Hotfix 2026-05-14: a downstream incident showed that a separate
+ * migration (`056_usage_history_observability_columns`) had been applied
+ * at version slot 056 on existing deployments BEFORE this branch
+ * renumbered the on-disk file to 056_api_keys_hash_only. Because the
+ * migration runner keys "already applied" by version-only, the renumber
+ * caused this migration to be silently skipped on every existing DB —
+ * leaving plaintext api_keys rows without key_hash and breaking
+ * authentication after A6.b made validation hash-only. The fix is to
+ * promote the body of this migration to an idempotent, table-guarded
+ * boot-time sweep that runs unconditionally regardless of which version
+ * slot the migration runner thinks is applied.
  */
 function applyApiKeysHashOnlyMigration(db: Database.Database): void {
   // Ensure the column exists; older databases may not have hit
@@ -411,20 +424,59 @@ function applyApiKeysHashOnlyMigration(db: Database.Database): void {
       updateHash.run({ id: row.id, keyHash });
     }
     console.log(
-      `[Migration] 056_api_keys_hash_only: back-filled key_hash for ${missingHash.length} legacy row(s).`
+      `[Migration] api_keys hash sweep: back-filled key_hash for ${missingHash.length} legacy row(s).`
     );
+  }
+}
+
+/**
+ * Boot-time idempotent api_keys hash sweep — runs on every getDbInstance()
+ * via runMigrations() regardless of whether migration 056 was dispatched
+ * through the standard pending pipeline.
+ *
+ * Why a separate hook (similar to runLegacyEncryptionSweep): if a different
+ * migration ever lands at version slot 056 on existing deployments, the
+ * version-only "already applied" check in getAppliedVersions() will skip
+ * the dispatch path entirely. This hook closes that hole. Exported so
+ * tests and operational scripts can invoke it explicitly.
+ *
+ * Returns the number of rows whose key_hash was newly back-filled.
+ */
+export function runApiKeysHashSweep(db: Database.Database): number {
+  if (!hasTable(db, "api_keys")) return 0;
+  if (!hasColumn(db, "api_keys", "key_hash")) {
+    // Migration 056 (or this sweep) hasn't run yet — ensure the column
+    // exists before we try to query it.
+    db.exec("ALTER TABLE api_keys ADD COLUMN key_hash TEXT");
   }
 
-  // ── Step 2: NULL out the plaintext `key` for rows that now have a hash ──
-  const result = db
-    .prepare("UPDATE api_keys SET key = NULL WHERE key_hash IS NOT NULL AND key IS NOT NULL")
-    .run();
-  const changes = result.changes ?? 0;
-  if (changes > 0) {
+  const rows = db
+    .prepare(
+      "SELECT id, key FROM api_keys WHERE (key_hash IS NULL OR key_hash = '') AND key IS NOT NULL"
+    )
+    .all() as Array<{ id: string; key: string }>;
+
+  if (rows.length === 0) return 0;
+
+  const updateHash = db.prepare("UPDATE api_keys SET key_hash = @keyHash WHERE id = @id");
+  const apply = db.transaction(() => {
+    let n = 0;
+    for (const row of rows) {
+      if (typeof row.key !== "string" || row.key.length === 0) continue;
+      const keyHash = createHash("sha256").update(row.key).digest("hex");
+      updateHash.run({ id: row.id, keyHash });
+      n++;
+    }
+    return n;
+  });
+
+  const migrated = apply();
+  if (migrated > 0) {
     console.log(
-      `[Migration] 056_api_keys_hash_only: cleared plaintext key column on ${changes} row(s).`
+      `[Migration] api_keys hash sweep back-filled key_hash for ${migrated} row(s) — these previously could not authenticate after A6.b made validation hash-only.`
     );
   }
+  return migrated;
 }
 
 function isSearchRequestTypeMigration(migration: { version: string; name: string }): boolean {
@@ -827,6 +879,21 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
       const message = error instanceof Error ? error.message : String(error);
       console.error(`[Migration] Legacy-encryption sweep failed: ${message}`);
     }
+    // Hotfix 2026-05-14: api_keys hash sweep must also run on every boot.
+    // Migration 056 (api_keys_hash_only) was silently skipped on existing
+    // deployments because version slot 056 had previously been applied as
+    // usage_history_observability_columns. The version-only check in
+    // getAppliedVersions() then treats 056 as already-applied and the
+    // dispatch table never fires. The idempotent sweep here closes that
+    // hole — any plaintext key that still lacks key_hash gets one, and
+    // authentication continues to work after A6.b made validation
+    // hash-only.
+    try {
+      runApiKeysHashSweep(db);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[Migration] api_keys hash sweep failed: ${message}`);
+    }
     return 0;
   }
 
@@ -955,6 +1022,18 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[Migration] Legacy-encryption sweep failed: ${message}`);
+  }
+
+  // ── Post-Migration Hook (Hotfix 2026-05-14): api_keys hash sweep ──
+  // Belt-and-braces: even when migration 056 dispatched correctly via the
+  // pending pipeline, we run the idempotent sweep again so a future
+  // migration renumber that re-uses slot 056 cannot silently strand
+  // plaintext rows in the api_keys table.
+  try {
+    runApiKeysHashSweep(db);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Migration] api_keys hash sweep failed: ${message}`);
   }
 
   return count;
