@@ -23,7 +23,7 @@ Every fix is scoped narrowly to the file(s) cited; no broad refactors. Each task
 - [x] Task A5. **Constant-time env-key comparison** in `src/sse/services/auth.ts:1725-1733` and `src/lib/db/apiKeys.ts:171-174`. Replace `apiKey === envKey` / `key === envKey` with `crypto.timingSafeEqual`, gating on equal length first (with a dummy compare on length mismatch to keep total work uniform). Pattern already exists at `src/app/api/oauth/[provider]/[action]/route.ts:54` — reuse it as a shared helper in `src/lib/util/secureCompare.ts` (new file is acceptable here because the helper is referenced from multiple modules). Rationale: removes the network-observable timing oracle on the passthrough env-var key.
 
 - [ ] Task A6. **Plan plaintext-key column retirement** in `src/lib/db/apiKeys.ts:265-269`. Split into two sub-steps so the runtime never breaks:
-  - [ ] A6.a. Add a migration (`db/migrations/056_api_keys_hash_only.sql`) that backfills `key_hash` for any row still missing it (hash the existing `key` value), then clears `api_keys.key` to NULL when `key_hash IS NOT NULL`.
+  - [x] A6.a. Add a migration (`db/migrations/056_api_keys_hash_only.sql`) that backfills `key_hash` for any row still missing it (hash the existing `key` value), then clears `api_keys.key` to NULL when `key_hash IS NOT NULL`.
   - [ ] A6.b. Change `_stmtValidateKey` and `_stmtGetKeyMetadata` to `WHERE key_hash = ?` only; pass only `hashedKey` from `validateApiKey()` (line 818) and `getApiKeyMetadata()`. Keep the legacy `WHERE key = ?` clause behind a `OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1` env flag for one release if backwards compatibility is needed.
   - Rationale: a DB leak today exposes every legacy key directly; the migration brings storage-at-rest in line with hash-only design.
 

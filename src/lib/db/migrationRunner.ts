@@ -16,6 +16,7 @@
 
 import fs from "fs";
 import path from "path";
+import { createHash } from "crypto";
 import { fileURLToPath } from "url";
 import type Database from "better-sqlite3";
 import { DEFAULT_DATABASE_SETTINGS } from "@/types/databaseSettings";
@@ -371,6 +372,59 @@ function applyApiKeyLifecycleMigration(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_api_keys_revoked_at ON api_keys(revoked_at);
     CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at);
   `);
+}
+
+/**
+ * Tranche A — Task A6.a: retire the plaintext `api_keys.key` column for
+ * every row whose `key_hash` is already populated.
+ *
+ * SQLite has no native sha256() so the row-level backfill must run in TS.
+ * The companion SQL file (db/migrations/056_api_keys_hash_only.sql) keeps
+ * a documentation-friendly canonical form of the NULL update so fresh
+ * databases can still exec() the file directly via testing harnesses.
+ *
+ * Step 1: hash any row whose key_hash IS NULL but key IS NOT NULL.
+ * Step 2: NULL out `key` for every row whose key_hash IS NOT NULL.
+ *
+ * The legacy column itself is preserved in this PR; a future migration
+ * will drop it once one release of backwards-compat (gated by
+ * OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1) has shipped.
+ */
+function applyApiKeysHashOnlyMigration(db: Database.Database): void {
+  // Ensure the column exists; older databases may not have hit
+  // ensureApiKeysColumns() yet (e.g., when migrations run before
+  // any apiKeys.ts code path has touched the schema).
+  ensureColumn(db, "api_keys", "key_hash", "ALTER TABLE api_keys ADD COLUMN key_hash TEXT");
+
+  // ── Step 1: backfill key_hash for any row still missing it ──
+  const missingHash = db
+    .prepare(
+      "SELECT id, key FROM api_keys WHERE (key_hash IS NULL OR key_hash = '') AND key IS NOT NULL"
+    )
+    .all() as Array<{ id: string; key: string }>;
+
+  if (missingHash.length > 0) {
+    const updateHash = db.prepare("UPDATE api_keys SET key_hash = @keyHash WHERE id = @id");
+    for (const row of missingHash) {
+      if (typeof row.key !== "string" || row.key.length === 0) continue;
+      const keyHash = createHash("sha256").update(row.key).digest("hex");
+      updateHash.run({ id: row.id, keyHash });
+    }
+    console.log(
+      `[Migration] 056_api_keys_hash_only: back-filled key_hash for ${missingHash.length} legacy row(s).`
+    );
+  }
+
+  // ── Step 2: NULL out the plaintext `key` for rows that now have a hash ──
+  const result = db
+    .prepare("UPDATE api_keys SET key = NULL WHERE key_hash IS NOT NULL AND key IS NOT NULL")
+    .run();
+  const changes = result.changes ?? 0;
+  if (changes > 0) {
+    console.log(
+      `[Migration] 056_api_keys_hash_only: cleared plaintext key column on ${changes} row(s).`
+    );
+  }
 }
 
 function isSearchRequestTypeMigration(migration: { version: string; name: string }): boolean {
@@ -830,6 +884,8 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
         applyCompressionReceiptsMigration(db);
       } else if (migration.version === "042") {
         applyCompressionCombosMigration(db, migration.path);
+      } else if (migration.version === "056" && migration.name === "api_keys_hash_only") {
+        applyApiKeysHashOnlyMigration(db);
       } else {
         const sql = fs.readFileSync(migration.path, "utf-8");
         db.exec(sql);
