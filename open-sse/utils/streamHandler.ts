@@ -149,11 +149,20 @@ export function createStreamController({
 
 /**
  * Create transform stream with disconnect detection
- * Wraps existing transform stream and adds abort capability
+ * Wraps existing transform stream and adds abort capability.
+ *
+ * `transformStream.writable` is optional — callers that have already piped
+ * the upstream through the transform (e.g. `pipeWithDisconnect`) only have a
+ * `ReadableStream` to surface to the client, so we skip the writer abort in
+ * that case. Callers that still own both sides of a `TransformStream` pass
+ * the full object and we abort the writer on cancel for correct cleanup.
  */
 export function createDisconnectAwareStream(transformStream, streamController) {
   const reader = transformStream.readable.getReader();
-  const writer = transformStream.writable.getWriter();
+  const writer =
+    transformStream.writable && typeof transformStream.writable.getWriter === "function"
+      ? transformStream.writable.getWriter()
+      : null;
 
   return new ReadableStream({
     async pull(controller) {
@@ -208,9 +217,11 @@ export function createDisconnectAwareStream(transformStream, streamController) {
     cancel(reason) {
       streamController.handleDisconnect(reason || "cancelled");
       reader.cancel();
-      setTimeout(() => {
-        writer.abort();
-      }, DISCONNECT_ABORT_DELAY_MS).unref?.();
+      if (writer) {
+        setTimeout(() => {
+          writer.abort();
+        }, DISCONNECT_ABORT_DELAY_MS).unref?.();
+      }
     },
   });
 }
@@ -227,8 +238,9 @@ export function pipeWithDisconnect(
   streamController: StreamController
 ) {
   const transformedBody = providerResponse.body.pipeThrough(transformStream);
-  return createDisconnectAwareStream(
-    { readable: transformedBody, writable: { getWriter: () => ({ abort: () => {} }) } },
-    streamController
-  );
+  // The transform's writable side is already owned by `pipeThrough`, so we pass
+  // only the readable half. `createDisconnectAwareStream` handles the missing
+  // writable by skipping the writer abort on cancel — `reader.cancel()` is what
+  // actually propagates the disconnect upstream in this flow.
+  return createDisconnectAwareStream({ readable: transformedBody }, streamController);
 }

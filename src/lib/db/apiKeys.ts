@@ -96,6 +96,14 @@ interface ApiKeysStatements {
   getAllKeys: StatementLike<ApiKeyRow>;
   getKeyById: StatementLike<ApiKeyRow>;
   validateKey: StatementLike<JsonRecord>;
+  /**
+   * Legacy plaintext fallback for `validateKey`. Only populated when the
+   * `OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1` escape hatch is set; otherwise null.
+   * Split from `validateKey` (Tranche C #14) so the hot path is an exact
+   * `WHERE key_hash = ?` lookup and the legacy branch can be removed in a
+   * future PR by simply not setting the env var.
+   */
+  validateKeyByPlaintext: StatementLike<JsonRecord> | null;
   getKeyMetadata: StatementLike<ApiKeyRow>;
   insertKey: StatementLike;
   deleteKey: StatementLike;
@@ -112,11 +120,21 @@ interface ApiKeyView extends JsonRecord {
   rateLimits: RateLimitRule[] | null;
 }
 
-// LRU cache for API key validation (valid keys only)
+// LRU cache for API key validation.
+// `valid: true` entries TTL = CACHE_TTL.
+// `valid: false` entries TTL = NEGATIVE_CACHE_TTL and are populated ONLY when
+// the key does not exist in the database at all (the "unknown key" path —
+// see validateApiKey below). Revocation/expiry/ban paths are NOT cached so
+// that a real key rotation cannot be blocked by a stale negative entry.
 const _keyValidationCache = new Map<string, { valid: boolean; timestamp: number }>();
 const _keyMetadataCache = new Map<string, CacheEntry<ApiKeyMetadata>>();
 const _lastUsedUpdateCache = new Map<string, number>();
-const CACHE_TTL = 60 * 1000; // 1 minute TTL
+const CACHE_TTL = 60 * 1000; // 1 minute TTL for positive validation hits
+// Negative cache TTL is intentionally shorter than CACHE_TTL so that creating
+// a brand-new API key after some scanner traffic against the same prefix does
+// not get rejected for a full minute. 5s is long enough to absorb a brute-force
+// burst but short enough to be invisible to a real operator workflow.
+const NEGATIVE_CACHE_TTL = 5 * 1000;
 const LAST_USED_UPDATE_TTL = 5 * 60 * 1000;
 const MAX_CACHE_SIZE = 1000;
 
@@ -165,6 +183,7 @@ const _modelPermissionCache = new Map<string, { allowed: boolean; timestamp: num
 let _stmtGetAllKeys: ApiKeysStatements["getAllKeys"] | null = null;
 let _stmtGetKeyById: ApiKeysStatements["getKeyById"] | null = null;
 let _stmtValidateKey: ApiKeysStatements["validateKey"] | null = null;
+let _stmtValidateKeyByPlaintext: ApiKeysStatements["validateKey"] | null = null;
 let _stmtGetKeyMetadata: ApiKeysStatements["getKeyMetadata"] | null = null;
 let _stmtInsertKey: ApiKeysStatements["insertKey"] | null = null;
 let _stmtDeleteKey: ApiKeysStatements["deleteKey"] | null = null;
@@ -280,15 +299,24 @@ function getPreparedStatements(db: ApiKeysDbLike): ApiKeysStatements {
   ) {
     _stmtGetAllKeys = db.prepare<ApiKeyRow>("SELECT * FROM api_keys ORDER BY created_at");
     _stmtGetKeyById = db.prepare<ApiKeyRow>("SELECT * FROM api_keys WHERE id = ?");
-    // Tranche A — Task A6.b: hash-only WHERE clause is the default.
-    // The legacy `key = ? OR key_hash = ?` form is gated behind the
-    // OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1 escape hatch (one-release
-    // backwards-compatibility window).
+    // Tranche A — Task A6.b + Tranche C #14: the modern hot path is always a
+    // hash-only `WHERE key_hash = ?` lookup. The legacy `key = ? OR key_hash
+    // = ?` form had two problems: (1) the OR clause defeats index usage on
+    // either column, and (2) it ambiguously matched a plaintext key against a
+    // hash column. We now keep a dedicated plaintext statement that is only
+    // queried when the hash lookup misses AND `OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1`
+    // is set, so the legacy branch can be cleanly removed by un-setting the
+    // env var in a future release.
     _stmtValidateKey = db.prepare<JsonRecord>(
-      LEGACY_PLAINTEXT_KEYS
-        ? "SELECT id, expires_at, revoked_at, is_active, is_banned FROM api_keys WHERE key = ? OR key_hash = ?"
-        : "SELECT id, expires_at, revoked_at, is_active, is_banned FROM api_keys WHERE key_hash = ?"
+      "SELECT id, expires_at, revoked_at, is_active, is_banned FROM api_keys WHERE key_hash = ?"
     );
+    if (LEGACY_PLAINTEXT_KEYS) {
+      _stmtValidateKeyByPlaintext = db.prepare<JsonRecord>(
+        "SELECT id, expires_at, revoked_at, is_active, is_banned FROM api_keys WHERE key = ?"
+      );
+    } else {
+      _stmtValidateKeyByPlaintext = null;
+    }
     _stmtGetKeyMetadata = db.prepare<ApiKeyRow>(
       LEGACY_PLAINTEXT_KEYS
         ? "SELECT id, name, machine_id, allowed_models, allowed_connections, no_log, auto_resolve, is_active, access_schedule, max_requests_per_day, max_requests_per_minute, max_sessions, revoked_at, expires_at, ip_allowlist, scopes, rate_limits, is_banned, key_hash FROM api_keys WHERE key = ? OR key_hash = ?"
@@ -315,6 +343,7 @@ function getPreparedStatements(db: ApiKeysDbLike): ApiKeysStatements {
     getAllKeys: _stmtGetAllKeys,
     getKeyById: _stmtGetKeyById,
     validateKey: _stmtValidateKey,
+    validateKeyByPlaintext: _stmtValidateKeyByPlaintext,
     getKeyMetadata: _stmtGetKeyMetadata,
     insertKey: _stmtInsertKey,
     deleteKey: _stmtDeleteKey,
@@ -820,10 +849,21 @@ export async function setApiKeyExpiry(id: string, expiresAt: string | null): Pro
  *   - revoked_at IS NULL,
  *   - expires_at IS NULL OR expires_at > now.
  *
- * Cache TTL is short (CACHE_TTL) and the metadata cache is also invalidated
- * by revokeApiKey/updateApiKeyPermissions/deleteApiKey, so a revoke takes
- * effect within at most CACHE_TTL even without an explicit clear in the
- * caller.
+ * Cache TTL is short (CACHE_TTL) for positive results and even shorter
+ * (NEGATIVE_CACHE_TTL) for "key does not exist" results. The metadata cache is
+ * also invalidated by revokeApiKey/updateApiKeyPermissions/deleteApiKey, so a
+ * revoke takes effect within at most CACHE_TTL even without an explicit clear
+ * in the caller.
+ *
+ * Tranche C #13: negative results from the "row not found" path are cached
+ * with NEGATIVE_CACHE_TTL so scanner / brute-force traffic does not hit the
+ * SQLite prepared statement on every wrong key. Revoked / expired / banned
+ * keys are deliberately NOT cached as negative so a real key rotation flips
+ * to valid on the very next request rather than after up to 5s of latency.
+ *
+ * Tranche C #14: lookup is hash-only by default; the plaintext legacy path
+ * is only consulted as a secondary statement when both the hash lookup
+ * misses AND `OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1` is set.
  */
 export async function validateApiKey(key: string | null | undefined) {
   if (!key || typeof key !== "string") return false;
@@ -835,21 +875,35 @@ export async function validateApiKey(key: string | null | undefined) {
   const cacheKey = hashedKey;
 
   const cached = _keyValidationCache.get(cacheKey);
-  if (cached && now - cached.timestamp < CACHE_TTL) {
-    return cached.valid;
+  if (cached) {
+    const ttl = cached.valid ? CACHE_TTL : NEGATIVE_CACHE_TTL;
+    if (now - cached.timestamp < ttl) {
+      return cached.valid;
+    }
   }
 
   const db = getDbInstance() as ApiKeysDbLike;
   const stmt = getPreparedStatements(db);
-  // Tranche A — Task A6.b: pass only the hashed lookup parameter by
-  // default. The legacy dual-arg call is preserved behind the env flag
-  // so operators have a one-release rollback path.
-  const row = (
-    LEGACY_PLAINTEXT_KEYS ? stmt.validateKey.get(key, hashedKey) : stmt.validateKey.get(hashedKey)
-  ) as JsonRecord | undefined;
+  // Tranche A — Task A6.b + Tranche C #14: always try the hash-only lookup
+  // first. If it misses AND the legacy escape hatch is set, fall back to the
+  // explicit plaintext-key statement. This removes the OR ambiguity from the
+  // hot path and isolates the legacy branch for clean future removal.
+  let row = stmt.validateKey.get(hashedKey) as JsonRecord | undefined;
+  if (!row && LEGACY_PLAINTEXT_KEYS && stmt.validateKeyByPlaintext) {
+    row = stmt.validateKeyByPlaintext.get(key) as JsonRecord | undefined;
+  }
 
-  if (!row) return false;
+  if (!row) {
+    // Cache only the "key does not exist" outcome — see header comment.
+    evictIfNeeded(_keyValidationCache);
+    _keyValidationCache.set(cacheKey, { valid: false, timestamp: now });
+    return false;
+  }
 
+  // Below this point we intentionally do NOT cache negative results: each of
+  // these rejection reasons can legitimately flip back to "valid" via an
+  // operator action (unban, re-activate, clear revoked_at, extend expires_at)
+  // and we don't want to block the next request for NEGATIVE_CACHE_TTL.
   const isBanned = parseIsBanned(row.is_banned ?? row.isBanned);
   if (isBanned) return false;
 
@@ -1052,6 +1106,7 @@ function clearPreparedStatementCache() {
   _stmtGetAllKeys = null;
   _stmtGetKeyById = null;
   _stmtValidateKey = null;
+  _stmtValidateKeyByPlaintext = null;
   _stmtGetKeyMetadata = null;
   _stmtInsertKey = null;
   _stmtDeleteKey = null;

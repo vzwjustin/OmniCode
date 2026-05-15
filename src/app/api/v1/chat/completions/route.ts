@@ -42,6 +42,7 @@ export async function POST(request) {
     }
   }
 
+  // Tranche C #23: redundant with `guardrailRegistry.runPreCallHooks` evaluated inside `handleChat`; left in place for the rollback window — remove with the registry cutover.
   // Prompt injection guard — inspect body before forwarding
   try {
     const cloned = request.clone();

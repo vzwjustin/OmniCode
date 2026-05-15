@@ -1,13 +1,11 @@
 // @ts-nocheck
 import { PROVIDERS, OAUTH_ENDPOINTS } from "../config/constants.ts";
 import { getGitHubCopilotRefreshHeaders } from "../config/providerHeaderProfiles.ts";
-import { pbkdf2Sync } from "node:crypto";
+import { createHash } from "node:crypto";
 import { runWithProxyContext } from "../utils/proxyFetch.ts";
 
 // Token expiry buffer (refresh if expires within 5 minutes)
 export const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
-
-const CACHE_SECRET = "omniroute-token-cache";
 
 /**
  * Tranche B — B3 (Bug review item #20)
@@ -50,8 +48,20 @@ function buildFormParams(entries: Record<string, unknown>): URLSearchParams {
   return params;
 }
 
-function getRefreshCacheKey(provider, refreshToken) {
-  const tokenHash = pbkdf2Sync(refreshToken, CACHE_SECRET, 1000, 32, "sha256").toString("hex");
+// Tranche C #22: this is a cache key for an in-memory Map, not a credential
+// hash. PBKDF2(1000 rounds, sha256, 32 bytes) was wasted CPU on the refresh
+// hot path. A plain sha256 of `provider:refreshToken` gives the same uniqueness
+// guarantees we actually need (avoid collisions across providers and avoid
+// putting raw tokens into log-grep-able cache keys) at a tiny fraction of the
+// cost. Exported for the Tranche C regression test in
+// `tests/unit/tranche-c-fixes.test.ts` (#22 suite) — not part of the public
+// runtime surface; treat as test-only.
+export function getRefreshCacheKey(provider, refreshToken) {
+  const tokenHash = createHash("sha256")
+    .update(provider)
+    .update(":")
+    .update(refreshToken)
+    .digest("hex");
   return `${provider}:${tokenHash}`;
 }
 

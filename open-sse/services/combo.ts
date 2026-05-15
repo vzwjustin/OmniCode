@@ -540,11 +540,27 @@ export function resolveNestedComboModels(combo, allCombos, visited = new Set(), 
   return resolved;
 }
 
-function selectWeightedTarget<T extends { weight?: number }>(targets: T[]) {
+/**
+ * Pick a target weighted by `target.weight`. Returns `null` for an empty list
+ * and falls back to a uniform random pick when every weight is zero/negative.
+ *
+ * Tranche C #24: floating-point accumulation in the subtractive loop can leave
+ * `random > 0` even after walking every element (the running balance never
+ * crosses 0 because of tiny FP residue). Previously the function relied on
+ * `targets.at(-1)` as the implicit fallback; we now make the fallback explicit
+ * with a comment so future readers understand the corner case.
+ */
+export function selectWeightedTarget<T extends { weight?: number }>(targets: T[]) {
   if (targets.length === 0) return null;
 
   const totalWeight = targets.reduce((sum, target) => sum + (target.weight || 0), 0);
-  if (totalWeight <= 0) {
+  // Explicit early-return when every weight is zero/negative: a uniform random
+  // pick is the only safe degeneracy because subtractive selection would never
+  // converge below zero (Math.random() * 0 === 0 cannot decrement further).
+  if (totalWeight === 0) {
+    return targets[Math.floor(Math.random() * targets.length)];
+  }
+  if (totalWeight < 0) {
     return targets[Math.floor(Math.random() * targets.length)];
   }
 
@@ -554,20 +570,54 @@ function selectWeightedTarget<T extends { weight?: number }>(targets: T[]) {
     if (random <= 0) return target;
   }
 
-  return targets.at(-1);
+  // Fallback: floating-point residue means we picked the last target.
+  // The subtractive loop occasionally exits with `random` still slightly
+  // greater than 0 because of accumulated FP error; in that case the
+  // mathematically correct selection is the final (largest-cumulative-bucket)
+  // target, so we return it explicitly rather than relying on `targets.at(-1)`
+  // (which used to look like dead code to readers).
+  return targets[targets.length - 1];
 }
 
-function orderTargetsForWeightedFallback<T extends { executionKey: string; weight: number }>(
+/**
+ * Reorder `targets` so the weighted-selected step is the head and the
+ * remaining steps form the fallback sequence (sorted by weight unless the
+ * caller asked to preserve their original order).
+ *
+ * Tranche C #18: if the selected `executionKey` no longer matches any current
+ * target (because the topology raced with a config reload or hot-reload
+ * removed the step), `targets.find(...)` returned `undefined` and the
+ * subsequent `.filter(Boolean)` silently dropped it — the caller then started
+ * with the *second* target as the head and the originally selected weight
+ * vanished. We now log a warning and substitute `targets[0]` as the head so
+ * the caller still has a valid first target and an explicit signal in logs.
+ */
+export function orderTargetsForWeightedFallback<T extends { executionKey: string; weight: number }>(
   targets: T[],
   selectedExecutionKey: string,
-  preserveExistingOrder = false
+  preserveExistingOrder = false,
+  log?: { warn?: (...args: unknown[]) => void } | null
 ) {
   const selected = targets.find((target) => target.executionKey === selectedExecutionKey);
   const rest = targets.filter((target) => target.executionKey !== selectedExecutionKey);
   if (!preserveExistingOrder) {
     rest.sort((a, b) => b.weight - a.weight);
   }
-  return [selected, ...rest].filter(Boolean);
+
+  if (!selected) {
+    // Race / hot-reload safety net — warn loudly and fall back to the first
+    // available target so the caller still gets a non-empty head. See #18.
+    log?.warn?.(
+      "COMBO",
+      "Weighted fallback could not find the selected executionKey in the current target list; " +
+        "falling back to targets[0]. This usually indicates a config hot-reload race.",
+      { selectedExecutionKey, availableKeys: targets.map((t) => t.executionKey) }
+    );
+    if (targets.length === 0) return [];
+    return [targets[0], ...rest.filter((t) => t.executionKey !== targets[0].executionKey)];
+  }
+
+  return [selected, ...rest];
 }
 
 // shuffleArray and getNextModelFromDeck moved to src/shared/utils/shuffleDeck.ts
@@ -1382,7 +1432,11 @@ export function resolveComboTargets(combo, allCombos) {
   return allCombos ? resolveNestedComboTargets(combo, allCombos) : getDirectComboTargets(combo);
 }
 
-function resolveWeightedTargets(combo, allCombos) {
+function resolveWeightedTargets(
+  combo,
+  allCombos,
+  log?: { warn?: (...args: unknown[]) => void } | null
+) {
   const topLevelSteps = getOrderedTopLevelRuntimeSteps(combo, allCombos);
   if (topLevelSteps.length === 0) {
     return { orderedTargets: [], selectedStep: null };
@@ -1396,7 +1450,8 @@ function resolveWeightedTargets(combo, allCombos) {
   const orderedSteps = orderTargetsForWeightedFallback(
     topLevelSteps,
     selectedStep.executionKey,
-    hasCompositeTierRuntimeOrder(combo)
+    hasCompositeTierRuntimeOrder(combo),
+    log
   );
   const expandedTargets = orderedSteps.flatMap((step) => {
     if (!allCombos) {
@@ -1678,7 +1733,7 @@ export async function handleComboChat({
 
   let orderedTargets =
     strategy === "weighted"
-      ? resolveWeightedTargets(combo, allCombos)?.orderedTargets || []
+      ? resolveWeightedTargets(combo, allCombos, log)?.orderedTargets || []
       : resolveComboTargets(combo, allCombos);
 
   orderedTargets = await applyRequestTagRouting(orderedTargets, body, log);
