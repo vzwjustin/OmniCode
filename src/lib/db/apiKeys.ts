@@ -123,6 +123,20 @@ const MAX_CACHE_SIZE = 1000;
 // Compiled regex cache for wildcard patterns
 const _regexCache = new Map<string, RegExp>();
 
+/**
+ * Tranche A — Task A6.b: hash-only validation.
+ *
+ * After A6.a's migration (`db/migrations/056_api_keys_hash_only.sql`)
+ * back-fills `key_hash` and NULLs out the plaintext `api_keys.key` column,
+ * the validator queries by `key_hash` exclusively. Operators who still
+ * carry rows that only have a plaintext `key` can opt back into the
+ * legacy dual lookup for ONE release by setting
+ * `OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1` in the environment. The flag is
+ * read at module load (no per-request env lookup overhead) and is
+ * intended to be removed in the next minor release.
+ */
+const LEGACY_PLAINTEXT_KEYS = process.env.OMNIROUTE_LEGACY_PLAINTEXT_KEYS === "1";
+
 const API_KEY_COLUMN_FALLBACKS = [
   { name: "allowed_models", definition: "allowed_models TEXT" },
   { name: "no_log", definition: "no_log INTEGER NOT NULL DEFAULT 0" },
@@ -266,11 +280,19 @@ function getPreparedStatements(db: ApiKeysDbLike): ApiKeysStatements {
   ) {
     _stmtGetAllKeys = db.prepare<ApiKeyRow>("SELECT * FROM api_keys ORDER BY created_at");
     _stmtGetKeyById = db.prepare<ApiKeyRow>("SELECT * FROM api_keys WHERE id = ?");
+    // Tranche A — Task A6.b: hash-only WHERE clause is the default.
+    // The legacy `key = ? OR key_hash = ?` form is gated behind the
+    // OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1 escape hatch (one-release
+    // backwards-compatibility window).
     _stmtValidateKey = db.prepare<JsonRecord>(
-      "SELECT id, expires_at, revoked_at, is_active, is_banned FROM api_keys WHERE key = ? OR key_hash = ?"
+      LEGACY_PLAINTEXT_KEYS
+        ? "SELECT id, expires_at, revoked_at, is_active, is_banned FROM api_keys WHERE key = ? OR key_hash = ?"
+        : "SELECT id, expires_at, revoked_at, is_active, is_banned FROM api_keys WHERE key_hash = ?"
     );
     _stmtGetKeyMetadata = db.prepare<ApiKeyRow>(
-      "SELECT id, name, machine_id, allowed_models, allowed_connections, no_log, auto_resolve, is_active, access_schedule, max_requests_per_day, max_requests_per_minute, max_sessions, revoked_at, expires_at, ip_allowlist, scopes, rate_limits, is_banned, key_hash FROM api_keys WHERE key = ? OR key_hash = ?"
+      LEGACY_PLAINTEXT_KEYS
+        ? "SELECT id, name, machine_id, allowed_models, allowed_connections, no_log, auto_resolve, is_active, access_schedule, max_requests_per_day, max_requests_per_minute, max_sessions, revoked_at, expires_at, ip_allowlist, scopes, rate_limits, is_banned, key_hash FROM api_keys WHERE key = ? OR key_hash = ?"
+        : "SELECT id, name, machine_id, allowed_models, allowed_connections, no_log, auto_resolve, is_active, access_schedule, max_requests_per_day, max_requests_per_minute, max_sessions, revoked_at, expires_at, ip_allowlist, scopes, rate_limits, is_banned, key_hash FROM api_keys WHERE key_hash = ?"
     );
     _stmtInsertKey = db.prepare(
       "INSERT INTO api_keys (id, name, key, machine_id, allowed_models, no_log, created_at, key_prefix, key_hash, scopes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -819,7 +841,12 @@ export async function validateApiKey(key: string | null | undefined) {
 
   const db = getDbInstance() as ApiKeysDbLike;
   const stmt = getPreparedStatements(db);
-  const row = stmt.validateKey.get(key, hashedKey) as JsonRecord | undefined;
+  // Tranche A — Task A6.b: pass only the hashed lookup parameter by
+  // default. The legacy dual-arg call is preserved behind the env flag
+  // so operators have a one-release rollback path.
+  const row = (
+    LEGACY_PLAINTEXT_KEYS ? stmt.validateKey.get(key, hashedKey) : stmt.validateKey.get(hashedKey)
+  ) as JsonRecord | undefined;
 
   if (!row) return false;
 
@@ -890,7 +917,11 @@ export async function getApiKeyMetadata(
 
   const db = getDbInstance() as ApiKeysDbLike;
   const stmt = getPreparedStatements(db);
-  const row = stmt.getKeyMetadata.get(key, hashedKey);
+  // Tranche A — Task A6.b: hash-only lookup by default; legacy dual lookup
+  // remains available via OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1.
+  const row = LEGACY_PLAINTEXT_KEYS
+    ? stmt.getKeyMetadata.get(key, hashedKey)
+    : stmt.getKeyMetadata.get(hashedKey);
 
   if (!row) return null;
 
