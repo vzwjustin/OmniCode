@@ -1,4 +1,5 @@
 import { randomUUID, createHash } from "crypto";
+import { secureCompareStrings } from "@/lib/util/secureCompare";
 import {
   getProviderConnections,
   validateApiKey,
@@ -1701,13 +1702,17 @@ export function extractApiKey(request: Request) {
  * Feature #1350: Supports OMNIROUTE_API_KEY / ROUTER_API_KEY env vars as
  * persistent passthrough keys that always validate, surviving Docker
  * restarts and backup restores without DB dependency.
+ *
+ * Tranche A — Task A5: env-key comparison is constant-time via
+ * `secureCompareStrings` to close the network-observable timing oracle
+ * on the passthrough key (CWE-208).
  */
 export async function isValidApiKey(apiKey: string) {
   if (!apiKey) return false;
 
   // Persistent env-var key — always valid regardless of DB state (#1350)
   const envKey = process.env.OMNIROUTE_API_KEY || process.env.ROUTER_API_KEY;
-  if (envKey && apiKey === envKey) return true;
+  if (envKey && secureCompareStrings(apiKey, envKey)) return true;
 
   return await validateApiKey(apiKey);
 }

@@ -8,6 +8,7 @@ import { getDbInstance, rowToCamel } from "./core";
 import { backupDbFile } from "./backup";
 import { registerDbStateResetter } from "./stateReset";
 import { setNoLog } from "../compliance";
+import { secureCompareStrings } from "../util/secureCompare";
 
 // ──────────────── Performance Optimizations ────────────────
 
@@ -170,7 +171,10 @@ function toRecord(value: unknown): JsonRecord {
 
 function isConfiguredEnvApiKey(key: string): boolean {
   const envKey = process.env.OMNIROUTE_API_KEY || process.env.ROUTER_API_KEY;
-  return Boolean(envKey && key === envKey);
+  // Tranche A — Task A5: constant-time compare to close the timing oracle
+  // on the passthrough env key (CWE-208).
+  if (!envKey) return false;
+  return secureCompareStrings(key, envKey);
 }
 
 function markApiKeyUsed(db: ApiKeysDbLike, id: unknown, now: number): void {
