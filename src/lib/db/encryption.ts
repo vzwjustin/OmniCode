@@ -35,6 +35,23 @@ const STATIC_SALT = "omniroute-field-encryption-v1";
 
 let _staticKey: Buffer | null = null;
 let _legacyDynamicKey: Buffer | null = null;
+
+/**
+ * Typed error thrown when a runtime crypto fault prevents encryption.
+ * Callers MUST NOT swallow this — the row should fail to persist instead
+ * of being demoted to plaintext-at-rest. Boot-time configuration problems
+ * are still surfaced earlier by `validateEncryptionConfig()`.
+ */
+export class EncryptionError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message);
+    this.name = "EncryptionError";
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
+}
+
 /** Connection object with potentially encrypted credential fields. */
 export interface ConnectionFields {
   apiKey?: string | null;
@@ -124,11 +141,18 @@ export function encrypt(plaintext: string | null | undefined): string | null | u
     return `${PREFIX}${iv.toString("hex")}:${encrypted}:${authTag}`;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    // FAIL-CLOSED (Tranche A — Task A1): a runtime crypto fault must NEVER
+    // demote the row to plaintext-at-rest. Throw so the calling DB write
+    // is aborted by the surrounding transaction / statement, and surface a
+    // typed error so callers can quarantine the failure if they choose.
+    // Configuration validity is still checked at boot via
+    // validateEncryptionConfig(); this branch only fires on genuine
+    // runtime crypto failures (extremely rare).
     console.error(
-      `[Encryption] Encryption failed: ${message}. ` +
+      `[Encryption] Encryption failed (fail-closed): ${message}. ` +
         `Check your STORAGE_ENCRYPTION_KEY — generate one with: openssl rand -base64 32`
     );
-    return plaintext; // fallback to plaintext rather than crashing
+    throw new EncryptionError(`Field encryption failed: ${message}`, { cause: err });
   }
 }
 
