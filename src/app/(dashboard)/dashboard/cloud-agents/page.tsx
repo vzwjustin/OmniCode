@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, Button, Input, Badge } from "@/shared/components";
+import {
+  Card,
+  Button,
+  Input,
+  Badge,
+  EmptyState,
+  RelativeTime,
+  CopyButton,
+  Kbd,
+  ConfirmModal,
+} from "@/shared/components";
 import { useTranslations } from "next-intl";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -84,6 +94,8 @@ export default function CloudAgentsPage() {
     autoCreatePr: true,
   });
   const [messageInput, setMessageInput] = useState("");
+  const [taskPendingDelete, setTaskPendingDelete] = useState<CloudAgentTask | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const t = useTranslations("cloudAgents");
   const notify = useNotificationStore();
 
@@ -408,6 +420,7 @@ export default function CloudAgentsPage() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    setDeleting(true);
     try {
       const res = await fetch(`/api/v1/agents/tasks/${taskId}`, {
         method: "DELETE",
@@ -417,6 +430,7 @@ export default function CloudAgentsPage() {
         if (selectedTask?.id === taskId) {
           setSelectedTask(null);
         }
+        notify.success("Task removed from the list.", "Deleted");
       } else {
         await showApiError(res, "Failed to delete task");
       }
@@ -426,6 +440,9 @@ export default function CloudAgentsPage() {
         err instanceof Error ? err.message : "Network error while deleting task",
         "Connection failed"
       );
+    } finally {
+      setDeleting(false);
+      setTaskPendingDelete(null);
     }
   };
 
@@ -460,6 +477,29 @@ export default function CloudAgentsPage() {
     return (task.activities || []).find((activity) => activity.type === "plan")?.content || "";
   };
 
+  // Keyboard shortcuts:
+  //   Esc           — clear the selected task (when one is selected)
+  // Cmd/Ctrl+Enter  — submit the create-task form when focus is anywhere on the page
+  //                   (handled at form level, see onKeyDown on the textarea)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedTask && !taskPendingDelete) {
+        const target = e.target as HTMLElement | null;
+        // Don't hijack Esc when the user is inside an input/textarea/contenteditable
+        // (browsers map Esc to "clear/cancel" inside those, and modals own their own Esc)
+        if (
+          target &&
+          (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+        ) {
+          return;
+        }
+        setSelectedTask(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedTask, taskPendingDelete]);
+
   // Render "live • updated Xs ago" once we have at least one successful poll.
   // Returns null before the first refresh so we don't flash "updated 0s ago"
   // during initial mount.
@@ -492,6 +532,27 @@ export default function CloudAgentsPage() {
     if (!result) return "";
     if (typeof result === "string") return result;
     return JSON.stringify(result, null, 2);
+  };
+
+  // Pull a PR URL out of the result blob when present. Different agents shape
+  // the result differently; we accept the two common keys.
+  const extractPrUrl = (result: CloudAgentTask["result"]): string | null => {
+    if (!result || typeof result !== "object") return null;
+    const r = result as Record<string, unknown>;
+    const candidate =
+      typeof r.prUrl === "string"
+        ? r.prUrl
+        : typeof r.pullRequestUrl === "string"
+          ? r.pullRequestUrl
+          : null;
+    if (!candidate) return null;
+    try {
+      // Reject anything that isn't a real URL — protects against XSS via href
+      const parsed = new URL(candidate);
+      return parsed.protocol === "https:" || parsed.protocol === "http:" ? candidate : null;
+    } catch {
+      return null;
+    }
   };
 
   if (loading) {
@@ -579,6 +640,12 @@ export default function CloudAgentsPage() {
               placeholder={t("taskDescriptionPlaceholder")}
               value={newTask.prompt}
               onChange={(e) => setNewTask({ ...newTask, prompt: e.target.value })}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !creating) {
+                  e.preventDefault();
+                  (e.currentTarget.form?.requestSubmit() as unknown) ?? undefined;
+                }
+              }}
               className="min-h-24 w-full rounded-lg border border-border/50 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               required
             />
@@ -616,7 +683,10 @@ export default function CloudAgentsPage() {
               Auto-create PR
             </label>
           </div>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-3">
+            <span className="text-[11px] text-text-muted hidden sm:inline-flex items-center gap-1">
+              Tip: press <Kbd>⌘</Kbd> + <Kbd>Enter</Kbd> in the description to submit
+            </span>
             <Button type="submit" variant="primary" loading={creating}>
               <span className="material-symbols-outlined text-[16px] mr-1">rocket_launch</span>
               {t("startTask")}
@@ -632,10 +702,11 @@ export default function CloudAgentsPage() {
             {renderLiveIndicator(lastListRefresh, true)}
           </div>
           {tasks.length === 0 ? (
-            <div className="text-center py-8 text-text-muted">
-              <span className="material-symbols-outlined text-[40px] mb-2">assignment</span>
-              <p>{t("noTasks")}</p>
-            </div>
+            <EmptyState
+              icon="📝"
+              title={t("noTasks")}
+              description="Start your first task using the form above."
+            />
           ) : (
             tasks.map((task) => {
               const agent = getAgentInfo(task.providerId);
@@ -648,18 +719,21 @@ export default function CloudAgentsPage() {
                   onClick={() => setSelectedTask(task)}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{agent.icon}</span>
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg shrink-0" aria-hidden>
+                        {agent.icon}
+                      </span>
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-text-main line-clamp-1">
                           {task.prompt || t("untitledTask")}
                         </p>
                         <p className="text-xs text-text-muted">
-                          {agent.name} • {new Date(task.createdAt).toLocaleString()}
+                          {agent.name} <span aria-hidden>·</span>{" "}
+                          <RelativeTime value={task.createdAt} />
                         </p>
                       </div>
                     </div>
-                    {getStatusBadge(task.status)}
+                    <div className="shrink-0">{getStatusBadge(task.status)}</div>
                   </div>
                 </Card>
               );
@@ -678,17 +752,22 @@ export default function CloudAgentsPage() {
           </div>
           {selectedTask ? (
             <Card className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{getAgentInfo(selectedTask.providerId).icon}</span>
-                  <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-lg shrink-0" aria-hidden>
+                    {getAgentInfo(selectedTask.providerId).icon}
+                  </span>
+                  <div className="min-w-0">
                     <p className="font-medium">{getAgentInfo(selectedTask.providerId).name}</p>
                     <p className="text-xs text-text-muted">
-                      {t("created")}: {new Date(selectedTask.createdAt).toLocaleString()}
+                      {t("created")} <RelativeTime value={selectedTask.createdAt} />
                     </p>
                   </div>
                 </div>
-                {getStatusBadge(selectedTask.status)}
+                <div className="flex items-center gap-2 shrink-0">
+                  {getStatusBadge(selectedTask.status)}
+                  <CopyButton value={selectedTask.id} size="sm" label="Copy task ID" />
+                </div>
               </div>
 
               {selectedTask.status === "awaiting_approval" && getPlanText(selectedTask) && (
@@ -741,21 +820,45 @@ export default function CloudAgentsPage() {
                 </div>
               )}
 
-              {selectedTask.result && (
-                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-600">
-                      check_circle
-                    </span>
-                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                      {t("result")}
-                    </span>
-                  </div>
-                  <pre className="text-xs text-text-muted whitespace-pre-wrap">
-                    {formatResult(selectedTask.result)}
-                  </pre>
-                </div>
-              )}
+              {selectedTask.result &&
+                (() => {
+                  const prUrl = extractPrUrl(selectedTask.result);
+                  return (
+                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="material-symbols-outlined text-[16px] text-emerald-600">
+                          check_circle
+                        </span>
+                        <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                          {t("result")}
+                        </span>
+                      </div>
+                      {prUrl && (
+                        <div className="flex items-center gap-2 mb-2 p-2 rounded-md bg-emerald-500/10">
+                          <span
+                            className="material-symbols-outlined text-[16px] text-emerald-600"
+                            aria-hidden
+                          >
+                            link
+                          </span>
+                          <a
+                            href={prUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-emerald-700 dark:text-emerald-400 hover:underline truncate flex-1 min-w-0"
+                            title={prUrl}
+                          >
+                            {prUrl}
+                          </a>
+                          <CopyButton value={prUrl} size="sm" label="Copy PR URL" />
+                        </div>
+                      )}
+                      <pre className="text-xs text-text-muted whitespace-pre-wrap">
+                        {formatResult(selectedTask.result)}
+                      </pre>
+                    </div>
+                  );
+                })()}
 
               {selectedTask.error && (
                 <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
@@ -797,7 +900,7 @@ export default function CloudAgentsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDeleteTask(selectedTask.id)}
+                  onClick={() => setTaskPendingDelete(selectedTask)}
                   className="text-red-500 hover:text-red-400"
                 >
                   <span className="material-symbols-outlined text-[14px] mr-1">delete</span>
@@ -806,13 +909,32 @@ export default function CloudAgentsPage() {
               </div>
             </Card>
           ) : (
-            <div className="text-center py-8 text-text-muted border border-dashed border-border/50 rounded-lg">
-              <span className="material-symbols-outlined text-[40px] mb-2">touch_app</span>
-              <p>{t("selectTaskPrompt")}</p>
-            </div>
+            <EmptyState
+              icon="👆"
+              title={t("selectTaskPrompt")}
+              description="Pick a task from the list to see its plan, activities, and result."
+            />
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={taskPendingDelete !== null}
+        onClose={() => !deleting && setTaskPendingDelete(null)}
+        onConfirm={() => taskPendingDelete && handleDeleteTask(taskPendingDelete.id)}
+        title="Delete task?"
+        message={
+          taskPendingDelete
+            ? `This permanently removes "${taskPendingDelete.prompt.slice(0, 80) || "this task"}${
+                taskPendingDelete.prompt.length > 80 ? "\u2026" : ""
+              }" from the dashboard. The task will not be cancelled upstream\u2014you must do that separately if it's still running.`
+            : ""
+        }
+        confirmText="Delete"
+        cancelText="Keep"
+        variant="danger"
+        loading={deleting}
+      />
     </div>
   );
 }

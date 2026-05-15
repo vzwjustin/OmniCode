@@ -143,11 +143,17 @@ export default function Sidebar({
   const renderNavLink = (item) => {
     const active = !item.external && activeHref === item.href;
     const className = cn(
-      "flex items-center gap-3 rounded-lg transition-all group",
+      "relative flex items-center gap-3 rounded-lg transition-all group",
       collapsed ? "justify-center px-2 py-2.5" : "px-4 py-2",
       active
-        ? "bg-primary/10 text-primary"
-        : "text-text-muted hover:bg-surface/50 hover:text-text-main"
+        ? "bg-primary/10 text-primary font-semibold"
+        : "text-text-muted hover:bg-surface/50 hover:text-text-main",
+      // Active left accent rail (visible only when expanded)
+      active &&
+        !collapsed &&
+        "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-[3px] before:rounded-r-full before:bg-primary",
+      // Focus ring matches Button/Input
+      "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
     );
     const iconClassName = cn(
       "material-symbols-outlined text-[18px]",
@@ -182,6 +188,7 @@ export default function Sidebar({
         href={item.href}
         onClick={onClose}
         title={collapsed ? item.label : undefined}
+        aria-current={active ? "page" : undefined}
         className={className}
       >
         {content}

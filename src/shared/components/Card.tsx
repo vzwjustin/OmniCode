@@ -38,7 +38,8 @@ export default function Card({
         "bg-surface",
         "border border-black/5 dark:border-white/5",
         "rounded-lg shadow-sm",
-        hover && "hover:shadow-md hover:border-primary/30 transition-all cursor-pointer",
+        hover &&
+          "hover:shadow-md hover:border-primary/30 active:scale-[0.997] transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base",
         paddings[padding],
         className
       )}
