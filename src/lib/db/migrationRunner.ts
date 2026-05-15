@@ -816,7 +816,18 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
   });
 
   if (pending.length === 0) {
-    return 0; // Nothing to do
+    // Tranche A.1 regression fix: the A3 legacy-encryption sweep must run
+    // on every boot, not only when there are pending migrations. Without
+    // this, existing databases (which already have every migration applied)
+    // never get their legacy-salt ciphertexts migrated, reintroducing the
+    // re-encryption-loop / 50% CPU symptom from recent_issues.jsonl #9.
+    try {
+      runLegacyEncryptionSweep(db);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[Migration] Legacy-encryption sweep failed: ${message}`);
+    }
+    return 0;
   }
 
   // ── Safety Check 2: Mass-migration detection (abort if existing DB + many migrations) ──
