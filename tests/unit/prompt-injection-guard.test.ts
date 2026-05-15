@@ -213,17 +213,24 @@ test("promptInjectionGuard: withInjectionGuard blocks suspicious POST bodies", a
   });
 });
 
-test("promptInjectionGuard: withInjectionGuard annotates downstream headers in warn mode", async () => {
+test("promptInjectionGuard: withInjectionGuard annotates downstream via async context in warn mode", async () => {
   await withEnv({ INPUT_SANITIZER_ENABLED: "true", INPUT_SANITIZER_MODE: "warn" }, async () => {
+    // Tranche B — B7 (#9): the guard now uses AsyncLocalStorage (via
+    // getInjectionAnnotation()) instead of mutating the immutable
+    // Request.headers. The old test asserted the broken header mutation;
+    // this asserts the new contract.
+    const { getInjectionAnnotation } = await import("@/middleware/promptInjectionGuard");
     const wrapped = withInjectionGuard(
-      async (request) =>
-        new Response(
+      async () => {
+        const ann = getInjectionAnnotation();
+        return new Response(
           JSON.stringify({
-            flagged: request.headers.get("X-Injection-Flagged"),
-            detections: request.headers.get("X-Injection-Detections"),
+            flagged: ann?.flagged ?? false,
+            detections: ann?.detections ?? 0,
           }),
           { headers: { "Content-Type": "application/json" } }
-        ),
+        );
+      },
       { mode: "warn" }
     );
     const request = new Request("http://localhost/api/chat", {
@@ -238,7 +245,7 @@ test("promptInjectionGuard: withInjectionGuard annotates downstream headers in w
     const payload = (await response.json()) as any;
 
     assert.equal(response.status, 200);
-    assert.equal(payload.flagged, "true");
+    assert.equal(payload.flagged, true);
     assert.ok(Number(payload.detections) >= 1);
   });
 });
@@ -253,7 +260,11 @@ test("promptInjectionGuard: withInjectionGuard skips non-mutating methods", asyn
   assert.equal(response.status, 200);
 });
 
-test("promptInjectionGuard: withInjectionGuard fails closed when the guard throws", async () => {
+test("promptInjectionGuard: withInjectionGuard fails OPEN when the guard throws", async () => {
+  // Tranche B — B8 (#10): AGENTS.md and docs/security/GUARDRAILS.md both
+  // mandate fail-open for guardrails. The previous behavior (HTTP 500 on any
+  // evaluator exception) let any bug in the evaluator brick every mutating
+  // route. The wrapped handler MUST still run and return its own response.
   const wrapped = withInjectionGuard(async () => new Response("passed", { status: 202 }), {
     mode: "block",
   });
@@ -267,5 +278,6 @@ test("promptInjectionGuard: withInjectionGuard fails closed when the guard throw
 
   const response = await wrapped(request, {});
 
-  assert.equal(response.status, 500);
+  assert.equal(response.status, 202);
+  assert.equal(await response.text(), "passed");
 });

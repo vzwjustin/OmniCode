@@ -1,4 +1,5 @@
 import { handleChat } from "@/sse/handlers/chat";
+import { handleCorsOptions } from "@/shared/utils/cors";
 
 // NOTE: We do NOT call initTranslators() here — the translator registry is
 // bootstrapped at module level inside open-sse/translator/index.ts when it
@@ -9,13 +10,18 @@ import { handleChat } from "@/sse/handlers/chat";
 // The translators are always initialized via the open-sse side (chatCore),
 // so /v1/responses just delegates to handleChat which handles everything.
 
+/**
+ * Tranche B — B6 (Bug review item #8)
+ *
+ * Previously this route shipped a hand-rolled OPTIONS that only included
+ * `Access-Control-Allow-Methods` and `Access-Control-Allow-Headers: *`. It
+ * was missing the central CORS_HEADERS contract (full method list, explicit
+ * x-api-key / anthropic-version / x-omniroute-connection allowed headers)
+ * and bypassed the middleware's per-origin overlay. Delegate to the shared
+ * handler so /v1/responses gets the same preflight as /v1/chat/completions.
+ */
 export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*",
-    },
-  });
+  return handleCorsOptions();
 }
 
 /**

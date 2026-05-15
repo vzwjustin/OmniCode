@@ -168,8 +168,24 @@ export function mergeAbortSignals(primary: AbortSignal, secondary: AbortSignal):
     return controller.signal;
   }
 
-  primary.addEventListener("abort", () => abortFrom(primary), { once: true });
-  secondary.addEventListener("abort", () => abortFrom(secondary), { once: true });
+  // C19 (review #19): when one signal fires, the corresponding listener is
+  // removed via {once: true}, but the listener on the OTHER signal stays
+  // subscribed indefinitely (until that signal also fires or is GC'd). For
+  // long-lived signals (e.g. a request-level signal that lives 5+ minutes
+  // through a stream) this is a real listener leak. Hold references to both
+  // listeners and tear down whichever one didn't fire as soon as the other
+  // resolves the merge.
+  const onPrimary = () => {
+    secondary.removeEventListener("abort", onSecondary);
+    abortFrom(primary);
+  };
+  const onSecondary = () => {
+    primary.removeEventListener("abort", onPrimary);
+    abortFrom(secondary);
+  };
+
+  primary.addEventListener("abort", onPrimary, { once: true });
+  secondary.addEventListener("abort", onSecondary, { once: true });
   return controller.signal;
 }
 
@@ -410,12 +426,19 @@ export class BaseExecutor {
   static FETCH_START_TIMEOUT_MS = FETCH_TIMEOUT_MS;
 
   // Override in subclass for provider-specific refresh
+  //
+  // Tranche B — B1 (Bug review item #5): the optional `signal` lets callers
+  // (refreshWithRetry → withTimeout) cancel the upstream refresh fetch when a
+  // timeout fires, so rotating-token providers don't have their one-time
+  // refresh token consumed by an orphaned in-flight request.
   async refreshCredentials(
     credentials: ProviderCredentials,
-    log: ExecutorLog | null
+    log: ExecutorLog | null,
+    signal?: AbortSignal
   ): Promise<Partial<ProviderCredentials> | null> {
     void credentials;
     void log;
+    void signal;
     return null;
   }
 

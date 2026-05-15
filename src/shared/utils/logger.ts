@@ -20,6 +20,42 @@ import { getAppLogLevel } from "@/lib/logEnv";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+/**
+ * Tranche B — B9 (EPIPE feedback loop)
+ *
+ * pino's production transport writes JSON to `fd 1` (process.stdout). When the
+ * server is launched as a spawned child of Electron and Electron's own parent
+ * stdio pipe is closed (detached terminal, parent died, GUI launch with no
+ * console), every write fails with EPIPE. Without a listener on
+ * `process.stdout`, Node raises that EPIPE as `uncaughtException`. Our
+ * Next.js/console.* handlers then write to stderr → another EPIPE → loop.
+ * Live observation: 7.4 GB of error JSON-lines written to the log file in
+ * three minutes while the CPU pegged at 99%.
+ *
+ * Installing this listener at module load ensures pino's stdout writes
+ * silently no-op once the pipe is broken. The companion file-transport target
+ * keeps logs flowing to disk, so we don't lose observability.
+ */
+function installStdioEpipeGuard() {
+  const guard = (stream: NodeJS.WriteStream | undefined) => {
+    if (!stream || typeof stream.on !== "function") return;
+    stream.on("error", (err: NodeJS.ErrnoException) => {
+      if (err?.code !== "EPIPE") {
+        // Surface non-EPIPE failures via stderr if it's still alive.
+        try {
+          process.stderr.write(`[logger] stdio stream error: ${err?.message || err}\n`);
+        } catch {
+          /* both stdio handles broken — there's nowhere left to report */
+        }
+      }
+    });
+  };
+  guard(process.stdout);
+  guard(process.stderr);
+}
+
+installStdioEpipeGuard();
+
 const baseConfig: pino.LoggerOptions = {
   level: getAppLogLevel(isDev ? "debug" : "info"),
   base: { service: "omniroute" },

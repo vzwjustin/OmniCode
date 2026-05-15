@@ -105,15 +105,21 @@ export function createStreamController({
 
     // Call when stream completes normally
     handleComplete: () => {
-      if (disconnected) return;
-      disconnected = true;
-
-      logStream("complete");
-
+      // Always clear any pending abort timer first - even if we already
+      // marked the stream disconnected (e.g. handleDisconnect fired and
+      // then completion arrived inside the DISCONNECT_ABORT_DELAY_MS
+      // window). Without this clear, the orphan setTimeout would still
+      // call abortController.abort() ~2s later, racing with downstream
+      // consumers that have already finished cleanly.
       if (abortTimeout) {
         clearTimeout(abortTimeout);
         abortTimeout = null;
       }
+
+      if (disconnected) return;
+      disconnected = true;
+
+      logStream("complete");
     },
 
     // Call on error

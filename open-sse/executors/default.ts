@@ -464,8 +464,12 @@ export class DefaultExecutor extends BaseExecutor {
    * Refresh credentials via the centralized tokenRefresh service.
    * Delegates to getAccessToken() which handles all providers with
    * race-condition protection (deduplication via refreshPromiseCache).
+   *
+   * Tranche B — B1 (Bug review item #5): forwards the optional abort `signal`
+   * to `getAccessToken` so the inner fetch can be cancelled when the
+   * 30s refresh timeout fires.
    */
-  async refreshCredentials(credentials, log) {
+  async refreshCredentials(credentials, log, signal) {
     if (this.provider === "gigachat") {
       if (!credentials.apiKey) return null;
       try {
@@ -479,7 +483,7 @@ export class DefaultExecutor extends BaseExecutor {
     }
     if (!credentials.refreshToken) return null;
     try {
-      return await getAccessToken(this.provider, credentials, log);
+      return await getAccessToken(this.provider, credentials, log, null, signal);
     } catch (error) {
       log?.error?.("TOKEN", `${this.provider} refresh error: ${error.message}`);
       return null;
