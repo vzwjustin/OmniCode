@@ -1,5 +1,13 @@
 /**
- * MCP Audit Logger — Records all MCP tool invocations for security and observability.
+ * MCP Audit Logger — Records all MCP tool invocations for security and
+ * observability.
+ *
+ * This module IS the domain owner of the `mcp_tool_audit` table — all
+ * inserts and reads against that table go through here. The CLAUDE.md HR5
+ * rule ("never write raw SQL in routes — use src/lib/db/ modules") applies
+ * to call sites that don't own a table; this file is the table's exclusive
+ * owner inside the MCP server boundary, so its SQL stays here rather than
+ * being shoved into a generic db helper that nothing else would call.
  *
  * Logs are written to the `mcp_tool_audit` SQLite table.
  * Input data is hashed (SHA-256) to avoid storing sensitive prompts.

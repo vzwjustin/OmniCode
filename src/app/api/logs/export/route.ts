@@ -1,5 +1,5 @@
-import { getDbInstance } from "@/lib/db/core";
 import { exportCallLogsSince } from "@/lib/usage/callLogs";
+import { getProxyLogsSince } from "@/lib/db/proxyLogs";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 
 /**
@@ -17,7 +17,6 @@ export async function GET(request: Request) {
     const logType = searchParams.get("type") || "call-logs";
 
     const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
-    const db = getDbInstance();
 
     let rows: unknown[] = [];
     let tableName = "";
@@ -27,10 +26,7 @@ export async function GET(request: Request) {
       rows = await exportCallLogsSince(since);
     } else if (logType === "proxy-logs") {
       tableName = "proxy_logs";
-      const stmt = db.prepare(
-        "SELECT * FROM proxy_logs WHERE timestamp >= @since ORDER BY timestamp DESC"
-      );
-      rows = stmt.all({ since });
+      rows = getProxyLogsSince(since);
     }
 
     const filename = `omniroute-${tableName}-${hours}h-${new Date().toISOString().slice(0, 10)}.json`;

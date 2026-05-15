@@ -134,6 +134,50 @@ class SkillRegistry {
     return false;
   }
 
+  /**
+   * Update mutable per-skill columns (`enabled`, `mode`) by skill id.
+   *
+   * Returns true if a row was updated. Caller should call
+   * `loadFromDatabase()` afterwards if it relies on cached registry state.
+   */
+  async updateSkillById(
+    id: string,
+    updates: { enabled?: boolean; mode?: "on" | "off" | "auto" }
+  ): Promise<boolean> {
+    const setClauses: string[] = [];
+    const params: unknown[] = [];
+
+    if (updates.enabled !== undefined) {
+      setClauses.push("enabled = ?");
+      params.push(updates.enabled ? 1 : 0);
+      // Legacy enabled toggle should also keep mode in sync.
+      // Without this, skills created as mode="off" remain excluded even after enabled=true.
+      if (updates.mode === undefined) {
+        setClauses.push("mode = ?");
+        params.push(updates.enabled ? "on" : "off");
+      }
+    }
+
+    if (updates.mode !== undefined) {
+      setClauses.push("mode = ?");
+      params.push(updates.mode);
+      // keep enabled column consistent for older codepaths
+      setClauses.push("enabled = ?");
+      params.push(updates.mode === "off" ? 0 : 1);
+    }
+
+    if (setClauses.length === 0) return false;
+
+    setClauses.push("updated_at = datetime('now')");
+    params.push(id);
+
+    const db = getDbInstance();
+    const result = db
+      .prepare(`UPDATE skills SET ${setClauses.join(", ")} WHERE id = ?`)
+      .run(...params);
+    return result.changes > 0;
+  }
+
   async unregisterById(id: string): Promise<boolean> {
     const db = getDbInstance();
     const deleted = db.prepare("DELETE FROM skills WHERE id = ?").run(id);

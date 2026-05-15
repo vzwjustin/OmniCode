@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbInstance, SQLITE_FILE } from "@/lib/db/core";
 import { CALL_LOGS_DIR } from "@/lib/usage/callLogArtifacts";
+import {
+  exportKeyValueSettings,
+  exportComboRows,
+  exportProviderConnectionMetadata,
+  exportApiKeyMetadata,
+} from "@/lib/db/databaseSnapshot";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -40,56 +46,28 @@ export async function GET(request: NextRequest) {
 
       // 2. Export settings as JSON
       const settings: Record<string, string> = {};
-      try {
-        const rows = db.prepare("SELECT key, value FROM key_value").all() as {
-          key: string;
-          value: string;
-        }[];
-        for (const row of rows) {
-          settings[row.key] = row.value;
-        }
-      } catch {
-        // key_value table might not exist
+      for (const row of exportKeyValueSettings()) {
+        settings[row.key] = row.value;
       }
       fs.writeFileSync(path.join(tempDir, "settings.json"), JSON.stringify(settings, null, 2));
 
       // 3. Export combos summary
-      const combos: unknown[] = [];
-      try {
-        const rows = db.prepare("SELECT * FROM combos").all();
-        combos.push(...rows);
-      } catch {
-        // combos table might not exist
-      }
-      fs.writeFileSync(path.join(tempDir, "combos.json"), JSON.stringify(combos, null, 2));
+      fs.writeFileSync(
+        path.join(tempDir, "combos.json"),
+        JSON.stringify(exportComboRows(), null, 2)
+      );
 
       // 4. Export provider connections (without sensitive credentials)
-      const providers: unknown[] = [];
-      try {
-        const rows = db
-          .prepare(
-            "SELECT id, provider, name, auth_type, is_active, email, created_at FROM provider_connections"
-          )
-          .all();
-        providers.push(...rows);
-      } catch {
-        // provider_connections table might not exist
-      }
-      fs.writeFileSync(path.join(tempDir, "providers.json"), JSON.stringify(providers, null, 2));
+      fs.writeFileSync(
+        path.join(tempDir, "providers.json"),
+        JSON.stringify(exportProviderConnectionMetadata(), null, 2)
+      );
 
       // 5. Export API keys summary (masked)
-      const apiKeys: unknown[] = [];
-      try {
-        const rows = db
-          .prepare(
-            "SELECT id, name, substr(key, 1, 8) as prefix, machine_id, created_at FROM api_keys"
-          )
-          .all();
-        apiKeys.push(...rows);
-      } catch {
-        // api_keys table might not exist
-      }
-      fs.writeFileSync(path.join(tempDir, "api-keys.json"), JSON.stringify(apiKeys, null, 2));
+      fs.writeFileSync(
+        path.join(tempDir, "api-keys.json"),
+        JSON.stringify(exportApiKeyMetadata(), null, 2)
+      );
 
       // 6. Export call log artifacts directory
       if (CALL_LOGS_DIR && fs.existsSync(CALL_LOGS_DIR)) {

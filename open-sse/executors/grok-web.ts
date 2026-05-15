@@ -20,6 +20,7 @@ import {
 } from "./base.ts";
 import { FETCH_TIMEOUT_MS } from "../config/constants.ts";
 import { extractCookieValue } from "@/lib/providers/webCookieAuth";
+import { sanitizeErrorMessage } from "../utils/error.ts";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -124,10 +125,12 @@ function stripInjectedRuntimeReminders(text: string): string {
 function extractTextContent(msg: Record<string, unknown>): string {
   if (typeof msg.content === "string") return stripInjectedRuntimeReminders(msg.content);
   if (Array.isArray(msg.content)) {
-    return stripInjectedRuntimeReminders((msg.content as Array<Record<string, unknown>>)
-      .filter((c) => c.type === "text")
-      .map((c) => String(c.text || ""))
-      .join(" "));
+    return stripInjectedRuntimeReminders(
+      (msg.content as Array<Record<string, unknown>>)
+        .filter((c) => c.type === "text")
+        .map((c) => String(c.text || ""))
+        .join(" ")
+    );
   }
   return "";
 }
@@ -145,7 +148,9 @@ function normalizeToolArgumentObject(value: unknown): Record<string, unknown> {
   if (typeof value === "string") {
     try {
       const parsed = JSON.parse(value);
-      return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : { input: value };
+      return parsed && typeof parsed === "object"
+        ? (parsed as Record<string, unknown>)
+        : { input: value };
     } catch {
       return { input: value };
     }
@@ -259,18 +264,26 @@ function extractFirstUrl(text: string): string | undefined {
 }
 
 function wantsUrlFetch(text: string): boolean {
-  return /\b(webfetch|web_fetch|fetch|browse|open|read|lee|abre|extrae|investiga|analiza|resume|summarize|de qu[eé] va)\b/i.test(text) && !!extractFirstUrl(text);
+  return (
+    /\b(webfetch|web_fetch|fetch|browse|open|read|lee|abre|extrae|investiga|analiza|resume|summarize|de qu[eé] va)\b/i.test(
+      text
+    ) && !!extractFirstUrl(text)
+  );
 }
 
 function forcedToolChoiceName(toolChoice: unknown): string | null {
   if (!toolChoice || typeof toolChoice !== "object") return null;
   const record = toolChoice as Record<string, unknown>;
-  if (record.type !== "function" || !record.function || typeof record.function !== "object") return null;
+  if (record.type !== "function" || !record.function || typeof record.function !== "object")
+    return null;
   const name = (record.function as Record<string, unknown>).name;
   return typeof name === "string" && name.trim() ? name.trim() : null;
 }
 
-function parseOpenAIMessages(messages: Array<Record<string, unknown>>, beforeLatestUser = ""): string {
+function parseOpenAIMessages(
+  messages: Array<Record<string, unknown>>,
+  beforeLatestUser = ""
+): string {
   const parts: string[] = [];
   let lastUserIdx = -1;
   let lastUserSourceIdx = -1;
@@ -337,7 +350,9 @@ function parseOpenAIMessages(messages: Array<Record<string, unknown>>, beforeLat
 
 function buildGrokToolRegistry(body: Record<string, unknown>): GrokToolRegistry {
   const tools = Array.isArray(body.tools) ? (body.tools as Array<Record<string, unknown>>) : [];
-  const messages = Array.isArray(body.messages) ? (body.messages as Array<Record<string, unknown>>) : [];
+  const messages = Array.isArray(body.messages)
+    ? (body.messages as Array<Record<string, unknown>>)
+    : [];
   const lastUserText = getLastUserText(messages);
   const executedToolState = getExecutedToolState(messages);
   const toolChoice = body.tool_choice ?? "auto";
@@ -367,7 +382,9 @@ function buildGrokToolRegistry(body: Record<string, unknown>): GrokToolRegistry 
     })
     .filter((tool): tool is GrokFunctionToolSummary => Boolean(tool));
   const forcedName = forcedToolChoiceName(toolChoice);
-  const visibleTools = forcedName ? functionTools.filter((tool) => tool.name === forcedName) : functionTools;
+  const visibleTools = forcedName
+    ? functionTools.filter((tool) => tool.name === forcedName)
+    : functionTools;
 
   return {
     enabled: visibleTools.length > 0,
@@ -381,13 +398,17 @@ function buildGrokToolRegistry(body: Record<string, unknown>): GrokToolRegistry 
 function getSchemaProperties(parameters: unknown): Record<string, unknown> {
   if (!parameters || typeof parameters !== "object") return {};
   const properties = (parameters as Record<string, unknown>).properties;
-  return properties && typeof properties === "object" ? (properties as Record<string, unknown>) : {};
+  return properties && typeof properties === "object"
+    ? (properties as Record<string, unknown>)
+    : {};
 }
 
 function getSchemaRequired(parameters: unknown): string[] {
   if (!parameters || typeof parameters !== "object") return [];
   const required = (parameters as Record<string, unknown>).required;
-  return Array.isArray(required) ? required.filter((key): key is string => typeof key === "string") : [];
+  return Array.isArray(required)
+    ? required.filter((key): key is string => typeof key === "string")
+    : [];
 }
 
 function formatToolArgsSummary(parameters: unknown): string {
@@ -414,8 +435,13 @@ function isTerminalTool(tool: GrokFunctionToolSummary): boolean {
   if (isMetaOrInfrastructureTool(tool)) return false;
   const text = toolText(tool);
   const name = tool.name.toLowerCase();
-  const explicitName = /\b(bash|shell|terminal|run_command|execute_command|exec|command)\b/.test(name);
-  const explicitText = /\b(?:run|execute).{0,24}\b(?:shell|bash|terminal|command)\b|\b(?:shell|bash|terminal)\b/.test(text);
+  const explicitName = /\b(bash|shell|terminal|run_command|execute_command|exec|command)\b/.test(
+    name
+  );
+  const explicitText =
+    /\b(?:run|execute).{0,24}\b(?:shell|bash|terminal|command)\b|\b(?:shell|bash|terminal)\b/.test(
+      text
+    );
   return explicitName || (hasAnyProperty(tool, ["command", "cmd", "shell"]) && explicitText);
 }
 
@@ -431,9 +457,16 @@ function isFileReadTool(tool: GrokFunctionToolSummary): boolean {
 function isUrlFetchTool(tool: GrokFunctionToolSummary): boolean {
   const text = toolText(tool);
   const name = tool.name.toLowerCase();
-  const explicitName = /\b(webfetch|web.fetch|fetch_url|url_fetch|read_url|browse_page|browsepage)\b/.test(name);
-  const explicitUrlText = /\b(?:fetch|browse|read).{0,32}\b(?:url|uri|web page|page content)\b|\b(?:url|uri|web page|page content).{0,32}\b(?:fetch|browse|read)\b/.test(text);
-  return explicitName || (!isMetaOrInfrastructureTool(tool) && hasAnyProperty(tool, ["url", "uri"]) && explicitUrlText);
+  const explicitName =
+    /\b(webfetch|web.fetch|fetch_url|url_fetch|read_url|browse_page|browsepage)\b/.test(name);
+  const explicitUrlText =
+    /\b(?:fetch|browse|read).{0,32}\b(?:url|uri|web page|page content)\b|\b(?:url|uri|web page|page content).{0,32}\b(?:fetch|browse|read)\b/.test(
+      text
+    );
+  return (
+    explicitName ||
+    (!isMetaOrInfrastructureTool(tool) && hasAnyProperty(tool, ["url", "uri"]) && explicitUrlText)
+  );
 }
 
 function isWebSearchTool(tool: GrokFunctionToolSummary): boolean {
@@ -448,12 +481,16 @@ function isWebSearchTool(tool: GrokFunctionToolSummary): boolean {
 
 function isContextMemoryTool(tool: GrokFunctionToolSummary): boolean {
   const text = toolText(tool);
-  return /\b(ctx_|memory|memories|conversation history|session notes|git commits|project memories|context.db|magic context)\b/.test(text);
+  return /\b(ctx_|memory|memories|conversation history|session notes|git commits|project memories|context.db|magic context)\b/.test(
+    text
+  );
 }
 
 function isMetaOrInfrastructureTool(tool: GrokFunctionToolSummary): boolean {
   const text = toolText(tool);
-  return /\b(mcp|mcpproxy|upstream|registry|registries|quarantine|oauth|cache key|token usage|session notes|conversation transcript|handoff|context management|memory|memories|lsp|language server|plan file|server management|tool discovery|tools? using bm25)\b/.test(text);
+  return /\b(mcp|mcpproxy|upstream|registry|registries|quarantine|oauth|cache key|token usage|session notes|conversation transcript|handoff|context management|memory|memories|lsp|language server|plan file|server management|tool discovery|tools? using bm25)\b/.test(
+    text
+  );
 }
 
 function baseToolOrderScore(tool: GrokFunctionToolSummary): number {
@@ -474,9 +511,19 @@ function latestUserIntentScore(tool: GrokFunctionToolSummary, lastUserText: stri
   const hasPath = /(?:^|\s|["'`])(?:~|\.?\.?\/|\/)[^\s"'`]+/.test(lastUserText);
   const hasUrl = !!extractFirstUrl(lastUserText);
   const asksLineCount = /\b(l[ií]neas?|line count|cu[aá]ntas? l[ií]neas?|wc\s+-l)\b/.test(user);
-  const asksFileContent = /\b(lee|leer|read|archivo|file|json|config|modelo|default|por defecto|de qu[eé] va|consiste|contenido)\b/.test(user) && hasPath;
-  const asksContext = /\b(contexto|memoria|historial|conversation history|project memories|ctx_|memory|memories|recordabas?)\b/.test(user);
-  const asksWeb = !asksContext && /\b(web|internet|fuente|oficial|release|versi[oó]n|ubuntu|latest|actual|contrasta|busca|search)\b/.test(user);
+  const asksFileContent =
+    /\b(lee|leer|read|archivo|file|json|config|modelo|default|por defecto|de qu[eé] va|consiste|contenido)\b/.test(
+      user
+    ) && hasPath;
+  const asksContext =
+    /\b(contexto|memoria|historial|conversation history|project memories|ctx_|memory|memories|recordabas?)\b/.test(
+      user
+    );
+  const asksWeb =
+    !asksContext &&
+    /\b(web|internet|fuente|oficial|release|versi[oó]n|ubuntu|latest|actual|contrasta|busca|search)\b/.test(
+      user
+    );
   let score = 0;
 
   if (asksFileContent && isFileReadTool(tool)) score += 160;
@@ -493,7 +540,9 @@ function latestUserIntentScore(tool: GrokFunctionToolSummary, lastUserText: stri
   return score;
 }
 
-function orderedToolsForManifest(toolRegistry: GrokToolRegistry): Array<{ tool: GrokFunctionToolSummary; score: number }> {
+function orderedToolsForManifest(
+  toolRegistry: GrokToolRegistry
+): Array<{ tool: GrokFunctionToolSummary; score: number }> {
   return [...toolRegistry.toolsByName.values()]
     .map((tool, index) => ({
       tool,
@@ -515,7 +564,7 @@ function buildClientToolManifest(toolRegistry: GrokToolRegistry, toolChoice: unk
   if (!toolRegistry.enabled) return "";
   const orderedTools = orderedToolsForManifest(toolRegistry);
   const lines = [
-    "CLIENT_TOOLS: use this caller-runtime tool list as the tool interface for this request. To call one, respond only with <tool_call>{\"name\":\"exact_tool_name\",\"arguments\":{...}}</tool_call>. After tool results, answer normally.",
+    'CLIENT_TOOLS: use this caller-runtime tool list as the tool interface for this request. To call one, respond only with <tool_call>{"name":"exact_tool_name","arguments":{...}}</tool_call>. After tool results, answer normally.',
     `tool_choice=${JSON.stringify(toolChoice ?? "auto")}`,
     ...(toolRegistry.completedToolCalls.length > 0
       ? [
@@ -530,7 +579,11 @@ function buildClientToolManifest(toolRegistry: GrokToolRegistry, toolChoice: unk
   return lines.join("\n");
 }
 
-function buildGrokMessage(messages: Array<Record<string, unknown>>, toolRegistry: GrokToolRegistry, toolChoice: unknown): string {
+function buildGrokMessage(
+  messages: Array<Record<string, unknown>>,
+  toolRegistry: GrokToolRegistry,
+  toolChoice: unknown
+): string {
   const manifest = buildClientToolManifest(toolRegistry, toolChoice);
   return parseOpenAIMessages(messages, manifest);
 }
@@ -553,7 +606,12 @@ function firstString(...values: unknown[]): string | undefined {
   return undefined;
 }
 
-function defaultRequiredValue(key: string, type: string | undefined, args: Record<string, unknown>, intent: string): unknown {
+function defaultRequiredValue(
+  key: string,
+  type: string | undefined,
+  args: Record<string, unknown>,
+  intent: string
+): unknown {
   const lower = key.toLowerCase();
   const command = firstString(args.command, args.cmd, args.shell, args.input);
   const path = firstString(args.filePath, args.file_path, args.path, args.filename);
@@ -599,13 +657,18 @@ function adaptArgumentsToDeclaredTool(
   const out: Record<string, unknown> = { ...args };
 
   // Normalize common aliases only when the declared schema expects them.
-  if ("filePath" in properties && !hasValue(out.filePath)) out.filePath = firstString(args.filePath, args.file_path, args.path);
-  if ("file_path" in properties && !hasValue(out.file_path)) out.file_path = firstString(args.file_path, args.filePath, args.path);
-  if ("path" in properties && !hasValue(out.path)) out.path = firstString(args.path, args.filePath, args.file_path);
-  if ("query" in properties && !hasValue(out.query)) out.query = firstString(args.query, args.search, args.input);
+  if ("filePath" in properties && !hasValue(out.filePath))
+    out.filePath = firstString(args.filePath, args.file_path, args.path);
+  if ("file_path" in properties && !hasValue(out.file_path))
+    out.file_path = firstString(args.file_path, args.filePath, args.path);
+  if ("path" in properties && !hasValue(out.path))
+    out.path = firstString(args.path, args.filePath, args.file_path);
+  if ("query" in properties && !hasValue(out.query))
+    out.query = firstString(args.query, args.search, args.input);
   if ("url" in properties && !hasValue(out.url)) out.url = firstString(args.url, args.uri);
   if ("uri" in properties && !hasValue(out.uri)) out.uri = firstString(args.uri, args.url);
-  if ("input" in properties && !hasValue(out.input)) out.input = firstString(args.input, args.query, args.command);
+  if ("input" in properties && !hasValue(out.input))
+    out.input = firstString(args.input, args.query, args.command);
 
   for (const key of required) {
     if (hasValue(out[key])) continue;
@@ -639,7 +702,10 @@ function normalizeArbitraryToolArguments(value: unknown): Record<string, unknown
   return {};
 }
 
-function parseClientToolCallMarkup(text: string, toolRegistry: GrokToolRegistry): OpenAIToolCall[] | null {
+function parseClientToolCallMarkup(
+  text: string,
+  toolRegistry: GrokToolRegistry
+): OpenAIToolCall[] | null {
   if (!toolRegistry.enabled || !text.includes("<tool_call>")) return null;
   const calls: OpenAIToolCall[] = [];
   const re = /<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/g;
@@ -655,10 +721,15 @@ function parseClientToolCallMarkup(text: string, toolRegistry: GrokToolRegistry)
     const name = typeof record.name === "string" ? record.name.trim() : "";
     if (!name || !toolRegistry.toolsByName.has(name)) continue;
     const rawArgs = normalizeArbitraryToolArguments(record.arguments);
-    const args = adaptArgumentsToDeclaredTool(name, rawArgs, toolRegistry, "clientTool", { preserveUnknownArgs: true });
+    const args = adaptArgumentsToDeclaredTool(name, rawArgs, toolRegistry, "clientTool", {
+      preserveUnknownArgs: true,
+    });
     if (toolRegistry.executedToolKeys.has(semanticToolKey(name, args))) continue;
     calls.push({
-      id: typeof record.id === "string" && record.id.trim() ? record.id.trim() : `call_${crypto.randomUUID()}`,
+      id:
+        typeof record.id === "string" && record.id.trim()
+          ? record.id.trim()
+          : `call_${crypto.randomUUID()}`,
       type: "function",
       function: { name, arguments: JSON.stringify(args) },
     });
@@ -667,10 +738,17 @@ function parseClientToolCallMarkup(text: string, toolRegistry: GrokToolRegistry)
 }
 
 function hasOpenToolCallMarkup(text: string): boolean {
-  return /<tool(?:_call)?$|<tool_call[^>]*$/.test(text) || (text.includes("<tool_call>") && !text.includes("</tool_call>"));
+  return (
+    /<tool(?:_call)?$|<tool_call[^>]*$/.test(text) ||
+    (text.includes("<tool_call>") && !text.includes("</tool_call>"))
+  );
 }
 
-function toolScore(tool: GrokFunctionToolSummary, intent: NativeToolIntent, context: ToolBridgeContext): number {
+function toolScore(
+  tool: GrokFunctionToolSummary,
+  intent: NativeToolIntent,
+  context: ToolBridgeContext
+): number {
   const name = tool.name.toLowerCase();
   const description = (tool.description || "").toLowerCase();
   const properties = getSchemaProperties(tool.parameters);
@@ -682,14 +760,16 @@ function toolScore(tool: GrokFunctionToolSummary, intent: NativeToolIntent, cont
   if (intent === "bash") {
     if (!isTerminalTool(tool)) score -= 80;
     if (name === "bash") score += 100;
-    if (["shell", "terminal", "run_command", "execute_command", "exec", "command"].includes(name)) score += 80;
+    if (["shell", "terminal", "run_command", "execute_command", "exec", "command"].includes(name))
+      score += 80;
     if (propNames.has("command") || propNames.has("cmd")) score += 60;
     if (/bash|shell|terminal|command|execute|run/.test(text)) score += 25;
     if (/read|search|grep|web|http|browser|context|note|memory/.test(name)) score -= 50;
   } else if (intent === "readFile") {
     if (!isFileReadTool(tool)) score -= 60;
     if (["read", "read_file", "readfile", "file_read"].includes(name)) score += 100;
-    if (propNames.has("filepath") || propNames.has("file_path") || propNames.has("path")) score += 50;
+    if (propNames.has("filepath") || propNames.has("file_path") || propNames.has("path"))
+      score += 50;
     if (/read.*file|file.*read|filesystem/.test(text)) score += 25;
     if (/write|edit|delete|remove|bash|shell|command/.test(text)) score -= 50;
   } else if (intent === "webSearch" || intent === "browsePage") {
@@ -697,13 +777,23 @@ function toolScore(tool: GrokFunctionToolSummary, intent: NativeToolIntent, cont
     if (isContextMemoryTool(tool) || isMetaOrInfrastructureTool(tool)) score -= 180;
     if (intent === "browsePage" || preferUrlFetch) {
       if (!isUrlFetchTool(tool)) score -= 60;
-      if (/webfetch|web_fetch|fetch|browse|browse_page|read_url|url_fetch|page/.test(name)) score += 140;
+      if (/webfetch|web_fetch|fetch|browse|browse_page|read_url|url_fetch|page/.test(name))
+        score += 140;
       if (propNames.has("url") || propNames.has("uri")) score += 90;
       if (/fetch|browse|url|web page|page content|extract.*url|read.*url/.test(text)) score += 55;
-      if (/websearch|web_search|search/.test(name) && !(propNames.has("url") || propNames.has("uri"))) score -= 80;
+      if (
+        /websearch|web_search|search/.test(name) &&
+        !(propNames.has("url") || propNames.has("uri"))
+      )
+        score -= 80;
     }
     if (intent === "webSearch" && !isWebSearchTool(tool)) score -= 60;
-    if (intent === "browsePage" && /\b(websearch|web_search|search)\b/.test(name) && !(propNames.has("url") || propNames.has("uri"))) score -= 120;
+    if (
+      intent === "browsePage" &&
+      /\b(websearch|web_search|search)\b/.test(name) &&
+      !(propNames.has("url") || propNames.has("uri"))
+    )
+      score -= 120;
     if (["web_search", "websearch", "search"].includes(name)) score += 100;
     if (propNames.has("query") || propNames.has("search")) score += 50;
     if (/web.*search|search.*web|internet|browse/.test(text)) score += 25;
@@ -713,7 +803,10 @@ function toolScore(tool: GrokFunctionToolSummary, intent: NativeToolIntent, cont
   return score;
 }
 
-function pickDeclaredToolForIntent(intent: NativeToolIntent, toolRegistry: GrokToolRegistry): string | null {
+function pickDeclaredToolForIntent(
+  intent: NativeToolIntent,
+  toolRegistry: GrokToolRegistry
+): string | null {
   let best: { name: string; score: number } | null = null;
   for (const tool of toolRegistry.toolsByName.values()) {
     const score = toolScore(tool, intent, { lastUserText: toolRegistry.lastUserText });
@@ -735,19 +828,27 @@ function mapGrokNativeToolToOpenAI(
   if (bash?.args) {
     const name = pickDeclaredToolForIntent("bash", toolRegistry);
     if (name) {
-      const args = adaptArgumentsToDeclaredTool(name, bash.args, toolRegistry, "bash", { preserveUnknownArgs: false });
+      const args = adaptArgumentsToDeclaredTool(name, bash.args, toolRegistry, "bash", {
+        preserveUnknownArgs: false,
+      });
       if (toolRegistry.executedToolKeys.has(semanticToolKey(name, args))) return null;
       return { id, type: "function", function: { name, arguments: JSON.stringify(args) } };
     }
   }
 
-  const readFile = (card.readFile || card.read_file) as { args?: Record<string, unknown> } | undefined;
+  const readFile = (card.readFile || card.read_file) as
+    | { args?: Record<string, unknown> }
+    | undefined;
   if (readFile?.args) {
     const rawPath = readFile.args.filePath || readFile.args.file_path || readFile.args.path;
     const name = pickDeclaredToolForIntent("readFile", toolRegistry);
     if (name && typeof rawPath === "string") {
       const userOffset = extractNumericUserParam(toolRegistry.lastUserText, ["offset"]);
-      const userLimit = extractNumericUserParam(toolRegistry.lastUserText, ["limit", "limite", "límite"]);
+      const userLimit = extractNumericUserParam(toolRegistry.lastUserText, [
+        "limit",
+        "limite",
+        "límite",
+      ]);
       const rawArgs = {
         ...readFile.args,
         ...(userOffset !== undefined ? { offset: userOffset } : {}),
@@ -756,13 +857,9 @@ function mapGrokNativeToolToOpenAI(
         file_path: rawPath,
         path: rawPath,
       };
-      const args = adaptArgumentsToDeclaredTool(
-        name,
-        rawArgs,
-        toolRegistry,
-        "readFile",
-        { preserveUnknownArgs: false }
-      );
+      const args = adaptArgumentsToDeclaredTool(name, rawArgs, toolRegistry, "readFile", {
+        preserveUnknownArgs: false,
+      });
       if (toolRegistry.executedToolKeys.has(semanticToolKey(name, args))) return null;
       return { id, type: "function", function: { name, arguments: JSON.stringify(args) } };
     }
@@ -772,7 +869,9 @@ function mapGrokNativeToolToOpenAI(
   if (webSearch?.args) {
     const name = pickDeclaredToolForIntent("webSearch", toolRegistry);
     if (name) {
-      const requestedUrl = wantsUrlFetch(toolRegistry.lastUserText) ? extractFirstUrl(toolRegistry.lastUserText) : undefined;
+      const requestedUrl = wantsUrlFetch(toolRegistry.lastUserText)
+        ? extractFirstUrl(toolRegistry.lastUserText)
+        : undefined;
       const args = adaptArgumentsToDeclaredTool(
         name,
         requestedUrl ? { ...webSearch.args, url: requestedUrl, uri: requestedUrl } : webSearch.args,
@@ -785,7 +884,9 @@ function mapGrokNativeToolToOpenAI(
     }
   }
 
-  const browsePage = (card.browsePage || card.browse_page) as { args?: Record<string, unknown> } | undefined;
+  const browsePage = (card.browsePage || card.browse_page) as
+    | { args?: Record<string, unknown> }
+    | undefined;
   if (browsePage?.args) {
     const url = firstString(browsePage.args.url, browsePage.args.uri);
     const name = pickDeclaredToolForIntent("browsePage", toolRegistry);
@@ -1133,7 +1234,9 @@ async function* extractContent(
     if (resp.token != null) {
       if (resp.isThinking) {
         const thinkingDelta =
-          suppressThinkingAfterVisibleContent && emittedVisibleContent ? "" : cleanGrokThinkingText(resp);
+          suppressThinkingAfterVisibleContent && emittedVisibleContent
+            ? ""
+            : cleanGrokThinkingText(resp);
         if (thinkingDelta) yield { thinking: thinkingDelta, fingerprint, responseId };
         continue;
       }
@@ -1302,7 +1405,13 @@ function buildStreamingResponse(
           }
 
           if (chunk.toolCalls) {
-            enqueueStreamingToolCalls(controller, encoder, { id: cid, created, model, fingerprint: fp, toolCalls: chunk.toolCalls });
+            enqueueStreamingToolCalls(controller, encoder, {
+              id: cid,
+              created,
+              model,
+              fingerprint: fp,
+              toolCalls: chunk.toolCalls,
+            });
             return;
           }
 
@@ -1311,7 +1420,13 @@ function buildStreamingResponse(
           if (chunk.fullMessage) {
             const toolCalls = parseClientToolCallMarkup(chunk.fullMessage, toolRegistry);
             if (toolCalls) {
-              enqueueStreamingToolCalls(controller, encoder, { id: cid, created, model, fingerprint: fp, toolCalls });
+              enqueueStreamingToolCalls(controller, encoder, {
+                id: cid,
+                created,
+                model,
+                fingerprint: fp,
+                toolCalls,
+              });
               return;
             }
           }
@@ -1320,7 +1435,13 @@ function buildStreamingResponse(
             buffered += chunk.delta;
             const toolCalls = parseClientToolCallMarkup(buffered, toolRegistry);
             if (toolCalls) {
-              enqueueStreamingToolCalls(controller, encoder, { id: cid, created, model, fingerprint: fp, toolCalls });
+              enqueueStreamingToolCalls(controller, encoder, {
+                id: cid,
+                created,
+                model,
+                fingerprint: fp,
+                toolCalls,
+              });
               return;
             }
             if (hasOpenToolCallMarkup(buffered)) continue;
@@ -1373,7 +1494,7 @@ function buildStreamingResponse(
                 {
                   index: 0,
                   delta: {
-                    content: `[Stream error: ${err instanceof Error ? err.message : String(err)}]`,
+                    content: `[Stream error: ${sanitizeErrorMessage(err instanceof Error ? err.message : String(err))}]`,
                   },
                   finish_reason: "stop",
                   logprobs: null,
@@ -1541,7 +1662,11 @@ export class GrokWebExecutor extends BaseExecutor {
     const { modeId, isThinking } = modelInfo || MODEL_MAP.fast;
 
     // Parse OpenAI messages → single Grok message string
-    const message = buildGrokMessage(messages, toolRegistry, (body as Record<string, unknown>).tool_choice);
+    const message = buildGrokMessage(
+      messages,
+      toolRegistry,
+      (body as Record<string, unknown>).tool_choice
+    );
     if (!message.trim()) {
       const errResp = new Response(
         JSON.stringify({
@@ -1641,10 +1766,11 @@ export class GrokWebExecutor extends BaseExecutor {
       response = await fetch(GROK_CHAT_API, fetchOptions);
     } catch (err) {
       log?.error?.("GROK-WEB", `Fetch failed: ${err instanceof Error ? err.message : String(err)}`);
+      const safeMessage = sanitizeErrorMessage(err instanceof Error ? err.message : String(err));
       const errResp = new Response(
         JSON.stringify({
           error: {
-            message: `Grok connection failed: ${err instanceof Error ? err.message : String(err)}`,
+            message: `Grok connection failed: ${safeMessage}`,
             type: "upstream_error",
           },
         }),

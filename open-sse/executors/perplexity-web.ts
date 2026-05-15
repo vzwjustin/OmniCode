@@ -7,6 +7,7 @@
  */
 
 import { BaseExecutor, type ExecuteInput } from "./base.ts";
+import { sanitizeErrorMessage } from "../utils/error.ts";
 
 const PPLX_SSE_ENDPOINT = "https://www.perplexity.ai/rest/sse/perplexity_ask";
 const PPLX_API_VERSION = "client-1.11.0";
@@ -559,7 +560,7 @@ function buildStreamingResponse(
                 {
                   index: 0,
                   delta: {
-                    content: `[Stream error: ${err instanceof Error ? err.message : String(err)}]`,
+                    content: `[Stream error: ${sanitizeErrorMessage(err instanceof Error ? err.message : String(err))}]`,
                   },
                   finish_reason: "stop",
                   logprobs: null,
@@ -734,10 +735,11 @@ export class PerplexityWebExecutor extends BaseExecutor {
       response = await fetch(PPLX_SSE_ENDPOINT, fetchOptions);
     } catch (err) {
       log?.error?.("PPLX-WEB", `Fetch failed: ${err instanceof Error ? err.message : String(err)}`);
+      const safeMessage = sanitizeErrorMessage(err instanceof Error ? err.message : String(err));
       const errResp = new Response(
         JSON.stringify({
           error: {
-            message: `Perplexity connection failed: ${err instanceof Error ? err.message : String(err)}`,
+            message: `Perplexity connection failed: ${safeMessage}`,
             type: "upstream_error",
           },
         }),

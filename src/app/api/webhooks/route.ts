@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { getWebhooks, createWebhook } from "@/lib/localDb";
 import { validateBody, isValidationFailure } from "@/shared/validation/helpers";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
+import { buildErrorBody } from "@omniroute/open-sse/utils/error";
 
 const createWebhookSchema = z.object({
   url: z.string().url("Invalid URL format").max(2000),
@@ -30,10 +31,9 @@ export async function GET(request: Request) {
     }));
     return NextResponse.json({ webhooks: masked });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to list webhooks" },
-      { status: 500 }
-    );
+    return NextResponse.json(buildErrorBody(500, error?.message || "Failed to list webhooks"), {
+      status: 500,
+    });
   }
 }
 
@@ -58,9 +58,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ webhook }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to create webhook" },
-      { status: 500 }
-    );
+    return NextResponse.json(buildErrorBody(500, error?.message || "Failed to create webhook"), {
+      status: 500,
+    });
   }
 }

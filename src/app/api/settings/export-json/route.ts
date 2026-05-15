@@ -6,7 +6,11 @@ import {
   getCombos,
   getApiKeys,
 } from "@/lib/localDb";
-import { getDbInstance } from "@/lib/db/core";
+import {
+  exportUsageHistory,
+  exportDomainCostHistory,
+  exportDomainBudgets,
+} from "@/lib/db/historyExport";
 import { isAuthRequired, isAuthenticated } from "@/shared/utils/apiAuth";
 
 /**
@@ -56,10 +60,9 @@ export async function GET(request: Request) {
     // These tables (usage_history, domain_cost_history, domain_budgets) can contain
     // thousands of rows and make the config backup grow to many MBs.
     if (includeHistory) {
-      const db = getDbInstance();
-      exportData.usageHistory = db.prepare("SELECT * FROM usage_history").all();
-      exportData.domainCostHistory = db.prepare("SELECT * FROM domain_cost_history").all();
-      exportData.domainBudgets = db.prepare("SELECT * FROM domain_budgets").all();
+      exportData.usageHistory = exportUsageHistory();
+      exportData.domainCostHistory = exportDomainCostHistory();
+      exportData.domainBudgets = exportDomainBudgets();
     }
 
     return new NextResponse(JSON.stringify(exportData, null, 2), {

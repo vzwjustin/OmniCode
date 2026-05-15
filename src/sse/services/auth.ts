@@ -866,7 +866,12 @@ export async function getProviderCredentials(
           lastErrorType: null,
           lastErrorSource: null,
           errorCode: null,
-        }).catch(() => {});
+        }).catch((err) => {
+          log.warn(
+            "AUTH",
+            `Failed to decay backoffLevel for connection ${c.id}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
       }
     }
 
@@ -1476,7 +1481,12 @@ export async function markAccountUnavailable(
         lastError: `Model ${model} ${reason}`,
         lastErrorAt: new Date().toISOString(),
         errorCode: status,
-      }).catch(() => {});
+      }).catch((err) => {
+        log.warn(
+          "AUTH",
+          `Failed to record model lockout error for ${connectionId}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      });
       log.info(
         "AUTH",
         `Model-only lockout for ${provider}:${model} — ${status} ${reason} ${Math.ceil(lockout.cooldownMs / 1000)}s (failureCount=${lockout.failureCount}, connection stays active)`
@@ -1503,7 +1513,12 @@ export async function markAccountUnavailable(
         lastError: `Mode ${model} forbidden for this Grok account`,
         lastErrorAt: new Date().toISOString(),
         errorCode: status,
-      }).catch(() => {});
+      }).catch((err) => {
+        log.warn(
+          "AUTH",
+          `Failed to record Grok mode lockout for ${connectionId}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      });
       log.info(
         "AUTH",
         `Mode-only lockout for ${provider}:${model} — 403 forbidden ${Math.ceil(lockout.cooldownMs / 1000)}s (connection stays active)`
@@ -1543,7 +1558,12 @@ export async function markAccountUnavailable(
         lastError: `Model ${model} not_found`,
         lastErrorAt: new Date().toISOString(),
         errorCode: status,
-      }).catch(() => {});
+      }).catch((err) => {
+        log.warn(
+          "AUTH",
+          `Failed to record local-provider 404 for ${connectionId}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      });
       log.info(
         "AUTH",
         `Model-only lockout for ${provider}:${model} — 404 not_found ${Math.ceil(lockout.cooldownMs / 1000)}s (failureCount=${lockout.failureCount}, connection stays active)`

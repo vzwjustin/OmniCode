@@ -3,7 +3,7 @@ import {
   SEARCH_PROVIDERS,
   SEARCH_CREDENTIAL_FALLBACKS,
 } from "@omniroute/open-sse/config/searchRegistry.ts";
-import { getDbInstance } from "@/lib/db/core";
+import { getProviderConnections } from "@/lib/db/providers";
 import { isAuthenticated } from "@/shared/utils/apiAuth";
 
 export async function GET(request: Request) {
@@ -11,36 +11,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const db = getDbInstance();
-    const providers = Object.values(SEARCH_PROVIDERS).map((p) => {
-      let status: "active" | "no_credentials" = "no_credentials";
-      try {
-        const cred = db
-          .prepare(
-            "SELECT id FROM provider_connections WHERE provider = ? AND is_active = 1 LIMIT 1"
-          )
-          .get(p.id);
-        // Use canonical fallback mapping (e.g. perplexity-search → perplexity)
-        const fallbackId = SEARCH_CREDENTIAL_FALLBACKS[p.id];
-        const fallbackCred =
-          !cred && fallbackId
-            ? db
-                .prepare(
-                  "SELECT id FROM provider_connections WHERE provider = ? AND is_active = 1 LIMIT 1"
-                )
-                .get(fallbackId)
-            : null;
-        if (cred || fallbackCred) status = "active";
-      } catch {
-        // DB error — report as no_credentials
-      }
-      return {
-        id: p.id,
-        name: p.name,
-        status,
-        cost_per_query: p.costPerQuery,
-      };
-    });
+    const providers = await Promise.all(
+      Object.values(SEARCH_PROVIDERS).map(async (p) => {
+        let status: "active" | "no_credentials" = "no_credentials";
+        try {
+          const cred = (await getProviderConnections({ provider: p.id, isActive: true }))[0];
+          const fallbackId = SEARCH_CREDENTIAL_FALLBACKS[p.id];
+          const fallbackCred =
+            !cred && fallbackId
+              ? (await getProviderConnections({ provider: fallbackId, isActive: true }))[0]
+              : null;
+          if (cred || fallbackCred) status = "active";
+        } catch {
+          // DB error — report as no_credentials
+        }
+        return {
+          id: p.id,
+          name: p.name,
+          status,
+          cost_per_query: p.costPerQuery,
+        };
+      })
+    );
 
     return NextResponse.json({ providers });
   } catch (error) {

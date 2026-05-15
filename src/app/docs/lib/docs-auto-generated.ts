@@ -27,7 +27,7 @@ export const autoNavSections: AutoGenNavSection[] = [
     items: [
       {
         slug: "architecture",
-        title: "OmniCoder Architecture",
+        title: "OmniRoute Architecture",
         fileName: "architecture/ARCHITECTURE.md",
       },
       {
@@ -37,7 +37,7 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "codebase-documentation",
-        title: "OmniCoder Codebase Documentation",
+        title: "OmniCode Codebase Documentation",
         fileName: "architecture/CODEBASE_DOCUMENTATION.md",
       },
       {
@@ -57,7 +57,7 @@ export const autoNavSections: AutoGenNavSection[] = [
     items: [
       {
         slug: "docker-guide",
-        title: "🐳 Docker Guide — OmniCoder",
+        title: "🐳 Docker Guide — OmniCode",
         fileName: "guides/DOCKER_GUIDE.md",
       },
       {
@@ -67,7 +67,7 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "features",
-        title: "OmniCoder — Dashboard Features Gallery",
+        title: "OmniCode — Dashboard Features Gallery",
         fileName: "guides/FEATURES.md",
       },
       {
@@ -82,7 +82,7 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "setup-guide",
-        title: "📖 Setup Guide — OmniCoder",
+        title: "📖 Setup Guide — OmniCode",
         fileName: "guides/SETUP_GUIDE.md",
       },
       {
@@ -97,7 +97,7 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "uninstall",
-        title: "OmniCoder — Uninstall Guide",
+        title: "OmniCode — Uninstall Guide",
         fileName: "guides/UNINSTALL.md",
       },
       {
@@ -117,7 +117,7 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "cli-tools",
-        title: "CLI Tools — OmniCoder v3.8.0",
+        title: "CLI Tools — OmniCode v3.8.0",
         fileName: "reference/CLI-TOOLS.md",
       },
       {
@@ -142,7 +142,7 @@ export const autoNavSections: AutoGenNavSection[] = [
     items: [
       {
         slug: "a2a-server",
-        title: "OmniCoder A2A Server Documentation",
+        title: "OmniCode A2A Server Documentation",
         fileName: "frameworks/A2A-SERVER.md",
       },
       {
@@ -162,7 +162,7 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "mcp-server",
-        title: "OmniCoder MCP Server Documentation",
+        title: "OmniCode MCP Server Documentation",
         fileName: "frameworks/MCP-SERVER.md",
       },
       {
@@ -187,7 +187,7 @@ export const autoNavSections: AutoGenNavSection[] = [
     items: [
       {
         slug: "auto-combo",
-        title: "OmniCoder Auto-Combo Engine",
+        title: "OmniCode Auto-Combo Engine",
         fileName: "routing/AUTO-COMBO.md",
       },
       {
@@ -206,9 +206,19 @@ export const autoNavSections: AutoGenNavSection[] = [
         fileName: "security/COMPLIANCE.md",
       },
       {
+        slug: "error-sanitization",
+        title: "Error Message Sanitization",
+        fileName: "security/ERROR_SANITIZATION.md",
+      },
+      {
         slug: "guardrails",
         title: "Guardrails",
         fileName: "security/GUARDRAILS.md",
+      },
+      {
+        slug: "public-creds",
+        title: "Public Credentials Handling",
+        fileName: "security/PUBLIC_CREDS.md",
       },
       {
         slug: "stealth-guide",
@@ -227,7 +237,7 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "compression-guide",
-        title: "🗜️ Prompt Compression Guide — OmniCoder",
+        title: "🗜️ Prompt Compression Guide — OmniCode",
         fileName: "compression/COMPRESSION_GUIDE.md",
       },
       {
@@ -257,12 +267,12 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "fly-io-deployment-guide",
-        title: "OmniCoder Fly.io 部署指南",
+        title: "OmniCode Fly.io 部署指南",
         fileName: "ops/FLY_IO_DEPLOYMENT_GUIDE.md",
       },
       {
         slug: "proxy-guide",
-        title: "🌐 OmniCoder Proxy Guide",
+        title: "🌐 OmniCode Proxy Guide",
         fileName: "ops/PROXY_GUIDE.md",
       },
       {
@@ -277,7 +287,7 @@ export const autoNavSections: AutoGenNavSection[] = [
       },
       {
         slug: "vm-deployment-guide",
-        title: "OmniCoder — Deployment Guide on VM with Cloudflare",
+        title: "OmniCode — Deployment Guide on VM with Cloudflare",
         fileName: "ops/VM_DEPLOYMENT_GUIDE.md",
       },
     ],
@@ -287,7 +297,7 @@ export const autoNavSections: AutoGenNavSection[] = [
 export const autoSearchIndex: AutoGenSearchItem[] = [
   {
     slug: "architecture",
-    title: "OmniCoder Architecture",
+    title: "OmniRoute Architecture",
     fileName: "architecture/ARCHITECTURE.md",
     section: "Architecture",
     content:
@@ -311,7 +321,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "architecture/AUTHZ_GUIDE.md",
     section: "Architecture",
     content:
-      "Source of truth: src/server/authz/, src/shared/constants/publicApiRoutes.ts, src/lib/api/requireManagementAuth.ts, src/shared/utils/apiAuth.ts Last updated: 2026-05-13 — v3.8.0 OmniCoder has a route-aware authorization pipeline that gates every API request. Classification is deterministic and fail-c",
+      "Source of truth: src/server/authz/, src/shared/constants/publicApiRoutes.ts, src/lib/api/requireManagementAuth.ts, src/shared/utils/apiAuth.ts Last updated: 2026-05-13 — v3.8.0 OmniCode has a route-aware authorization pipeline that gates every API request. Classification is deterministic and fail-cl",
     headings: [
       "Two Auth Modes",
       "1. API Key (Bearer)",
@@ -327,11 +337,11 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "codebase-documentation",
-    title: "OmniCoder Codebase Documentation",
+    title: "OmniCode Codebase Documentation",
     fileName: "architecture/CODEBASE_DOCUMENTATION.md",
     section: "Architecture",
     content:
-      "Version: v3.8.0 Last updated: 2026-05-13 Audience: Engineers contributing to OmniCoder or building integrations on top of it. For high-level architecture diagrams and the reasoning behind each subsystem, read ARCHITECTURE.md. For deep dives on individual subsystems (Auto Combo, MCP server, A2A serve",
+      "Version: v3.8.0 Last updated: 2026-05-13 Audience: Engineers contributing to OmniCode or building integrations on top of it. For high-level architecture diagrams and the reasoning behind each subsystem, read ARCHITECTURE.md. For deep dives on individual subsystems (Auto Combo, MCP server, A2A server",
     headings: [
       "1. Tech Stack",
       "2. Repository Layout",
@@ -351,7 +361,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "architecture/REPOSITORY_MAP.md",
     section: "Architecture",
     content:
-      "One-line description for every directory and root file. Last updated: 2026-05-13 — OmniCoder v3.8.0 Use this map to navigate the codebase quickly. For deep dives, follow links to dedicated docs. ---------------------------------------- ----------------------------------------------------------------",
+      "One-line description for every directory and root file. Last updated: 2026-05-13 — OmniCode v3.8.0 Use this map to navigate the codebase quickly. For deep dives, follow links to dedicated docs. ---------------------------------------- -----------------------------------------------------------------",
     headings: [
       "Top-level tree",
       "Root files",
@@ -371,7 +381,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "architecture/RESILIENCE_GUIDE.md",
     section: "Architecture",
     content:
-      "OmniCoder has three distinct but related resilience mechanisms. Each has a different scope and purpose. Keep them separate when debugging routing behavior. Source: diagrams/resilience-3layers.mmd Scope: entire provider (e.g., glm, openai, anthropic). Purpose: stop sending traffic to a provider that ",
+      "OmniCode has three distinct but related resilience mechanisms. Each has a different scope and purpose. Keep them separate when debugging routing behavior. Source: diagrams/resilience-3layers.mmd Scope: entire provider (e.g., glm, openai, anthropic). Purpose: stop sending traffic to a provider that i",
     headings: [
       "1. Provider Circuit Breaker",
       "2. Connection Cooldown",
@@ -385,22 +395,22 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "docker-guide",
-    title: "🐳 Docker Guide — OmniCoder",
+    title: "🐳 Docker Guide — OmniCode",
     fileName: "guides/DOCKER_GUIDE.md",
     section: "Guides",
     content:
-      "Complete Docker deployment reference. For a quick start, see the README Docker section. - Quick Run - With Environment File - Docker Compose - Available Profiles - Redis Sidecar - Production Compose - Dockerfile Stages - Critical Environment Variables - Docker Compose with Caddy (HTTPS) - Cloudflare",
+      "Complete Docker deployment reference. For a quick start, see the README Docker section. - Quick Run - With Environment File - Docker Compose - Available Profiles - Production Compose - Dockerfile Stages - Critical Environment Variables - Docker Compose with Caddy (HTTPS) - Cloudflare Quick Tunnel - ",
     headings: [
       "Table of Contents",
       "Quick Run",
       "With Environment File",
       "Docker Compose",
       "Available Profiles",
-      "Redis Sidecar",
       "Production Compose",
       "Dockerfile Stages",
       "Critical Environment Variables",
       "Docker Compose with Caddy (HTTPS Auto-TLS)",
+      "Cloudflare Quick Tunnel",
     ],
   },
   {
@@ -409,7 +419,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "guides/ELECTRON_GUIDE.md",
     section: "Guides",
     content:
-      "Source of truth: electron/ workspace Last updated: 2026-05-13 — v3.8.0 OmniCoder ships a cross-platform desktop app (Windows / macOS / Linux) built on Electron 41 + electron-builder 26.10. The desktop app spawns the Next.js standalone server as a child process, points a BrowserWindow at it, and adds",
+      "Source of truth: electron/ workspace Last updated: 2026-05-13 — v3.8.0 OmniCode ships a cross-platform desktop app (Windows / macOS / Linux) built on Electron 41 + electron-builder 26.10. The desktop app spawns the Next.js standalone server as a child process, points a BrowserWindow at it, and adds ",
     headings: [
       "Architecture",
       "Versions",
@@ -425,7 +435,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "features",
-    title: "OmniCoder — Dashboard Features Gallery",
+    title: "OmniCode — Dashboard Features Gallery",
     fileName: "guides/FEATURES.md",
     section: "Guides",
     content:
@@ -449,7 +459,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "guides/I18N.md",
     section: "Guides",
     content:
-      "OmniCoder supports 30 languages with full dashboard UI translation, translated documentation, and RTL support for Arabic and Hebrew. 🌐 Languages: 🇺🇸 English 🇧🇷 Português (Brasil) 🇪🇸 Español 🇫🇷 Français 🇩🇪 Deutsch 🇮🇹 Italiano 🇷🇺 Русский 🇨🇳 中文 (简体) 🇯🇵 日本語 🇰🇷 한국어 🇸🇦 العربية 🇮🇳 ",
+      "OmniCode supports 30 languages with full dashboard UI translation, translated documentation, and RTL support for Arabic and Hebrew. 🌐 Languages: 🇺🇸 English 🇧🇷 Português (Brasil) 🇪🇸 Español 🇫🇷 Français 🇩🇪 Deutsch 🇮🇹 Italiano 🇷🇺 Русский 🇨🇳 中文 (简体) 🇯🇵 日本語 🇰🇷 한국어 🇸🇦 العربية 🇮🇳 ह",
     headings: [
       "Translation pipeline (recommended — v3.8.0)",
       "Legacy scripts (deprecated)",
@@ -469,7 +479,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "guides/PWA_GUIDE.md",
     section: "Guides",
     content:
-      'OmniCoder ships as a fully installable Progressive Web App. When you access the dashboard from any mobile browser — Android (Chrome) or iOS (Safari) — you can "Add to Home Screen" and get a native app-like experience with no app store required. A Progressive Web App turns the OmniCoder web dashboard',
+      'OmniCode ships as a fully installable Progressive Web App. When you access the dashboard from any mobile browser — Android (Chrome) or iOS (Safari) — you can "Add to Home Screen" and get a native app-like experience with no app store required. A Progressive Web App turns the OmniCode web dashboard i',
     headings: [
       "What Is a PWA?",
       "Installation",
@@ -485,11 +495,11 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "setup-guide",
-    title: "📖 Setup Guide — OmniCoder",
+    title: "📖 Setup Guide — OmniCode",
     fileName: "guides/SETUP_GUIDE.md",
     section: "Guides",
     content:
-      "Complete setup reference for OmniCoder. For the quick version, see the Quick Start in README. - Install Methods - CLI Tool Configuration - Protocol Setup (MCP + A2A) - Timeout Configuration - Split-Port Mode - Void Linux (xbps-src) - Uninstalling -------------------- --------------------------------",
+      "Complete setup reference for OmniCode. For the quick version, see the Quick Start in README. - Install Methods - CLI Tool Configuration - Protocol Setup (MCP + A2A) - Timeout Configuration - Split-Port Mode - Void Linux (xbps-src) - Uninstalling -------------------- ---------------------------------",
     headings: [
       "Table of Contents",
       "Install Methods",
@@ -509,7 +519,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "guides/TERMUX_GUIDE.md",
     section: "Guides",
     content:
-      "OmniCoder can run as a headless server on Android through Termux. The Electron desktop app is not supported in Termux, but the web dashboard and OpenAI-compatible API work from the local browser or from other devices on the same network. Install Termux from F-Droid or GitHub releases, then update pa",
+      "OmniCode can run as a headless server on Android through Termux. The Electron desktop app is not supported in Termux, but the web dashboard and OpenAI-compatible API work from the local browser or from other devices on the same network. Install Termux from F-Droid or GitHub releases, then update pac",
     headings: [
       "Prerequisites",
       "Install",
@@ -545,7 +555,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "uninstall",
-    title: "OmniCoder — Uninstall Guide",
+    title: "OmniCode — Uninstall Guide",
     fileName: "guides/UNINSTALL.md",
     section: "Guides",
     content:
@@ -605,18 +615,18 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "cli-tools",
-    title: "CLI Tools — OmniCoder v3.8.0",
+    title: "CLI Tools — OmniCode v3.8.0",
     fileName: "reference/CLI-TOOLS.md",
     section: "Reference",
     content:
-      "Last updated: 2026-05-13 OmniCoder integrates with two categories of CLI tools: 1. External CLI integrations — third-party CLIs (Cursor, Cline, Codex, Claude Code, Qwen Code, Windsurf, Hermes, Amp, etc.) that you point at OmniCoder's local OpenAI-compatible endpoint. 2. Internal OmniCoder CLI — comm",
+      "Last updated: 2026-05-13 OmniCode integrates with two categories of CLI tools: 1. External CLI integrations — third-party CLIs (Cursor, Cline, Codex, Claude Code, Qwen Code, Windsurf, Hermes, Amp, etc.) that you point at OmniCode's local OpenAI-compatible endpoint. 2. Internal OmniCode CLI — command",
     headings: [
       "How It Works",
       "1. External CLI Integrations",
       "Source of Truth",
       "Current Catalog (v3.8.0)",
       "CLI fingerprint sync (Agents + Settings)",
-      "Step 1 — Get an OmniCoder API Key",
+      "Step 1 — Get an OmniCode API Key",
       "Step 2 — Install CLI Tools",
       "Step 3 — Set Global Environment Variables",
       "Step 4 — Configure Each Tool",
@@ -629,7 +639,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "reference/ENVIRONMENT.md",
     section: "Reference",
     content:
-      "Complete reference for every environment variable recognized by OmniCoder. For a quick-start template, see .env.example. [!IMPORTANT] Every variable documented here must also appear in .env.example, and every variable in .env.example must appear here. npm run check:env-doc-sync enforces this on comm",
+      "Complete reference for every environment variable recognized by OmniCode. For a quick-start template, see .env.example. [!IMPORTANT] Every variable documented here must also appear in .env.example, and every variable in .env.example must appear here. npm run check:env-doc-sync enforces this on commi",
     headings: [
       "Table of Contents",
       "1. Required Secrets",
@@ -649,7 +659,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "reference/FREE_TIERS.md",
     section: "Reference",
     content:
-      "Last consolidated: 2026-05-13 — OmniCoder v3.8.0 Source of truth: src/shared/constants/providers.ts (FREEPROVIDERS, OAUTHPROVIDERS, and APIKEYPROVIDERS entries flagged with hasFree: true + freeNote) This page lists providers with usable free tiers shipped in OmniCoder v3.8.0. The data is derived fro",
+      "Last consolidated: 2026-05-13 — OmniCode v3.8.0 Source of truth: src/shared/constants/providers.ts (FREEPROVIDERS, OAUTHPROVIDERS, and APIKEYPROVIDERS entries flagged with hasFree: true + freeNote) This page lists providers with usable free tiers shipped in OmniCode v3.8.0. The data is derived from ",
     headings: [
       "How free providers are wired",
       "Quick reference (API key providers with hasFree: true)",
@@ -685,11 +695,11 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "a2a-server",
-    title: "OmniCoder A2A Server Documentation",
+    title: "OmniCode A2A Server Documentation",
     fileName: "frameworks/A2A-SERVER.md",
     section: "Frameworks",
     content:
-      "Agent-to-Agent Protocol v0.3 — OmniCoder as an intelligent routing agent The A2A surface has two faces: - JSON-RPC 2.0 at POST /a2a (canonical entry point, defined in src/app/a2a/route.ts). - REST under /api/a2a/ for dashboards and tooling (status, task list, cancel). Tasks are tracked by A2ATaskMan",
+      "Agent-to-Agent Protocol v0.3 — OmniCode as an intelligent routing agent The A2A surface has two faces: - JSON-RPC 2.0 at POST /a2a (canonical entry point, defined in src/app/a2a/route.ts). - REST under /api/a2a/ for dashboards and tooling (status, task list, cancel). Tasks are tracked by A2ATaskMana",
     headings: [
       "Agent Discovery",
       "Authentication",
@@ -709,7 +719,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "frameworks/AGENT_PROTOCOLS_GUIDE.md",
     section: "Frameworks",
     content:
-      "Source: src/lib/{a2a,acp,cloudAgent}/, src/app/api/{a2a,acp,cloud}/, src/app/api/v1/agents/ Last updated: 2026-05-13 — v3.8.0 OmniCoder exposes three different agent-related surfaces. They look similar at first glance but solve different problems. Use this page to pick the right one. Surface Best fo",
+      "Source: src/lib/{a2a,acp,cloudAgent}/, src/app/api/{a2a,acp,cloud}/, src/app/api/v1/agents/ Last updated: 2026-05-13 — v3.8.0 OmniCode exposes three different agent-related surfaces. They look similar at first glance but solve different problems. Use this page to pick the right one. Surface Best for",
     headings: [
       "TL;DR",
       "Decision Tree",
@@ -729,7 +739,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "frameworks/CLOUD_AGENT.md",
     section: "Frameworks",
     content:
-      "Source of truth: src/lib/cloudAgent/ and src/app/api/v1/agents/tasks/ Last updated: 2026-05-13 — v3.8.0 OmniCoder orchestrates third-party cloud-hosted coding agents (Codex Cloud, Devin, Jules) as long-running tasks. Each agent is wrapped behind a uniform interface so clients can submit a prompt + r",
+      "Source of truth: src/lib/cloudAgent/ and src/app/api/v1/agents/tasks/ Last updated: 2026-05-13 — v3.8.0 OmniCode orchestrates third-party cloud-hosted coding agents (Codex Cloud, Devin, Jules) as long-running tasks. Each agent is wrapped behind a uniform interface so clients can submit a prompt + re",
     headings: [
       "Supported Agents",
       "Architecture",
@@ -749,7 +759,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "frameworks/EVALS.md",
     section: "Frameworks",
     content:
-      'Source of truth: src/lib/evals/, src/lib/db/evals.ts, src/app/api/evals/ Last updated: 2026-05-13 — v3.8.0 OmniCoder ships a generic evaluation framework you can use to benchmark routing configurations, single providers/models, or the bundled "golden set" suites. Use it to verify routing changes, va',
+      'Source of truth: src/lib/evals/, src/lib/db/evals.ts, src/app/api/evals/ Last updated: 2026-05-13 — v3.8.0 OmniCode ships a generic evaluation framework you can use to benchmark routing configurations, single providers/models, or the bundled "golden set" suites. Use it to verify routing changes, val',
     headings: [
       "Concepts",
       "Suite",
@@ -765,7 +775,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "mcp-server",
-    title: "OmniCoder MCP Server Documentation",
+    title: "OmniCode MCP Server Documentation",
     fileName: "frameworks/MCP-SERVER.md",
     section: "Frameworks",
     content:
@@ -789,7 +799,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "frameworks/MEMORY.md",
     section: "Frameworks",
     content:
-      "Source of truth: src/lib/memory/ and src/app/api/memory/ Last updated: 2026-05-13 — v3.8.0 OmniCoder provides persistent conversational memory keyed by API key (and optionally session id). Memories are extracted automatically from LLM responses via lightweight regex pattern matching and injected bac",
+      "Source of truth: src/lib/memory/ and src/app/api/memory/ Last updated: 2026-05-13 — v3.8.0 OmniCode provides persistent conversational memory keyed by API key (and optionally session id). Memories are extracted automatically from LLM responses via lightweight regex pattern matching and injected back",
     headings: [
       "Architecture",
       "Storage Layers",
@@ -809,7 +819,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "frameworks/SKILLS.md",
     section: "Frameworks",
     content:
-      "Source of truth: src/lib/skills/ and src/app/api/skills/ Last updated: 2026-05-13 — v3.8.0 OmniCoder exposes an extensible Skills framework that lets language models (and operators) compose reusable capabilities — from filesystem reads and HTTP requests to sandboxed code execution and curated market",
+      "Source of truth: src/lib/skills/ and src/app/api/skills/ Last updated: 2026-05-13 — v3.8.0 OmniCode exposes an extensible Skills framework that lets language models (and operators) compose reusable capabilities — from filesystem reads and HTTP requests to sandboxed code execution and curated marketp",
     headings: [
       "Concepts",
       "Skill Sources",
@@ -829,7 +839,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "frameworks/WEBHOOKS.md",
     section: "Frameworks",
     content:
-      "Source of truth: src/lib/webhookDispatcher.ts, src/lib/db/webhooks.ts, src/app/api/webhooks/ Last updated: 2026-05-13 — v3.8.0 OmniCoder can fire HTTP webhooks on platform events. Use them to integrate with Slack, PagerDuty, Datadog, internal alerting services, or any HTTP receiver. The dispatcher s",
+      "Source of truth: src/lib/webhookDispatcher.ts, src/lib/db/webhooks.ts, src/app/api/webhooks/ Last updated: 2026-05-13 — v3.8.0 OmniCode can fire HTTP webhooks on platform events. Use them to integrate with Slack, PagerDuty, Datadog, internal alerting services, or any HTTP receiver. The dispatcher si",
     headings: [
       "Supported Events",
       "Architecture",
@@ -845,7 +855,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "auto-combo",
-    title: "OmniCoder Auto-Combo Engine",
+    title: "OmniCode Auto-Combo Engine",
     fileName: "routing/AUTO-COMBO.md",
     section: "Routing",
     content:
@@ -869,7 +879,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "routing/REASONING_REPLAY.md",
     section: "Routing",
     content:
-      "Source of truth: src/lib/db/reasoningCache.ts, open-sse/services/reasoningCache.ts Last updated: 2026-05-13 — v3.8.0 OmniCoder captures assistant reasoningcontent produced by thinking-mode models and replays it transparently on multi-turn requests when the upstream provider requires it. This elimina",
+      "Source of truth: src/lib/db/reasoningCache.ts, open-sse/services/reasoningCache.ts Last updated: 2026-05-13 — v3.8.0 OmniCode captures assistant reasoningcontent produced by thinking-mode models and replays it transparently on multi-turn requests when the upstream provider requires it. This eliminat",
     headings: [
       "Why This Exists",
       "Architecture",
@@ -887,7 +897,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "security/COMPLIANCE.md",
     section: "Security",
     content:
-      "Source of truth: src/lib/compliance/, src/app/api/compliance/ Last updated: 2026-05-13 — v3.8.0 OmniCoder records administrative actions, authentication events, provider credential lifecycle changes, and MCP tool invocations to SQLite-backed audit tables. This page covers what gets logged, where it ",
+      "Source of truth: src/lib/compliance/, src/app/api/compliance/ Last updated: 2026-05-13 — v3.8.0 OmniCode records administrative actions, authentication events, provider credential lifecycle changes, and MCP tool invocations to SQLite-backed audit tables. This page covers what gets logged, where it l",
     headings: [
       "What Gets Logged",
       "Administrative audit events (audit_log)",
@@ -902,12 +912,31 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     ],
   },
   {
+    slug: "error-sanitization",
+    title: "Error Message Sanitization",
+    fileName: "security/ERROR_SANITIZATION.md",
+    section: "Security",
+    content:
+      "Source of truth: open-sse/utils/error.ts — sanitizeErrorMessage, buildErrorBody, createErrorResult Tests: tests/unit/error-message-sanitization.test.ts Last updated: 2026-05-14 — v3.8.0 Audience: Any engineer touching error responses (HTTP routes, SSE streams, executors, MCP handlers). Status: MANDA",
+    headings: [
+      "Why this exists",
+      "The mandatory pattern",
+      "1. Building an error response (HTTP / API routes)",
+      "2. Custom error envelopes (rare)",
+      "3. Logging vs. responding",
+      "4. Forbidden patterns",
+      "Coverage in CI",
+      "Related controls",
+      "References",
+    ],
+  },
+  {
     slug: "guardrails",
     title: "Guardrails",
     fileName: "security/GUARDRAILS.md",
     section: "Security",
     content:
-      "Source of truth: src/lib/guardrails/ Last updated: 2026-05-13 — v3.8.0 Guardrails enforce safety, policy, and content transformations at the boundary between OmniCoder and upstream providers. Each guardrail can inspect (and optionally reject, transform, or annotate) request payloads (preCall) and up",
+      "Source of truth: src/lib/guardrails/ Last updated: 2026-05-13 — v3.8.0 Guardrails enforce safety, policy, and content transformations at the boundary between OmniCode and upstream providers. Each guardrail can inspect (and optionally reject, transform, or annotate) request payloads (preCall) and ups",
     headings: [
       "Built-in Guardrails",
       "Vision Bridge (visionBridge.ts)",
@@ -919,6 +948,24 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
       "Execution Order",
       "Configuration",
       "Custom Guardrails",
+    ],
+  },
+  {
+    slug: "public-creds",
+    title: "Public Credentials Handling",
+    fileName: "security/PUBLIC_CREDS.md",
+    section: "Security",
+    content:
+      "Source of truth: open-sse/utils/publicCreds.ts Tests: tests/unit/publicCreds.test.ts Last updated: 2026-05-14 — v3.8.0 Audience: Engineers integrating providers that ship public OAuth clientid / clientsecret / Firebase Web API keys in their public CLIs. Status: MANDATORY for all new code that embeds",
+    headings: [
+      "Why this exists",
+      "The mandatory pattern",
+      "1. Adding a new public credential",
+      "2. Consumers",
+      "3. Forbidden patterns",
+      "Related controls",
+      "When NOT to use this helper",
+      "References",
     ],
   },
   {
@@ -947,7 +994,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "compression/COMPRESSION_ENGINES.md",
     section: "Compression",
     content:
-      "OmniCoder compression is built around engine contracts. A mode can run one engine directly (caveman or rtk) or a deterministic stacked pipeline that executes multiple engines in order. Mode Engine path Intended input ------------ ---------------------------------- -----------------------------------",
+      "OmniCode compression is built around engine contracts. A mode can run one engine directly (caveman or rtk) or a deterministic stacked pipeline that executes multiple engines in order. Mode Engine path Intended input ------------ ---------------------------------- ------------------------------------",
     headings: [
       "Modes",
       "Engine Registry",
@@ -963,11 +1010,11 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "compression-guide",
-    title: "🗜️ Prompt Compression Guide — OmniCoder",
+    title: "🗜️ Prompt Compression Guide — OmniCode",
     fileName: "compression/COMPRESSION_GUIDE.md",
     section: "Compression",
     content:
-      "Save 15-95% on eligible context automatically. For a quick overview, see the README Compression section. OmniCoder implements a modular prompt compression pipeline that runs proactively before requests hit upstream providers. This means your token savings happen transparently — no changes needed to ",
+      "Save 15-95% on eligible context automatically. For a quick overview, see the README Compression section. OmniCode implements a modular prompt compression pipeline that runs proactively before requests hit upstream providers. This means your token savings happen transparently — no changes needed to y",
     headings: [
       "Overview",
       "Compression Modes",
@@ -1019,7 +1066,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "compression/RTK_COMPRESSION.md",
     section: "Compression",
     content:
-      "RTK compression is OmniCoder's command-aware compression engine for terminal and tool output. It is designed for coding-agent sessions where most context growth comes from test logs, build output, package manager noise, shell transcripts, Docker output, git output, and stack traces. RTK can run dire",
+      "RTK compression is OmniCode's command-aware compression engine for terminal and tool output. It is designed for coding-agent sessions where most context growth comes from test logs, build output, package manager noise, shell transcripts, Docker output, git output, and stack traces. RTK can run direc",
     headings: [
       "What It Compresses",
       "Filter Resolution",
@@ -1053,11 +1100,11 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "fly-io-deployment-guide",
-    title: "OmniCoder Fly.io 部署指南",
+    title: "OmniCode Fly.io 部署指南",
     fileName: "ops/FLY_IO_DEPLOYMENT_GUIDE.md",
     section: "Ops",
     content:
-      "本文档记录 OmniCoder 在 Fly.io 上的实际部署方法，适用于两类场景： - 首次把当前项目部署到 Fly.io - 后续代码更新后继续发布 - 新项目参考同样流程部署 本文基于当前项目已经验证通过的配置整理，应用名为 omniroute。 当前仓库中的 fly.toml 已确认包含以下关键项： 说明： - app = 'omniroute' 决定实际部署到哪个 Fly 应用 - destination = '/data' 决定持久卷挂载目录 - 本项目必须让 DATADIR=/data，否则数据库和密钥会写到容器临时目录 --- Windows PowerShell： 如果安装脚",
+      "本文档记录 OmniCode 在 Fly.io 上的实际部署方法，适用于两类场景： - 首次把当前项目部署到 Fly.io - 后续代码更新后继续发布 - 新项目参考同样流程部署 本文基于当前项目已经验证通过的配置整理，应用名为 omniroute。 当前仓库中的 fly.toml 已确认包含以下关键项： 说明： - app = 'omniroute' 决定实际部署到哪个 Fly 应用 - destination = '/data' 决定持久卷挂载目录 - 本项目必须让 DATADIR=/data，否则数据库和密钥会写到容器临时目录 --- Windows PowerShell： 如果安装脚本",
     headings: [
       "1. 部署目标",
       "2. 当前项目关键配置",
@@ -1073,11 +1120,11 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "proxy-guide",
-    title: "🌐 OmniCoder Proxy Guide",
+    title: "🌐 OmniCode Proxy Guide",
     fileName: "ops/PROXY_GUIDE.md",
     section: "Ops",
     content:
-      "Bypass geographic blocks, protect your identity, and route AI traffic through any proxy — with zero configuration complexity. OmniCoder includes a full-featured proxy management system that lets you route upstream AI provider traffic through HTTP, HTTPS, or SOCKS5 proxies. Whether you're in a blocke",
+      "Bypass geographic blocks, protect your identity, and route AI traffic through any proxy — with zero configuration complexity. OmniCode includes a full-featured proxy management system that lets you route upstream AI provider traffic through HTTP, HTTPS, or SOCKS5 proxies. Whether you're in a blocked",
     headings: [
       "Table of Contents",
       "Why Use Proxies?",
@@ -1117,7 +1164,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
     fileName: "ops/TUNNELS_GUIDE.md",
     section: "Ops",
     content:
-      "Source of truth: src/lib/{cloudflaredTunnel,ngrokTunnel,tailscaleTunnel}.ts, src/app/api/tunnels/ Last updated: 2026-05-13 — v3.8.0 OmniCoder can expose its local server (http://localhost:20128) to the public internet via three tunnel backends. This is useful for: - OAuth callbacks from cloud provid",
+      "Source of truth: src/lib/{cloudflaredTunnel,ngrokTunnel,tailscaleTunnel}.ts, src/app/api/tunnels/ Last updated: 2026-05-13 — v3.8.0 OmniCode can expose its local server (http://localhost:20128) to the public internet via three tunnel backends. This is useful for: - OAuth callbacks from cloud provide",
     headings: [
       "Backends at a glance",
       "1. Cloudflare Tunnel (Quick Tunnel)",
@@ -1133,7 +1180,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
   },
   {
     slug: "vm-deployment-guide",
-    title: "OmniCoder — Deployment Guide on VM with Cloudflare",
+    title: "OmniCode — Deployment Guide on VM with Cloudflare",
     fileName: "ops/VM_DEPLOYMENT_GUIDE.md",
     section: "Ops",
     content:
@@ -1147,7 +1194,7 @@ export const autoSearchIndex: AutoGenSearchItem[] = [
       "1.4 Install Docker",
       "1.5 Install nginx",
       "1.6 Configure Firewall (UFW)",
-      "2. Install OmniCoder",
+      "2. Install OmniCode",
       "2.1 Create configuration directory",
     ],
   },
@@ -1193,7 +1240,9 @@ export const autoAllSlugs: string[] = [
   "auto-combo",
   "reasoning-replay",
   "compliance",
+  "error-sanitization",
   "guardrails",
+  "public-creds",
   "stealth-guide",
   "compression-engines",
   "compression-guide",
