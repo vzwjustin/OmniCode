@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, Button, Badge, Toggle } from "@/shared/components";
-import { useLocale, useTranslations } from "next-intl";
+import { Card, Button, Badge, Toggle, RelativeTime, EmptyState } from "@/shared/components";
+import { useTranslations } from "next-intl";
 
 const rowCountFormatter = new Intl.NumberFormat("en-US");
 
@@ -41,7 +41,6 @@ export default function SystemStorageTab() {
   const [purgeDetailedLogsStatus, setPurgeDetailedLogsStatus] = useState({ type: "", message: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
-  const locale = useLocale();
   const t = useTranslations("settings");
   const tc = useTranslations("common");
   const [storageHealth, setStorageHealth] = useState({
@@ -492,20 +491,6 @@ export default function SystemStorageTab() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const formatRelativeTime = (isoString) => {
-    if (!isoString) return null;
-    const now = new Date();
-    const then = new Date(isoString);
-    const diffMs = (now as any) - (then as any);
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return t("justNow");
-    if (diffMin < 60) return t("minutesAgo", { count: diffMin });
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return t("hoursAgo", { count: diffHr });
-    const diffDays = Math.floor(diffHr / 24);
-    return t("daysAgo", { count: diffDays });
-  };
-
   const formatBackupReason = (reason) => {
     if (reason === "manual") return t("backupReasonManual");
     if (reason === "pre-restore") return t("backupReasonPreRestore");
@@ -880,9 +865,11 @@ export default function SystemStorageTab() {
           <div>
             <p className="text-sm font-medium">{t("lastBackup")}</p>
             <p className="text-xs text-text-muted">
-              {storageHealth.lastBackupAt
-                ? `${new Date(storageHealth.lastBackupAt).toLocaleString(locale)} (${formatRelativeTime(storageHealth.lastBackupAt)})`
-                : t("noBackupYet")}
+              {storageHealth.lastBackupAt ? (
+                <RelativeTime value={storageHealth.lastBackupAt} />
+              ) : (
+                t("noBackupYet")
+              )}
             </p>
           </div>
         </div>
@@ -1273,15 +1260,7 @@ export default function SystemStorageTab() {
                 {t("loadingBackups")}
               </div>
             ) : backups.length === 0 ? (
-              <div className="text-center py-6 text-text-muted text-sm">
-                <span
-                  className="material-symbols-outlined text-[32px] mb-2 block opacity-40"
-                  aria-hidden="true"
-                >
-                  folder_off
-                </span>
-                {t("noBackupsYet")}
-              </div>
+              <EmptyState icon="📁" title={t("noBackupsYet")} />
             ) : (
               <>
                 <div className="flex items-center justify-between mb-1">
@@ -1312,7 +1291,7 @@ export default function SystemStorageTab() {
                           description
                         </span>
                         <span className="text-sm font-medium truncate">
-                          {new Date(backup.createdAt).toLocaleString(locale)}
+                          <RelativeTime value={backup.createdAt} />
                         </span>
                         <Badge
                           variant={
@@ -1808,17 +1787,21 @@ export default function SystemStorageTab() {
             <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02]">
               <p className="text-xs text-text-muted mb-1">Last Vacuum</p>
               <p className="text-sm font-semibold">
-                {dbSettings.stats.lastVacuumAt
-                  ? new Date(dbSettings.stats.lastVacuumAt).toLocaleString(locale)
-                  : "Never"}
+                {dbSettings.stats.lastVacuumAt ? (
+                  <RelativeTime value={dbSettings.stats.lastVacuumAt} />
+                ) : (
+                  "Never"
+                )}
               </p>
             </div>
             <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02]">
               <p className="text-xs text-text-muted mb-1">Last Optimization</p>
               <p className="text-sm font-semibold">
-                {dbSettings.stats.lastOptimizationAt
-                  ? new Date(dbSettings.stats.lastOptimizationAt).toLocaleString(locale)
-                  : "Never"}
+                {dbSettings.stats.lastOptimizationAt ? (
+                  <RelativeTime value={dbSettings.stats.lastOptimizationAt} />
+                ) : (
+                  "Never"
+                )}
               </p>
             </div>
             <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.02]">

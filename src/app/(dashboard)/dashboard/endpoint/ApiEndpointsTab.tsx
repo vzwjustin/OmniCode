@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card } from "@/shared/components";
+import { Card, ConfirmModal, EmptyState, RelativeTime } from "@/shared/components";
 import { useDisplayBaseUrl } from "@/shared/hooks";
 
 /* ─── Types ──────────────────────────────────────────── */
@@ -89,6 +89,8 @@ export default function ApiEndpointsTab() {
   const [whEvents, setWhEvents] = useState<string[]>(["*"]);
   const [whDesc, setWhDesc] = useState("");
   const [testingWebhookId, setTestingWebhookId] = useState<string | null>(null);
+  const [webhookPendingDelete, setWebhookPendingDelete] = useState<WebhookItem | null>(null);
+  const [deletingWebhook, setDeletingWebhook] = useState(false);
 
   // Load catalog
   const loadCatalog = async () => {
@@ -254,12 +256,18 @@ export default function ApiEndpointsTab() {
     } catch {}
   };
 
-  const deleteWebhook = async (id: string) => {
-    if (!confirm("Delete this webhook?")) return;
+  const requestDeleteWebhook = (wh: WebhookItem) => {
+    setWebhookPendingDelete(wh);
+  };
+
+  const performDeleteWebhook = async (id: string) => {
+    setDeletingWebhook(true);
     try {
       await fetch(`/api/webhooks/${id}`, { method: "DELETE" });
       setWebhooks((prev) => prev.filter((w) => w.id !== id));
     } catch {}
+    setDeletingWebhook(false);
+    setWebhookPendingDelete(null);
   };
 
   const testWebhook = async (id: string) => {
@@ -613,11 +621,12 @@ export default function ApiEndpointsTab() {
           ))}
 
           {filteredEndpoints.length === 0 && (
-            <Card className="p-8 text-center">
-              <span className="material-symbols-outlined text-[32px] text-text-muted">
-                search_off
-              </span>
-              <p className="text-sm text-text-muted mt-2">No endpoints match your filter</p>
+            <Card className="p-2">
+              <EmptyState
+                icon="🔍"
+                title="No endpoints match"
+                description="No endpoints match your filter."
+              />
             </Card>
           )}
 
@@ -769,14 +778,11 @@ export default function ApiEndpointsTab() {
             {webhooksLoading ? (
               <div className="text-xs text-text-muted py-4 text-center">Loading...</div>
             ) : webhooks.length === 0 ? (
-              <div className="text-center py-6">
-                <span className="material-symbols-outlined text-[32px] text-text-muted">
-                  webhook
-                </span>
-                <p className="text-xs text-text-muted mt-2">
-                  No webhooks configured. Add one to receive event notifications.
-                </p>
-              </div>
+              <EmptyState
+                icon="🔔"
+                title="No webhooks configured"
+                description="Add one to receive event notifications."
+              />
             ) : (
               <div className="space-y-2">
                 {webhooks.map((wh) => (
@@ -807,7 +813,7 @@ export default function ApiEndpointsTab() {
                         </span>
                         {wh.last_triggered_at && (
                           <span className="text-[9px] text-text-muted">
-                            Last: {new Date(wh.last_triggered_at).toLocaleString()}
+                            Last: <RelativeTime value={wh.last_triggered_at} />
                             {wh.last_status ? ` (${wh.last_status})` : ""}
                           </span>
                         )}
@@ -838,7 +844,7 @@ export default function ApiEndpointsTab() {
                         </span>
                       </button>
                       <button
-                        onClick={() => deleteWebhook(wh.id)}
+                        onClick={() => requestDeleteWebhook(wh)}
                         className="p-1 rounded hover:bg-red-500/10 transition-colors"
                         title="Delete"
                       >
@@ -875,6 +881,18 @@ export default function ApiEndpointsTab() {
           </Card>
         </>
       )}
+
+      <ConfirmModal
+        isOpen={webhookPendingDelete !== null}
+        onClose={() => !deletingWebhook && setWebhookPendingDelete(null)}
+        onConfirm={() => webhookPendingDelete && performDeleteWebhook(webhookPendingDelete.id)}
+        title="Delete webhook?"
+        message={webhookPendingDelete ? `Delete this webhook? ${webhookPendingDelete.url}` : ""}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deletingWebhook}
+      />
     </div>
   );
 }

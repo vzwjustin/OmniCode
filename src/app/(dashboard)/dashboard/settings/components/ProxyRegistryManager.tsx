@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button, Card, Modal } from "@/shared/components";
+import { Button, Card, Modal, ConfirmModal, CopyButton } from "@/shared/components";
 
 type ProxyItem = {
   id: string;
@@ -181,6 +181,10 @@ export default function ProxyRegistryManager() {
     updated: number;
     failed: number;
   } | null>(null);
+
+  // Force-delete confirmation (proxy already assigned to one or more scopes)
+  const [forceDeleteId, setForceDeleteId] = useState<string | null>(null);
+  const [forceDeleteLoading, setForceDeleteLoading] = useState(false);
 
   const editingId = useMemo(() => form.id || "", [form.id]);
 
@@ -410,26 +414,36 @@ export default function ProxyRegistryManager() {
       const payload = await res.json().catch(() => ({}));
       const inUse = res.status === 409;
       if (inUse) {
-        const ok = window.confirm(t("errorForceDeleteConfirm"));
-        if (!ok) return;
-
-        const forceRes = await fetch(`/api/settings/proxies?id=${encodeURIComponent(id)}&force=1`, {
-          method: "DELETE",
-        });
-
-        if (!forceRes.ok) {
-          const forcePayload = await forceRes.json().catch(() => ({}));
-          setError(forcePayload?.error?.message || t("errorDeleteFailed"));
-          return;
-        }
-
-        await load();
+        setForceDeleteId(id);
         return;
       }
 
       setError(payload?.error?.message || t("errorDeleteFailed"));
     } catch (e: any) {
       setError(e?.message || t("errorDeleteFailed"));
+    }
+  };
+
+  const performForceDelete = async (id: string) => {
+    setForceDeleteLoading(true);
+    setError(null);
+    try {
+      const forceRes = await fetch(`/api/settings/proxies?id=${encodeURIComponent(id)}&force=1`, {
+        method: "DELETE",
+      });
+
+      if (!forceRes.ok) {
+        const forcePayload = await forceRes.json().catch(() => ({}));
+        setError(forcePayload?.error?.message || t("errorDeleteFailed"));
+        return;
+      }
+
+      await load();
+    } catch (e: any) {
+      setError(e?.message || t("errorDeleteFailed"));
+    } finally {
+      setForceDeleteLoading(false);
+      setForceDeleteId(null);
     }
   };
 
@@ -647,7 +661,16 @@ export default function ProxyRegistryManager() {
                         )}
                       </td>
                       <td className="py-2 pr-3 font-mono text-xs text-text-muted">
-                        {item.type}://{item.host}:{item.port}
+                        <span className="inline-flex items-center gap-1">
+                          <span>
+                            {item.type}://{item.host}:{item.port}
+                          </span>
+                          <CopyButton
+                            value={`${item.type}://${item.host}:${item.port}`}
+                            size="xs"
+                            label="Copy endpoint"
+                          />
+                        </span>
                       </td>
                       <td className="py-2 pr-3">
                         <span className="text-xs px-2 py-1 rounded border border-border bg-bg-subtle">
@@ -1068,6 +1091,21 @@ export default function ProxyRegistryManager() {
           </div>
         </div>
       </Modal>
+
+      {/* Force-delete confirmation (proxy assigned to combos/providers) */}
+      <ConfirmModal
+        isOpen={forceDeleteId !== null}
+        onClose={() => {
+          if (!forceDeleteLoading) setForceDeleteId(null);
+        }}
+        onConfirm={() => {
+          if (forceDeleteId) void performForceDelete(forceDeleteId);
+        }}
+        title={t("delete")}
+        message={t("errorForceDeleteConfirm")}
+        variant="danger"
+        loading={forceDeleteLoading}
+      />
     </>
   );
 }

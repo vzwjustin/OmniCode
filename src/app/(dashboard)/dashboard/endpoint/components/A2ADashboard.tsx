@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Card, Button } from "@/shared/components";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { Card, Button, ConfirmModal, RelativeTime, CopyButton } from "@/shared/components";
 import { useTranslations } from "next-intl";
 
 type A2ATaskState = "submitted" | "working" | "completed" | "failed" | "cancelled";
@@ -101,6 +101,7 @@ export default function A2ADashboardPage() {
   const [selectedTask, setSelectedTask] = useState<A2ATask | null>(null);
   const [actionMessage, setActionMessage] = useState("");
   const [actionBusy, setActionBusy] = useState<null | "cancel" | "send" | "stream">(null);
+  const [taskPendingCancel, setTaskPendingCancel] = useState<string | null>(null);
 
   const refreshStatus = useCallback(async () => {
     const response = await fetch("/api/a2a/status");
@@ -162,8 +163,11 @@ export default function A2ADashboardPage() {
     setSelectedTask(json.task || null);
   };
 
-  const handleCancelTask = async (taskId: string) => {
-    if (!globalThis.confirm(t("confirmCancelTask", { taskId }))) return;
+  const handleCancelTask = (taskId: string) => {
+    setTaskPendingCancel(taskId);
+  };
+
+  const performCancelTask = async (taskId: string) => {
     setActionBusy("cancel");
     setActionMessage("");
     try {
@@ -183,6 +187,7 @@ export default function A2ADashboardPage() {
       }
     } finally {
       setActionBusy(null);
+      setTaskPendingCancel(null);
     }
   };
 
@@ -310,9 +315,7 @@ export default function A2ADashboardPage() {
         <StatCard label={t("activeStreams")} value={status?.tasks?.activeStreams || 0} />
         <StatCard
           label={t("lastTask")}
-          value={
-            status?.tasks?.lastTaskAt ? new Date(status.tasks.lastTaskAt).toLocaleTimeString() : "—"
-          }
+          value={status?.tasks?.lastTaskAt ? <RelativeTime value={status.tasks.lastTaskAt} /> : "—"}
         />
       </div>
 
@@ -457,7 +460,12 @@ export default function A2ADashboardPage() {
 
                   return (
                     <tr key={task.id} className="border-b border-border/40">
-                      <td className="py-2 pr-2 font-mono text-xs">{task.id}</td>
+                      <td className="py-2 pr-2 font-mono text-xs">
+                        <span className="inline-flex items-center gap-1">
+                          {task.id}
+                          <CopyButton value={task.id} size="xs" label={`Copy ${task.id}`} />
+                        </span>
+                      </td>
                       <td className="py-2 pr-2">{task.skill}</td>
                       <td className="py-2 pr-2">
                         <span
@@ -478,7 +486,7 @@ export default function A2ADashboardPage() {
                         )}
                       </td>
                       <td className="py-2 pr-2 text-xs">
-                        {new Date(task.updatedAt).toLocaleString()}
+                        <RelativeTime value={task.updatedAt} />
                       </td>
                       <td className="py-2 flex gap-2">
                         <Button
@@ -576,11 +584,21 @@ export default function A2ADashboardPage() {
           </div>
         </Card>
       )}
+
+      <ConfirmModal
+        isOpen={taskPendingCancel !== null}
+        onClose={() => actionBusy === null && setTaskPendingCancel(null)}
+        onConfirm={() => taskPendingCancel && performCancelTask(taskPendingCancel)}
+        title={t("cancel")}
+        message={taskPendingCancel ? t("confirmCancelTask", { taskId: taskPendingCancel }) : ""}
+        variant="danger"
+        loading={actionBusy === "cancel"}
+      />
     </div>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-lg border border-border bg-bg p-4">
       <p className="text-xs text-text-muted uppercase tracking-wide">{label}</p>

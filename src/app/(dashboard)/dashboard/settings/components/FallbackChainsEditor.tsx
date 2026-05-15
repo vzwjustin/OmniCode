@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Button, Input, EmptyState } from "@/shared/components";
+import { Card, Button, Input, EmptyState, ConfirmModal } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useTranslations } from "next-intl";
 
@@ -31,6 +31,8 @@ export default function FallbackChainsEditor() {
   const [newModel, setNewModel] = useState("");
   const [newProviders, setNewProviders] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteTargetModel, setDeleteTargetModel] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const notify = useNotificationStore();
   const t = useTranslations("settings");
   const tc = useTranslations("common");
@@ -93,8 +95,12 @@ export default function FallbackChainsEditor() {
     }
   };
 
-  const handleDelete = async (model) => {
-    if (!confirm(t("deleteChainConfirm", { model }))) return;
+  const handleDelete = (model) => {
+    setDeleteTargetModel(model);
+  };
+
+  const performDelete = async (model: string) => {
+    setDeleting(true);
     try {
       const res = await fetch("/api/fallback/chains", {
         method: "DELETE",
@@ -109,6 +115,9 @@ export default function FallbackChainsEditor() {
       }
     } catch {
       notify.error(t("failedDeleteChain"));
+    } finally {
+      setDeleting(false);
+      setDeleteTargetModel(null);
     }
   };
 
@@ -213,6 +222,24 @@ export default function FallbackChainsEditor() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={deleteTargetModel !== null}
+        onClose={() => {
+          if (!deleting) setDeleteTargetModel(null);
+        }}
+        onConfirm={() => {
+          if (deleteTargetModel) void performDelete(deleteTargetModel);
+        }}
+        title={t("deleteChain")}
+        message={
+          deleteTargetModel
+            ? t("deleteChainConfirm", { model: deleteTargetModel })
+            : t("deleteChain")
+        }
+        variant="danger"
+        loading={deleting}
+      />
     </Card>
   );
 }
