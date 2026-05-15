@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, Badge, Button, Input, Select, Modal } from "@/shared/components";
+import { Card, Badge, Button, Input, Select, Modal, RelativeTime } from "@/shared/components";
 import { useTranslations } from "next-intl";
 
 interface Memory {
@@ -317,7 +317,9 @@ export default function MemoryPage() {
                     </td>
                     <td className="py-2 px-4 font-medium">{memory.key}</td>
                     <td className="py-2 px-4 max-w-md truncate">{memory.content}</td>
-                    <td className="py-2 px-4">{new Date(memory.createdAt).toLocaleDateString()}</td>
+                    <td className="py-2 px-4">
+                      <RelativeTime value={memory.createdAt} />
+                    </td>
                     <td className="py-2 px-4">
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(memory.id)}>
                         {t("delete")}

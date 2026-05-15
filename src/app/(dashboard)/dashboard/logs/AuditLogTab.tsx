@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { CopyButton, RelativeTime } from "@/shared/components";
 
 interface AuditEntry {
   id: number;
@@ -71,14 +72,6 @@ export default function AuditLogTab() {
       return;
     }
     setOffset(0);
-  };
-
-  const formatTimestamp = (ts: string) => {
-    try {
-      return new Date(ts).toLocaleString();
-    } catch {
-      return ts;
-    }
   };
 
   const actionBadgeColor = (action: string) => {
@@ -212,7 +205,7 @@ export default function AuditLogTab() {
                   className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-alt)] transition-colors"
                 >
                   <td className="px-4 py-3 whitespace-nowrap text-[var(--color-text-muted)] font-mono text-xs">
-                    {formatTimestamp(entry.timestamp)}
+                    <RelativeTime value={entry.timestamp} />
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -244,7 +237,16 @@ export default function AuditLogTab() {
                     {entry.ip_address || t("notAvailable")}
                   </td>
                   <td className="px-4 py-3 text-[var(--color-text-muted)] font-mono text-xs whitespace-nowrap">
-                    {entry.requestId || t("notAvailable")}
+                    {entry.requestId ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="truncate max-w-[140px]" title={entry.requestId}>
+                          {entry.requestId}
+                        </span>
+                        <CopyButton value={entry.requestId} label={t("requestId")} size="xs" />
+                      </span>
+                    ) : (
+                      t("notAvailable")
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <button
@@ -331,7 +333,7 @@ export default function AuditLogTab() {
                     <div className="flex justify-between gap-3">
                       <dt className="text-[var(--color-text-muted)]">{t("timestamp")}</dt>
                       <dd className="text-[var(--color-text-main)]">
-                        {formatTimestamp(selectedEntry.timestamp)}
+                        <RelativeTime value={selectedEntry.timestamp} />
                       </dd>
                     </div>
                     <div className="flex justify-between gap-3">
@@ -348,8 +350,24 @@ export default function AuditLogTab() {
                     </div>
                     <div className="flex justify-between gap-3">
                       <dt className="text-[var(--color-text-muted)]">{t("requestId")}</dt>
-                      <dd className="font-mono text-[var(--color-text-main)]">
-                        {selectedEntry.requestId || t("notAvailable")}
+                      <dd className="font-mono text-[var(--color-text-main)] inline-flex items-center gap-1">
+                        {selectedEntry.requestId ? (
+                          <>
+                            <span
+                              className="truncate max-w-[180px]"
+                              title={selectedEntry.requestId}
+                            >
+                              {selectedEntry.requestId}
+                            </span>
+                            <CopyButton
+                              value={selectedEntry.requestId}
+                              label={t("requestId")}
+                              size="xs"
+                            />
+                          </>
+                        ) : (
+                          t("notAvailable")
+                        )}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-3">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, type ReactNode } from "react";
-import { Card, Button, EmptyState } from "@/shared/components";
+import { Card, Button, EmptyState, RelativeTime } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useTranslations } from "next-intl";
 import CacheEntriesTab from "./components/CacheEntriesTab";
@@ -517,7 +517,7 @@ export default function CachePage() {
               </div>
               {pc && (
                 <div className="text-sm text-text-muted">
-                  {t("lastUpdated")}: {new Date(pc.lastUpdated).toLocaleString()}
+                  {t("lastUpdated")}: <RelativeTime value={pc.lastUpdated} />
                 </div>
               )}
             </div>

@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
-import { Card, Button, Input, Modal, CardSkeleton } from "@/shared/components";
+import {
+  Card,
+  Button,
+  Input,
+  Modal,
+  CardSkeleton,
+  ConfirmModal,
+  EmptyState,
+  RelativeTime,
+} from "@/shared/components";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useTranslations } from "next-intl";
 
@@ -118,6 +127,10 @@ export default function ApiManagerPageClient() {
   const [usageStats, setUsageStats] = useState<Record<string, KeyUsageStats>>({});
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
   const [allowKeyReveal, setAllowKeyReveal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    id: string;
+    type: "delete" | "regenerate";
+  } | null>(null);
 
   const { copied, copy } = useCopyToClipboard();
 
@@ -274,14 +287,15 @@ export default function ApiManagerPageClient() {
     }
   };
 
-  const handleDeleteKey = async (id: string) => {
+  const handleDeleteKey = (id: string) => {
     if (!id || typeof id !== "string" || !/^[a-zA-Z0-9_-]+$/.test(id)) {
       setPageError(t("invalidKeyId"));
       return;
     }
+    setConfirmAction({ id, type: "delete" });
+  };
 
-    if (!confirm(t("deleteConfirm"))) return;
-
+  const performDeleteKey = async (id: string) => {
     setIsSubmitting(true);
     clearPageError();
 
@@ -301,10 +315,12 @@ export default function ApiManagerPageClient() {
     }
   };
 
-  const handleRegenerateKey = async (id: string) => {
+  const handleRegenerateKey = (id: string) => {
     if (!id) return;
-    if (!confirm(t("regenerateConfirm"))) return;
+    setConfirmAction({ id, type: "regenerate" });
+  };
 
+  const performRegenerateKey = async (id: string) => {
     setIsSubmitting(true);
     clearPageError();
 
@@ -589,23 +605,17 @@ export default function ApiManagerPageClient() {
         <p className="text-sm text-text-muted mb-4">{t("keysSecurityNote")}</p>
 
         {keys.length === 0 ? (
-          <div className="text-center py-12 border border-dashed border-border rounded-lg">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="material-symbols-outlined text-[32px]">vpn_key</span>
-            </div>
-            <p className="text-text-main font-medium mb-2">{t("noKeys")}</p>
-            <p className="text-sm text-text-muted mb-4">{t("noKeysDesc")}</p>
-            <Button
-              icon="add"
-              onClick={() => {
-                setNameError(null);
-                setCreateError(null);
-                setShowAddModal(true);
-              }}
-            >
-              {t("createFirstKey")}
-            </Button>
-          </div>
+          <EmptyState
+            icon="🔑"
+            title={t("noKeys")}
+            description={t("noKeysDesc")}
+            actionLabel={t("createFirstKey")}
+            onAction={() => {
+              setNameError(null);
+              setCreateError(null);
+              setShowAddModal(true);
+            }}
+          />
         ) : (
           <div className="flex flex-col border border-border rounded-lg overflow-hidden">
             {/* Table Header */}
@@ -759,14 +769,14 @@ export default function ApiManagerPageClient() {
                     </span>
                     {stats?.lastUsed ? (
                       <span className="text-[10px] text-text-muted">
-                        {t("lastUsedOn", { date: new Date(stats.lastUsed).toLocaleDateString() })}
+                        <RelativeTime value={stats.lastUsed} />
                       </span>
                     ) : (
                       <span className="text-[10px] text-text-muted italic">{t("neverUsed")}</span>
                     )}
                   </div>
                   <div className="col-span-1 flex items-center text-sm text-text-muted">
-                    {new Date(key.createdAt).toLocaleDateString()}
+                    <RelativeTime value={key.createdAt} />
                   </div>
                   <div className="col-span-2 flex items-center justify-end gap-1">
                     <button
@@ -938,6 +948,26 @@ export default function ApiManagerPageClient() {
           onSave={handleUpdatePermissions}
         />
       )}
+
+      {/* Destructive Action Confirmation */}
+      <ConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction) return;
+          const { id, type } = confirmAction;
+          setConfirmAction(null);
+          if (type === "delete") {
+            void performDeleteKey(id);
+          } else {
+            void performRegenerateKey(id);
+          }
+        }}
+        title={confirmAction?.type === "delete" ? t("deleteKey") : t("regenerateKey")}
+        message={confirmAction?.type === "delete" ? t("deleteConfirm") : t("regenerateConfirm")}
+        variant="danger"
+        loading={isSubmitting}
+      />
     </div>
   );
 }

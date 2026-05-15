@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, ConfirmModal, Modal } from "@/shared/components";
+import { Card, ConfirmModal, Modal, RelativeTime } from "@/shared/components";
 
 type WebhookItem = {
   id: string;
@@ -429,9 +429,11 @@ export default function WebhooksPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-text-muted">
-                        {webhook.last_triggered_at
-                          ? new Date(webhook.last_triggered_at).toLocaleString()
-                          : t("never")}
+                        {webhook.last_triggered_at ? (
+                          <RelativeTime value={webhook.last_triggered_at} />
+                        ) : (
+                          t("never")
+                        )}
                         {webhook.last_status ? (
                           <span className="ml-1 font-mono text-xs">({webhook.last_status})</span>
                         ) : null}

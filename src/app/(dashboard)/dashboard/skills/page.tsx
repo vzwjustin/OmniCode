@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card } from "@/shared/components";
+import { Card, RelativeTime } from "@/shared/components";
 import { useTranslations } from "next-intl";
 import type { SkillsProvider } from "@/lib/skills/providerSettings";
 
@@ -582,7 +582,7 @@ export default function SkillsPage() {
                       </td>
                       <td className="py-3 text-text-muted">{exec.duration}ms</td>
                       <td className="py-3 text-text-muted text-sm">
-                        {new Date(exec.createdAt).toLocaleString()}
+                        <RelativeTime value={exec.createdAt} />
                       </td>
                     </tr>
                   ))
