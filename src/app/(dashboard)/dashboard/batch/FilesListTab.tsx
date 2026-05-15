@@ -1,20 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ConfirmModal, RelativeTime } from "@/shared/components";
 import FileDetailModal from "./FileDetailModal";
-
-function relativeTime(ts: number): string {
-  // ts is in seconds (Unix timestamp)
-  const diffMs = Date.now() - ts * 1000;
-  const diffSec = Math.round(diffMs / 1000);
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.round(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDays = Math.round(diffHr / 24);
-  return `${diffDays}d ago`;
-}
 
 function relativeExpiration(ts: number | null): string {
   if (!ts) return "Never";
@@ -74,6 +62,7 @@ export default function FilesListTab({ files, loading, onRefresh }: Readonly<Fil
   const [fileContents, setFileContents] = useState<string | null>(null);
   const [contentsLoading, setContentsLoading] = useState(false);
   const [deleteInProgress, setDeleteInProgress] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const purposes = ["all", ...Array.from(new Set(files.map((f) => f.purpose)))];
 
@@ -108,10 +97,12 @@ export default function FilesListTab({ files, loading, onRefresh }: Readonly<Fil
     }
   };
 
-  const handleDeleteFile = async (e: React.MouseEvent, fileId: string) => {
+  const handleDeleteFile = (e: React.MouseEvent, fileId: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this file?")) return;
+    setPendingDeleteId(fileId);
+  };
 
+  const performDeleteFile = async (fileId: string) => {
     setDeleteInProgress(fileId);
     try {
       const response = await fetch(`/api/v1/files/${fileId}`, { method: "DELETE" });
@@ -130,6 +121,7 @@ export default function FilesListTab({ files, loading, onRefresh }: Readonly<Fil
       alert("Error deleting file");
     } finally {
       setDeleteInProgress(null);
+      setPendingDeleteId(null);
     }
   };
 
@@ -230,7 +222,7 @@ export default function FilesListTab({ files, loading, onRefresh }: Readonly<Fil
                       {formatBytes(file.bytes)}
                     </td>
                     <td className="px-4 py-3 text-xs text-[var(--color-text-muted)] whitespace-nowrap">
-                      {fileCreatedAt ? relativeTime(fileCreatedAt) : "—"}
+                      {fileCreatedAt ? <RelativeTime value={fileCreatedAt * 1000} /> : "—"}
                     </td>
                     <td className="px-4 py-3 text-xs text-[var(--color-text-muted)] whitespace-nowrap">
                       {fileExpiresAt ? relativeExpiration(fileExpiresAt) : "Never"}
@@ -264,6 +256,19 @@ export default function FilesListTab({ files, loading, onRefresh }: Readonly<Fil
           onClose={() => setSelectedFileId(null)}
         />
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        isOpen={pendingDeleteId !== null}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          if (pendingDeleteId) void performDeleteFile(pendingDeleteId);
+        }}
+        title="Delete file"
+        message="Are you sure you want to delete this file?"
+        variant="danger"
+        loading={deleteInProgress !== null}
+      />
     </div>
   );
 }

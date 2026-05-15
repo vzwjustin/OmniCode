@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, Button, ModelSelectModal, ManualConfigModal } from "@/shared/components";
+import { Card, Button, ModelSelectModal, ManualConfigModal, CopyButton, RelativeTime } from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import CliStatusBadge from "./CliStatusBadge";
 import { useTranslations } from "next-intl";
@@ -547,8 +547,9 @@ export default function ClaudeToolCard({
                           <span className="flex-1 truncate font-mono" title={b.id}>
                             {b.id}
                           </span>
+                          <CopyButton value={b.id} size="xs" label="Copy backup ID" />
                           <span className="text-text-muted whitespace-nowrap">
-                            {new Date(b.createdAt).toLocaleString()}
+                            <RelativeTime value={b.createdAt} />
                           </span>
                           <button
                             onClick={() => handleRestoreBackup(b.id)}

@@ -8,7 +8,7 @@ import Card from "@/shared/components/Card";
 import { CardSkeleton } from "@/shared/components/Loading";
 import EmptyState from "@/shared/components/EmptyState";
 import Input from "@/shared/components/Input";
-import Modal from "@/shared/components/Modal";
+import Modal, { ConfirmModal } from "@/shared/components/Modal";
 import Toggle from "@/shared/components/Toggle";
 import Tooltip from "@/shared/components/Tooltip";
 import EmailPrivacyToggle from "@/shared/components/EmailPrivacyToggle";
@@ -617,6 +617,8 @@ export default function CombosPage() {
   const notify = useNotificationStore();
   const [proxyTargetCombo, setProxyTargetCombo] = useState(null);
   const [proxyConfig, setProxyConfig] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deletingCombo, setDeletingCombo] = useState(false);
   const [providerNodes, setProviderNodes] = useState([]);
   const [showUsageGuide, setShowUsageGuide] = useState(true);
   const [recentlyCreatedCombo, setRecentlyCreatedCombo] = useState("");
@@ -759,8 +761,12 @@ export default function CombosPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm(t("deleteConfirm"))) return;
+  const handleDelete = (id) => {
+    setDeleteTargetId(id);
+  };
+
+  const performDelete = async (id: string) => {
+    setDeletingCombo(true);
     try {
       const res = await fetch(`/api/combos/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -769,6 +775,9 @@ export default function CombosPage() {
       }
     } catch (error) {
       notify.error(t("errorDeleting"));
+    } finally {
+      setDeletingCombo(false);
+      setDeleteTargetId(null);
     }
   };
 
@@ -1221,6 +1230,19 @@ export default function CombosPage() {
           levelLabel={proxyTargetCombo.name}
         />
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        isOpen={deleteTargetId !== null}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={() => {
+          if (deleteTargetId) void performDelete(deleteTargetId);
+        }}
+        title={tc("delete")}
+        message={t("deleteConfirm")}
+        variant="danger"
+        loading={deletingCombo}
+      />
     </div>
   );
 }
