@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Button, EmptyState } from "@/shared/components";
+import { Button, CopyButton, EmptyState, RelativeTime } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useTranslations } from "next-intl";
 
@@ -38,17 +38,6 @@ interface ReasoningCacheData {
 }
 
 // ──────────────── Helpers ────────────────
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function formatChars(chars: number): string {
   if (chars >= 1_000_000) return `${(chars / 1_000_000).toFixed(1)}M`;
@@ -389,11 +378,17 @@ export default function ReasoningCacheTab() {
               {entries.map((entry) => (
                 <div key={entry.toolCallId}>
                   <div className="grid grid-cols-[minmax(120px,1fr)_100px_minmax(100px,1fr)_80px_80px_60px] gap-3 border-b border-border/15 px-4 py-3 last:border-b-0">
-                    <div
-                      className="truncate text-sm font-mono text-text-main"
-                      title={entry.toolCallId}
-                    >
-                      {entry.toolCallId}
+                    <div className="truncate text-sm font-mono text-text-main">
+                      <span className="inline-flex items-center gap-1">
+                        <span className="truncate" title={entry.toolCallId}>
+                          {entry.toolCallId}
+                        </span>
+                        <CopyButton
+                          value={entry.toolCallId}
+                          label={t("reasoningToolCallId")}
+                          size="xs"
+                        />
+                      </span>
                     </div>
                     <div className="text-sm text-text-muted">{entry.provider}</div>
                     <div className="truncate text-sm text-text-muted" title={entry.model}>
@@ -402,7 +397,9 @@ export default function ReasoningCacheTab() {
                     <div className="text-sm tabular-nums text-purple-400">
                       {entry.charCount.toLocaleString()}
                     </div>
-                    <div className="text-sm text-text-muted">{timeAgo(entry.createdAt)}</div>
+                    <div className="text-sm text-text-muted">
+                      <RelativeTime value={entry.createdAt} />
+                    </div>
                     <button
                       type="button"
                       onClick={() =>
@@ -441,13 +438,13 @@ export default function ReasoningCacheTab() {
                         <span>
                           Created:{" "}
                           <span className="text-text-main">
-                            {new Date(entry.createdAt).toLocaleString()}
+                            <RelativeTime value={entry.createdAt} />
                           </span>
                         </span>
                         <span>
                           Expires:{" "}
                           <span className="text-text-main">
-                            {new Date(entry.expiresAt).toLocaleString()}
+                            <RelativeTime value={entry.expiresAt} />
                           </span>
                         </span>
                         <span>
