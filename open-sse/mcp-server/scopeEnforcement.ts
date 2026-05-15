@@ -3,6 +3,14 @@ import { MCP_TOOL_MAP } from "./schemas/tools.ts";
 type AuthInfoLike = {
   clientId?: string;
   scopes?: string[];
+  /**
+   * The access token a transport's auth layer attaches when present.
+   * Used by tools that need to forward the caller's credential to an
+   * internal HTTP endpoint (e.g. the cloud-agent REST proxy). This is
+   * server-attested and DIFFERENT from `_meta` — `_meta` is client-
+   * controlled and ignored for both privileges and credentials.
+   */
+  token?: string;
 };
 
 export type McpToolExtraLike = {
@@ -10,6 +18,24 @@ export type McpToolExtraLike = {
   sessionId?: string;
   _meta?: unknown;
 };
+
+/**
+ * Canonical scope strings used by the MCP server. The runtime source of
+ * truth for which scope is required by which tool is the `scopes: [...]`
+ * array on each tool definition in `schemas/tools.ts` (read via
+ * `MCP_TOOL_MAP[toolName].scopes`); these constants exist so handler
+ * code, audit pipelines, and documentation can reference scope names
+ * without re-typing the string literals.
+ *
+ * Adding a scope here does NOT grant it — a tool def must list it in
+ * its `scopes` array to require it.
+ */
+export const MCP_SCOPES = {
+  CLOUD_AGENT_READ: "cloud_agent:read",
+  CLOUD_AGENT_WRITE: "cloud_agent:write",
+} as const;
+
+export type McpScope = (typeof MCP_SCOPES)[keyof typeof MCP_SCOPES];
 
 export type ScopeSource = "authInfo" | "env" | "none";
 
