@@ -143,3 +143,4 @@ bun.lock
 
 # Private environment variables for .http-client
 http-client.private.env.json
+app.bak/

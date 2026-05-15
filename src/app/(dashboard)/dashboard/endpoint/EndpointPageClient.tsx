@@ -376,27 +376,13 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
   const endpointData = useMemo(() => {
     const chat = allModels.filter((m) => !m.type && !m.parent);
     const embeddings = allModels.filter((m) => m.type === "embedding" && !m.parent);
-    const images = allModels.filter((m) => m.type === "image" && !m.parent);
-    const video = allModels.filter((m) => m.type === "video" && !m.parent);
     const rerank = allModels.filter((m) => m.type === "rerank" && !m.parent);
-    const audioTranscription = allModels.filter(
-      (m) => m.type === "audio" && m.subtype === "transcription" && !m.parent
-    );
-    const audioSpeech = allModels.filter(
-      (m) => m.type === "audio" && m.subtype === "speech" && !m.parent
-    );
     const moderation = allModels.filter((m) => m.type === "moderation" && !m.parent);
-    const music = allModels.filter((m) => m.type === "music" && !m.parent);
     return {
       chat,
       embeddings,
-      images,
-      video,
       rerank,
-      audioTranscription,
-      audioSpeech,
       moderation,
-      music,
     };
   }, [allModels]);
 
@@ -1727,17 +1713,16 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
             </div>
           </div>
 
-          {/* Media & Multi-Modal */}
+          {/* Embeddings */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-sm text-purple-400">perm_media</span>
+              <span className="material-symbols-outlined text-sm text-emerald-400">data_array</span>
               <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-                {t("categoryMedia") || "Media & Multi-Modal"}
+                {t("embeddings")}
               </h3>
               <div className="flex-1 h-px bg-border/50" />
             </div>
             <div className="flex flex-col gap-3">
-              {/* Embeddings */}
               <EndpointSection
                 icon="data_array"
                 iconColor="text-emerald-500"
@@ -1750,105 +1735,6 @@ export default function APIPageClient({ machineId }: Readonly<APIPageClientProps
                 onToggle={() =>
                   setExpandedEndpoint(expandedEndpoint === "embeddings" ? null : "embeddings")
                 }
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Image Generation */}
-              <EndpointSection
-                icon="image"
-                iconColor="text-purple-500"
-                iconBg="bg-purple-500/10"
-                title={t("imageGeneration")}
-                path="/v1/images/generations"
-                description={t("imageDesc")}
-                models={endpointData.images}
-                expanded={expandedEndpoint === "images"}
-                onToggle={() =>
-                  setExpandedEndpoint(expandedEndpoint === "images" ? null : "images")
-                }
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Audio Transcription */}
-              <EndpointSection
-                icon="mic"
-                iconColor="text-rose-500"
-                iconBg="bg-rose-500/10"
-                title={t("audioTranscription")}
-                path="/v1/audio/transcriptions"
-                description={t("audioTranscriptionDesc")}
-                models={endpointData.audioTranscription}
-                expanded={expandedEndpoint === "audioTranscription"}
-                onToggle={() =>
-                  setExpandedEndpoint(
-                    expandedEndpoint === "audioTranscription" ? null : "audioTranscription"
-                  )
-                }
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Audio Speech (TTS) */}
-              <EndpointSection
-                icon="record_voice_over"
-                iconColor="text-cyan-500"
-                iconBg="bg-cyan-500/10"
-                title={t("textToSpeech")}
-                path="/v1/audio/speech"
-                description={t("textToSpeechDesc")}
-                models={endpointData.audioSpeech}
-                expanded={expandedEndpoint === "audioSpeech"}
-                onToggle={() =>
-                  setExpandedEndpoint(expandedEndpoint === "audioSpeech" ? null : "audioSpeech")
-                }
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Music Generation */}
-              <EndpointSection
-                icon="music_note"
-                iconColor="text-fuchsia-500"
-                iconBg="bg-fuchsia-500/10"
-                title={t("musicGeneration") || "Music Generation"}
-                path="/v1/music/generations"
-                description={
-                  t("musicDesc") ||
-                  "Generate music and audio tracks via ComfyUI (Stable Audio, MusicGen)"
-                }
-                models={endpointData.music}
-                expanded={expandedEndpoint === "music"}
-                onToggle={() => setExpandedEndpoint(expandedEndpoint === "music" ? null : "music")}
-                copy={copy}
-                copied={copied}
-                baseUrl={currentEndpoint}
-                modelsLoading={modelsLoading}
-              />
-
-              {/* Video Generation */}
-              <EndpointSection
-                icon="videocam"
-                iconColor="text-red-500"
-                iconBg="bg-red-500/10"
-                title={t("videoGeneration") || "Video Generation"}
-                path="/v1/videos/generations"
-                description={
-                  t("videoDesc") ||
-                  "Generate videos via ComfyUI, Stable Diffusion WebUI, and compatible providers"
-                }
-                models={endpointData.video}
-                expanded={expandedEndpoint === "video"}
-                onToggle={() => setExpandedEndpoint(expandedEndpoint === "video" ? null : "video")}
                 copy={copy}
                 copied={copied}
                 baseUrl={currentEndpoint}

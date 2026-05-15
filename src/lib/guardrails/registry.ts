@@ -1,7 +1,6 @@
 import { BaseGuardrail, type GuardrailContext, type GuardrailExecutionResult } from "./base";
 import { PIIMaskerGuardrail } from "./piiMasker";
 import { PromptInjectionGuardrail } from "./promptInjection";
-import { VisionBridgeGuardrail } from "./visionBridge";
 
 type HeadersLike = Headers | Record<string, unknown> | null | undefined;
 
@@ -263,7 +262,6 @@ let defaultGuardrailsRegistered = false;
 export function registerDefaultGuardrails() {
   if (defaultGuardrailsRegistered) return guardrailRegistry;
 
-  guardrailRegistry.register(new VisionBridgeGuardrail());
   guardrailRegistry.register(new PIIMaskerGuardrail());
   guardrailRegistry.register(new PromptInjectionGuardrail());
   defaultGuardrailsRegistered = true;
