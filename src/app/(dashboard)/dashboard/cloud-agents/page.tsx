@@ -1,8 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, Button, Input, Badge } from "@/shared/components";
 import { useTranslations } from "next-intl";
+import { useNotificationStore } from "@/store/notificationStore";
+
+// Real-time refresh tunables. Two cadences because the endpoints have very
+// different cost characteristics:
+//
+//   LIST_POLL_MS — GET /api/v1/agents/tasks is a pure SQLite read; no upstream
+//   API call, no quota burn. Safe to poll aggressively.
+//
+//   DETAIL_POLL_MS — GET /api/v1/agents/tasks/[id] DOES call the upstream
+//   provider (Jules issues two parallel fetches: /sessions/{id} and
+//   /sessions/{id}/activities). Keep this conservative to respect rate limits.
+//
+// Polling auto-stops when the selected task is in a terminal state
+// (completed/failed/cancelled) and pauses while the tab is hidden.
+const LIST_POLL_MS = 5000;
+const DETAIL_POLL_MS = 4000;
+const TERMINAL_STATUSES: readonly CloudAgentTask["status"][] = ["completed", "failed", "cancelled"];
 
 interface CloudAgentTask {
   id: string;
@@ -68,42 +85,209 @@ export default function CloudAgentsPage() {
   });
   const [messageInput, setMessageInput] = useState("");
   const t = useTranslations("cloudAgents");
+  const notify = useNotificationStore();
+
+  const showApiError = useCallback(
+    async (res: Response, fallback: string) => {
+      let message = fallback;
+      try {
+        const data = await res.clone().json();
+        if (data && typeof data.error === "string" && data.error.trim()) {
+          message = data.error;
+        }
+      } catch {
+        try {
+          const text = await res.clone().text();
+          if (text.trim()) message = text;
+        } catch {
+          /* ignore */
+        }
+      }
+      notify.error(message, `Request failed (${res.status})`);
+    },
+    [notify]
+  );
 
   const upsertTask = useCallback((task: CloudAgentTask) => {
+    const safeTask: CloudAgentTask = {
+      ...task,
+      activities: Array.isArray(task.activities) ? task.activities : [],
+    };
     setTasks((prev) => {
-      const exists = prev.some((current) => current.id === task.id);
+      const exists = prev.some((current) => current.id === safeTask.id);
       return exists
-        ? prev.map((current) => (current.id === task.id ? task : current))
-        : [task, ...prev];
+        ? prev.map((current) => (current.id === safeTask.id ? safeTask : current))
+        : [safeTask, ...prev];
     });
-    setSelectedTask((current) => (current?.id === task.id ? task : current));
+    setSelectedTask((current) => (current?.id === safeTask.id ? safeTask : current));
   }, []);
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      const res = await fetch("/api/v1/agents/tasks");
-      if (res.ok) {
-        const data = await res.json();
-        setTasks(Array.isArray(data.data) ? data.data : []);
+  // Last-successful refresh timestamps for the live indicator. We only update
+  // these on successful fetches so a transient network blip doesn't make the
+  // UI appear fresher than it actually is.
+  const [lastListRefresh, setLastListRefresh] = useState<number | null>(null);
+  const [lastDetailRefresh, setLastDetailRefresh] = useState<number | null>(null);
+
+  // In-flight guards. The list poll is allowed to skip a tick if a previous
+  // fetch is still running; the detail poll uses an AbortController so we can
+  // cancel in-flight upstream requests when the user switches tasks (avoids a
+  // late upstream response clobbering a freshly-selected task's state).
+  const listFetchInFlightRef = useRef(false);
+  const detailFetchAbortRef = useRef<AbortController | null>(null);
+
+  // 1s ticker so the "updated Xs ago" relative timestamp re-renders smoothly
+  // between poll ticks. Tied to a state bump so React picks up the change.
+  const [, setTickerNonce] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTickerNonce((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // `silent` means: don't surface 4xx/5xx as a toast (we don't want every
+  // background poll to spam notifications on transient errors). The initial
+  // load + manual refresh still surface errors so users aren't left guessing.
+  const fetchTasks = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (listFetchInFlightRef.current) return;
+      listFetchInFlightRef.current = true;
+      try {
+        const res = await fetch("/api/v1/agents/tasks");
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data.data) ? (data.data as CloudAgentTask[]) : [];
+          setTasks(
+            list.map((t) => ({
+              ...t,
+              activities: Array.isArray(t.activities) ? t.activities : [],
+            }))
+          );
+          setLastListRefresh(Date.now());
+        } else if (!opts?.silent) {
+          await showApiError(res, "Failed to load cloud agent tasks");
+        }
+      } catch (err) {
+        if (!opts?.silent) {
+          console.error("Failed to fetch tasks:", err);
+          notify.error(
+            err instanceof Error ? err.message : "Network error while loading tasks",
+            "Connection failed"
+          );
+        }
+      } finally {
+        setLoading(false);
+        listFetchInFlightRef.current = false;
       }
-    } catch (err) {
-      console.error("Failed to fetch tasks:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [notify, showApiError]
+  );
 
+  // Single-task refresh — hits the per-id endpoint which, on the server side,
+  // calls agent.getStatus() against the upstream provider (Jules: two parallel
+  // requests to /sessions/{id} + /sessions/{id}/activities). We use an
+  // AbortController so switching tasks immediately cancels the previous
+  // upstream call rather than letting it race the new selection.
+  const fetchSelectedTask = useCallback(
+    async (taskId: string, opts?: { silent?: boolean }) => {
+      // Cancel any prior in-flight detail fetch before starting a new one.
+      detailFetchAbortRef.current?.abort();
+      const controller = new AbortController();
+      detailFetchAbortRef.current = controller;
+      try {
+        const res = await fetch(`/api/v1/agents/tasks/${taskId}`, {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.data) {
+            upsertTask(data.data);
+            setLastDetailRefresh(Date.now());
+          }
+        } else if (!opts?.silent) {
+          await showApiError(res, "Failed to refresh task");
+        }
+      } catch (err) {
+        // AbortError is expected on task-switch / unmount — never surface it.
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (!opts?.silent) {
+          console.error("Failed to fetch task detail:", err);
+        }
+      }
+    },
+    [showApiError, upsertTask]
+  );
+
+  // Initial load. Subsequent refreshes happen in the polling effect below.
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
+  // List polling. Skips silently when the tab is hidden so a backgrounded
+  // dashboard doesn't keep hammering the API.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      fetchTasks({ silent: true });
+    }, LIST_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchTasks]);
+
+  // Detail polling. Only runs when a task is selected AND it's in a
+  // non-terminal state. The cleanup function cancels any in-flight upstream
+  // request when the selected task changes (or when it transitions into a
+  // terminal state, which removes the polling dependency).
+  useEffect(() => {
+    if (!selectedTask) return;
+    if (TERMINAL_STATUSES.includes(selectedTask.status)) return;
+
+    const taskId = selectedTask.id;
+    // Fire one fetch immediately so the user sees fresh data without waiting
+    // up to DETAIL_POLL_MS after selecting a task.
+    fetchSelectedTask(taskId, { silent: true });
+
+    const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      fetchSelectedTask(taskId, { silent: true });
+    }, DETAIL_POLL_MS);
+
+    return () => {
+      clearInterval(id);
+      detailFetchAbortRef.current?.abort();
+    };
+    // We deliberately depend on selectedTask.id AND selectedTask.status only:
+    // re-fetching mid-poll when activities arrive would create a refresh loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTask?.id, selectedTask?.status, fetchSelectedTask]);
+
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedPrompt = newTask.prompt.trim();
+    const trimmedRepoName = newTask.repoName.trim();
+    const trimmedRepoUrl = newTask.repoUrl.trim();
+
+    if (!trimmedPrompt) {
+      notify.error("Please describe what you want the agent to do.", "Task description required");
+      return;
+    }
+    if (!trimmedRepoName || !trimmedRepoUrl) {
+      notify.error("Repository name and URL are both required.", "Repository information missing");
+      return;
+    }
+    try {
+      // Validate URL early so the user gets a clean message instead of a Zod issue dump.
+      new URL(trimmedRepoUrl);
+    } catch {
+      notify.error(
+        "Repository URL must be a valid URL (e.g. https://github.com/owner/repo).",
+        "Invalid repository URL"
+      );
+      return;
+    }
+
     setCreating(true);
     try {
       const source = {
-        repoName: newTask.repoName.trim(),
-        repoUrl: newTask.repoUrl.trim(),
+        repoName: trimmedRepoName,
+        repoUrl: trimmedRepoUrl,
         ...(newTask.branch.trim() ? { branch: newTask.branch.trim() } : {}),
       };
       const res = await fetch("/api/v1/agents/tasks", {
@@ -111,7 +295,7 @@ export default function CloudAgentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           providerId: newTask.providerId,
-          prompt: newTask.prompt,
+          prompt: trimmedPrompt,
           source,
           options: {
             autoCreatePr: newTask.autoCreatePr,
@@ -120,18 +304,31 @@ export default function CloudAgentsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.data) upsertTask(data.data);
+        if (data.data) {
+          upsertTask(data.data);
+          setSelectedTask(data.data);
+          notify.success(
+            `${getAgentInfo(data.data.providerId).name} task created successfully.`,
+            "Task started"
+          );
+        }
         setNewTask({
-          providerId: "jules",
+          providerId: newTask.providerId,
           prompt: "",
           repoName: "",
           repoUrl: "",
           branch: "main",
           autoCreatePr: true,
         });
+      } else {
+        await showApiError(res, "Failed to start cloud agent task");
       }
     } catch (err) {
       console.error("Failed to create task:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while creating task",
+        "Connection failed"
+      );
     } finally {
       setCreating(false);
     }
@@ -152,9 +349,15 @@ export default function CloudAgentsPage() {
         const data = await res.json();
         if (data.data) upsertTask(data.data);
         setMessageInput("");
+      } else {
+        await showApiError(res, "Failed to send message");
       }
     } catch (err) {
       console.error("Failed to send message:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while sending message",
+        "Connection failed"
+      );
     }
   };
 
@@ -169,9 +372,16 @@ export default function CloudAgentsPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.data) upsertTask(data.data);
+        notify.success("Plan approved. Agent is now executing.", "Approved");
+      } else {
+        await showApiError(res, "Failed to approve plan");
       }
     } catch (err) {
       console.error("Failed to approve plan:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while approving plan",
+        "Connection failed"
+      );
     }
   };
 
@@ -185,9 +395,15 @@ export default function CloudAgentsPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.data) upsertTask(data.data);
+      } else {
+        await showApiError(res, "Failed to cancel task");
       }
     } catch (err) {
       console.error("Failed to cancel task:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while cancelling task",
+        "Connection failed"
+      );
     }
   };
 
@@ -201,9 +417,15 @@ export default function CloudAgentsPage() {
         if (selectedTask?.id === taskId) {
           setSelectedTask(null);
         }
+      } else {
+        await showApiError(res, "Failed to delete task");
       }
     } catch (err) {
       console.error("Failed to delete task:", err);
+      notify.error(
+        err instanceof Error ? err.message : "Network error while deleting task",
+        "Connection failed"
+      );
     }
   };
 
@@ -235,7 +457,35 @@ export default function CloudAgentsPage() {
   };
 
   const getPlanText = (task: CloudAgentTask) => {
-    return task.activities.find((activity) => activity.type === "plan")?.content || "";
+    return (task.activities || []).find((activity) => activity.type === "plan")?.content || "";
+  };
+
+  // Render "live • updated Xs ago" once we have at least one successful poll.
+  // Returns null before the first refresh so we don't flash "updated 0s ago"
+  // during initial mount.
+  const renderLiveIndicator = (timestamp: number | null, active: boolean) => {
+    if (!timestamp) return null;
+    const secondsAgo = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    const label =
+      secondsAgo < 5
+        ? "just now"
+        : secondsAgo < 60
+          ? `${secondsAgo}s ago`
+          : `${Math.floor(secondsAgo / 60)}m ago`;
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[10px] text-text-muted"
+        title={`Last refreshed at ${new Date(timestamp).toLocaleTimeString()}`}
+      >
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${
+            active ? "bg-emerald-500 animate-pulse" : "bg-zinc-500/40"
+          }`}
+          aria-hidden
+        />
+        {active ? "live" : "paused"} · updated {label}
+      </span>
+    );
   };
 
   const formatResult = (result: CloudAgentTask["result"]) => {
@@ -377,7 +627,10 @@ export default function CloudAgentsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t("tasks")}</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{t("tasks")}</h2>
+            {renderLiveIndicator(lastListRefresh, true)}
+          </div>
           {tasks.length === 0 ? (
             <div className="text-center py-8 text-text-muted">
               <span className="material-symbols-outlined text-[40px] mb-2">assignment</span>
@@ -415,7 +668,14 @@ export default function CloudAgentsPage() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">{t("taskDetail")}</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{t("taskDetail")}</h2>
+            {selectedTask &&
+              renderLiveIndicator(
+                lastDetailRefresh,
+                !TERMINAL_STATUSES.includes(selectedTask.status)
+              )}
+          </div>
           {selectedTask ? (
             <Card className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
@@ -460,7 +720,7 @@ export default function CloudAgentsPage() {
                 </div>
               )}
 
-              {selectedTask.activities.length > 0 && (
+              {selectedTask.activities && selectedTask.activities.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <p className="text-sm font-medium">{t("conversation")}</p>
                   <div className="flex flex-col gap-2 max-h-64 overflow-auto">
