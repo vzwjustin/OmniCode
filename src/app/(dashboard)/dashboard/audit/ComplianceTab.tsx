@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card } from "@/shared/components";
+import { Card, RelativeTime } from "@/shared/components";
 
 type AuditEntry = {
   id: number;
@@ -54,15 +54,6 @@ function formatJson(value: unknown) {
     return JSON.stringify(value, null, 2);
   } catch {
     return String(value);
-  }
-}
-
-function formatLocalDate(value: string) {
-  if (!value) return "";
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
-    return value;
   }
 }
 
@@ -299,7 +290,7 @@ export default function ComplianceTab() {
                   return (
                     <tr key={entry.id} className="transition-colors hover:bg-sidebar/30">
                       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-text-muted">
-                        {formatLocalDate(entry.timestamp)}
+                        <RelativeTime value={entry.timestamp} />
                       </td>
                       <td className="px-4 py-3">
                         <span className="rounded-md border border-border bg-surface px-2 py-1 font-mono text-xs text-text-main">

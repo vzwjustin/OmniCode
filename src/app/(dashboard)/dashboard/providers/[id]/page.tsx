@@ -10,6 +10,7 @@ import {
   Card,
   Button,
   Badge,
+  ConfirmModal,
   Input,
   Modal,
   CardSkeleton,
@@ -1028,6 +1029,14 @@ export default function ProviderDetailPage() {
     Record<string, { proxy: any; level: string } | null>
   >({});
   const [importingModels, setImportingModels] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<
+    | { kind: "deleteConnection"; id: string }
+    | { kind: "batchDelete"; count: number }
+    | { kind: "clearAllModels" }
+    | { kind: "deleteNode"; nodeType: string }
+    | null
+  >(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importProgress, setImportProgress] = useState({
     current: 0,
@@ -1396,8 +1405,11 @@ export default function ProviderDetailPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm(t("deleteConnectionConfirm"))) return;
+  const handleDelete = (id) => {
+    setConfirmAction({ kind: "deleteConnection", id });
+  };
+
+  const performDeleteConnection = async (id: string) => {
     try {
       const res = await fetch(`/api/providers/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -1426,10 +1438,13 @@ export default function ProviderDetailPage() {
     });
   }, []);
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(t("batchDeleteConfirm", { count: selectedIds.size }))) return;
+    setConfirmAction({ kind: "batchDelete", count: selectedIds.size });
+  };
 
+  const performBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
     setBatchDeleting(true);
     try {
       const res = await fetch("/api/providers", {
@@ -2579,9 +2594,12 @@ export default function ProviderDetailPage() {
     [modelAliases, providerStorageAlias]
   );
 
-  const handleClearAllModels = async () => {
+  const handleClearAllModels = () => {
     if (clearingModels) return;
-    if (!confirm(t("clearAllModelsConfirm"))) return;
+    setConfirmAction({ kind: "clearAllModels" });
+  };
+
+  const performClearAllModels = async () => {
     setClearingModels(true);
     try {
       const res = await fetch(
@@ -2607,6 +2625,44 @@ export default function ProviderDetailPage() {
       notify.error(t("clearAllModelsFailed"));
     } finally {
       setClearingModels(false);
+    }
+  };
+
+  const performDeleteNode = async () => {
+    try {
+      const res = await fetch(`/api/provider-nodes/${providerId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        router.push("/dashboard/providers");
+      }
+    } catch (error) {
+      console.log("Error deleting provider node:", error);
+    }
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+    const action = confirmAction;
+    setConfirmLoading(true);
+    try {
+      switch (action.kind) {
+        case "deleteConnection":
+          await performDeleteConnection(action.id);
+          break;
+        case "batchDelete":
+          await performBatchDelete();
+          break;
+        case "clearAllModels":
+          await performClearAllModels();
+          break;
+        case "deleteNode":
+          await performDeleteNode();
+          break;
+      }
+    } finally {
+      setConfirmLoading(false);
+      setConfirmAction(null);
     }
   };
 
@@ -3124,29 +3180,15 @@ export default function ProviderDetailPage() {
                 size="sm"
                 variant="secondary"
                 icon="delete"
-                onClick={async () => {
-                  if (
-                    !confirm(
-                      t("deleteCompatibleNodeConfirm", {
-                        type: isCcCompatible
-                          ? t("ccCompatibleLabel")
-                          : isAnthropicCompatible
-                            ? t("anthropic")
-                            : t("openai"),
-                      })
-                    )
-                  )
-                    return;
-                  try {
-                    const res = await fetch(`/api/provider-nodes/${providerId}`, {
-                      method: "DELETE",
-                    });
-                    if (res.ok) {
-                      router.push("/dashboard/providers");
-                    }
-                  } catch (error) {
-                    console.log("Error deleting provider node:", error);
-                  }
+                onClick={() => {
+                  setConfirmAction({
+                    kind: "deleteNode",
+                    nodeType: isCcCompatible
+                      ? t("ccCompatibleLabel")
+                      : isAnthropicCompatible
+                        ? t("anthropic")
+                        : t("openai"),
+                  });
                 }}
               >
                 {t("delete")}
@@ -3991,6 +4033,31 @@ export default function ProviderDetailPage() {
           )}
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => {
+          if (confirmLoading) return;
+          setConfirmAction(null);
+        }}
+        onConfirm={() => void handleConfirmAction()}
+        title={t("delete")}
+        message={
+          confirmAction?.kind === "deleteConnection"
+            ? t("deleteConnectionConfirm")
+            : confirmAction?.kind === "batchDelete"
+              ? t("batchDeleteConfirm", { count: confirmAction.count })
+              : confirmAction?.kind === "clearAllModels"
+                ? t("clearAllModelsConfirm")
+                : confirmAction?.kind === "deleteNode"
+                  ? t("deleteCompatibleNodeConfirm", { type: confirmAction.nodeType })
+                  : ""
+        }
+        confirmText={t("delete")}
+        cancelText={t("cancel")}
+        variant="danger"
+        loading={confirmLoading}
+      />
     </div>
   );
 }

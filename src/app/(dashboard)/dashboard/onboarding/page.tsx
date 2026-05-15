@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDisplayBaseUrl } from "@/shared/hooks";
+import { CopyButton } from "@/shared/components";
 
 const STEP_IDS = ["welcome", "security", "provider", "test", "done"];
 const STEP_ICONS = ["waving_hand", "lock", "dns", "play_circle", "check_circle"];
@@ -430,7 +431,10 @@ export default function OnboardingWizard() {
                 <p className="text-text-muted">{t("doneDesc")}</p>
                 <div className="bg-white/[0.03] rounded-xl p-4 border border-white/[0.06] text-left">
                   <p className="text-xs text-text-muted mb-2 font-medium">{t("yourEndpoint")}</p>
-                  <code className="text-sm text-primary">{apiEndpoint}</code>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm text-primary">{apiEndpoint}</code>
+                    <CopyButton value={apiEndpoint} size="xs" />
+                  </div>
                 </div>
               </div>
             )}

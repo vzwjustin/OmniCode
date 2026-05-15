@@ -5,11 +5,13 @@ import { useTranslations } from "next-intl";
 import {
   Card,
   Button,
+  ConfirmModal,
   EmptyState,
   DataTable,
   FilterBar,
   Input,
   Modal,
+  RelativeTime,
   Select,
 } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
@@ -451,6 +453,7 @@ export default function EvalsTab() {
   const [suiteDraft, setSuiteDraft] = useState<EvalSuiteDraft>(createEmptySuiteDraft());
   const [savingSuite, setSavingSuite] = useState(false);
   const [deletingSuiteId, setDeletingSuiteId] = useState<string | null>(null);
+  const [suiteToDelete, setSuiteToDelete] = useState<EvalSuite | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -751,10 +754,15 @@ export default function EvalsTab() {
 
   async function handleDeleteSuite(suite: EvalSuite) {
     if (suite.source !== "custom") return;
-    const confirmDelete = window.confirm(
-      t("suiteBuilderDeleteConfirm", { name: suite.name || suite.id })
-    );
-    if (!confirmDelete) return;
+    setSuiteToDelete(suite);
+  }
+
+  async function performDeleteSuite() {
+    const suite = suiteToDelete;
+    if (!suite || suite.source !== "custom") {
+      setSuiteToDelete(null);
+      return;
+    }
 
     setDeletingSuiteId(suite.id);
     try {
@@ -787,6 +795,7 @@ export default function EvalsTab() {
       );
     } finally {
       setDeletingSuiteId(null);
+      setSuiteToDelete(null);
     }
   }
 
@@ -1291,7 +1300,7 @@ export default function EvalsTab() {
             if (column.key === "createdAt") {
               return (
                 <span className="text-xs text-text-muted">
-                  {formatTimestamp(String(row.createdAt || ""))}
+                  <RelativeTime value={String(row.createdAt || "")} />
                 </span>
               );
             }
@@ -1599,7 +1608,7 @@ export default function EvalsTab() {
                                   {getTargetLabel(run.target, t)}
                                 </h4>
                                 <p className="text-xs text-text-muted">
-                                  {formatTimestamp(run.createdAt)} ·{" "}
+                                  <RelativeTime value={run.createdAt} /> ·{" "}
                                   {t("historyLatency", { value: run.avgLatencyMs })}
                                 </p>
                               </div>
@@ -1747,7 +1756,7 @@ export default function EvalsTab() {
                                 </span>
                               </div>
                               <p className="text-xs text-text-muted mt-1">
-                                {formatTimestamp(run.createdAt)}
+                                <RelativeTime value={run.createdAt} />
                               </p>
                               <p className="text-xs text-text-muted mt-1">
                                 {t("historyLatency", { value: run.avgLatencyMs })}
@@ -1841,6 +1850,23 @@ export default function EvalsTab() {
         onSave={() => void handleSaveSuite()}
         saving={savingSuite}
         t={t}
+      />
+
+      <ConfirmModal
+        isOpen={suiteToDelete !== null}
+        onClose={() => {
+          if (deletingSuiteId) return;
+          setSuiteToDelete(null);
+        }}
+        onConfirm={() => void performDeleteSuite()}
+        title={t("delete")}
+        message={t("suiteBuilderDeleteConfirm", {
+          name: suiteToDelete?.name || suiteToDelete?.id || "",
+        })}
+        confirmText={t("delete")}
+        cancelText={t("cancel")}
+        variant="danger"
+        loading={deletingSuiteId !== null}
       />
     </div>
   );
