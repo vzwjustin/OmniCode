@@ -559,7 +559,7 @@ export class WindsurfExecutor extends BaseExecutor {
     const upstream = await fetch(url, {
       method: "POST",
       headers,
-      body: framedPayload,
+      body: framedPayload as BodyInit,
       signal: signal ?? undefined,
     });
 

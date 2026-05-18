@@ -34,7 +34,7 @@ export async function parseOptionalJsonBody<T extends z.ZodTypeAny>(request: Req
 
   const validation = validateBody(schema, rawBody);
   if (isValidationFailure(validation)) {
-    return { response: validation.response };
+    return { response: NextResponse.json({ error: validation.error }, { status: 400 }) };
   }
 
   return { data: validation.data };

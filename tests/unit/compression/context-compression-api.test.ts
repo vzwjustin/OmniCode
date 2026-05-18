@@ -1,11 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { rtkConfigSchema } from "../../../src/app/api/context/rtk/config/route.ts";
-import { rtkTestSchema } from "../../../src/app/api/context/rtk/test/route.ts";
-import { compressionComboCreateSchema } from "../../../src/app/api/context/combos/route.ts";
-import { compressionComboUpdateSchema } from "../../../src/app/api/context/combos/[id]/route.ts";
-import { assignmentsUpdateSchema } from "../../../src/app/api/context/combos/[id]/assignments/route.ts";
+import { rtkConfigSchema } from "../../../src/shared/validation/compressionConfigSchemas.ts";
+import {
+  assignmentsUpdateSchema,
+  compressionComboCreateSchema,
+  compressionComboUpdateSchema,
+  rtkTestSchema,
+} from "../../../src/server/compression/apiSchemas.ts";
 
 describe("context compression API schemas", () => {
   it("rejects invalid RTK config and test payloads", () => {

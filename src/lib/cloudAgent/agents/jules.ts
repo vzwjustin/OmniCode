@@ -371,6 +371,9 @@ export class JulesAgent extends CloudAgentBase {
           branch,
         };
       })
-      .filter((entry): entry is { name: string; url: string; branch?: string } => entry !== null);
+      .filter(
+        (entry): entry is { name: string; url: string; branch: string | undefined } =>
+          entry !== null
+      );
   }
 }

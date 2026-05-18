@@ -202,9 +202,7 @@ test("updateProviderConnectionSchema accepts http protocol", () => {
 // ROUTE-LEVEL TESTS: Static model listing behavior for bailian-coding-plan
 // ============================================================================
 
-// Import the exported helper function from the route
-const { getStaticModelsForProvider } =
-  await import("../../src/app/api/providers/[id]/models/route.ts");
+const { getStaticModelsForProvider } = await import("../../src/server/providers/staticModels.ts");
 
 test("getStaticModelsForProvider returns 6 models for bailian-coding-plan", () => {
   const models = getStaticModelsForProvider("bailian-coding-plan");

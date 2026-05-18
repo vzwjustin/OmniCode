@@ -131,6 +131,27 @@ test("managementPolicy: rejects client API keys for dashboard access", async () 
   }
 });
 
+test("managementPolicy: allows bearer API keys with manage scope for management APIs", async () => {
+  process.env.JWT_SECRET = "test-jwt-secret-for-mgmt-policy";
+  process.env.INITIAL_PASSWORD = "initial-pass";
+  await settingsDb.updateSettings({ requireLogin: true });
+  const created = await apiKeysDb.createApiKey("management-allowed", "machine-management", [
+    "manage",
+  ]);
+
+  const policy = await loadPolicy();
+  const out = await policy.evaluate(
+    ctx(new Headers({ authorization: `Bearer ${created.key}` }), "POST", "/api/keys")
+  );
+
+  assert.equal(out.allow, true);
+  if (out.allow) {
+    assert.equal(out.subject.kind, "management_key");
+    assert.equal(out.subject.id, created.id);
+    assert.deepEqual(out.subject.scopes, ["manage"]);
+  }
+});
+
 test("managementPolicy: allows internal model sync only on the dedicated provider routes", async () => {
   process.env.JWT_SECRET = "test-jwt-secret-for-mgmt-policy";
   process.env.INITIAL_PASSWORD = "initial-pass";

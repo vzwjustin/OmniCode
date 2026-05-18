@@ -567,7 +567,7 @@ async function testApiKeyConnection(connection: any) {
  * @param {string} validationModelId Optional custom model ID to test connection with
  * @returns {Promise<object>} Test result (same shape as the JSON response)
  */
-export async function testSingleConnection(connectionId: string, validationModelId?: string) {
+async function testSingleConnection(connectionId: string, validationModelId?: string) {
   const connection = await getProviderConnectionById(connectionId);
 
   if (!connection) {

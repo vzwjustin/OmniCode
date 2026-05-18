@@ -14,8 +14,9 @@ const core = await import("../../src/lib/db/core.ts");
 const settingsDb = await import("../../src/lib/db/settings.ts");
 const loginRoute = await import("../../src/app/api/auth/login/route.ts");
 const managementPassword = await import("../../src/lib/auth/managementPassword.ts");
+const routeInternals = await import("../../src/server/auth/routeInternals.ts");
 
-const originalGetCookieStore = loginRoute.authRouteInternals.getCookieStore;
+const originalGetCookieStore = routeInternals.authRouteInternals.getCookieStore;
 
 async function resetStorage() {
   core.resetDbInstance();
@@ -26,13 +27,13 @@ async function resetStorage() {
 
 test.beforeEach(async () => {
   await resetStorage();
-  loginRoute.authRouteInternals.getCookieStore = async () => ({
+  routeInternals.authRouteInternals.getCookieStore = async () => ({
     set() {},
   });
 });
 
 test.afterEach(() => {
-  loginRoute.authRouteInternals.getCookieStore = originalGetCookieStore;
+  routeInternals.authRouteInternals.getCookieStore = originalGetCookieStore;
 });
 
 test.after(() => {
@@ -64,7 +65,7 @@ test("auth login route returns needsSetup when no management password is configu
 test("auth login route lazily migrates INITIAL_PASSWORD to a persisted hash before validating", async () => {
   process.env.INITIAL_PASSWORD = "bootstrap-secret";
   const setCalls: unknown[][] = [];
-  loginRoute.authRouteInternals.getCookieStore = async () => ({
+  routeInternals.authRouteInternals.getCookieStore = async () => ({
     set: (...args: unknown[]) => setCalls.push(args),
   });
 

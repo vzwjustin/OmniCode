@@ -18,6 +18,7 @@ const providersDb = await import("../../src/lib/db/providers.ts");
 const modelsDb = await import("../../src/lib/db/models.ts");
 const callLogs = await import("../../src/lib/usage/callLogs.ts");
 const modelSyncRoute = await import("../../src/app/api/providers/[id]/sync-models/route.ts");
+const modelSyncLoopback = await import("../../src/server/providers/modelSyncLoopback.ts");
 const scheduler = await import("../../src/shared/services/modelSyncScheduler.ts");
 const originalFetch = globalThis.fetch;
 
@@ -31,7 +32,7 @@ async function resetStorage() {
   // first test's mock-fetch resolution (or rejection) leaks into every
   // subsequent test, causing the route to use in-process fallback instead
   // of the test's mocked self-fetch.
-  modelSyncRoute.__resetLoopbackReadinessForTests();
+  modelSyncLoopback.__resetLoopbackReadinessForTests();
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
@@ -943,7 +944,7 @@ test("model sync route falls back to in-process discovery when internal self-fet
   });
 
   // Reset shared readiness gate so this test exercises the probe path cleanly.
-  modelSyncRoute.__resetLoopbackReadinessForTests();
+  modelSyncLoopback.__resetLoopbackReadinessForTests();
 
   const fetchCalls: string[] = [];
   globalThis.fetch = async (url) => {

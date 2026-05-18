@@ -184,14 +184,14 @@ export async function POST(request) {
           refreshToken: connection.refreshToken,
           copilotToken: connection.copilotToken,
           projectId: connection.projectId,
-          providerSpecificData: connection.providerSpecificData,
+          providerSpecificData: asJsonRecord(connection.providerSpecificData),
         };
 
         // Build URL and headers
         const url = buildProviderUrl(provider, model, true, {
           baseUrlIndex: 0,
           baseUrl: getProviderBaseUrl(connection.providerSpecificData),
-          providerSpecificData: connection.providerSpecificData,
+          providerSpecificData: asJsonRecord(connection.providerSpecificData),
         });
         const headers = buildProviderHeaders(provider, credentials, true, actualBody);
 

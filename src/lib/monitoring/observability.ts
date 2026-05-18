@@ -74,7 +74,7 @@ interface BuildHealthPayloadOptions {
   circuitBreakers: CircuitBreakerStatus[];
   rateLimitStatus: JsonRecord;
   learnedLimits: JsonRecord;
-  lockouts: JsonRecord;
+  lockouts: unknown;
   localProviders: JsonRecord;
   inflightRequests: number;
   quotaMonitorSummary: QuotaMonitorSummary;

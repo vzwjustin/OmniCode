@@ -4,7 +4,7 @@ import React, { useState, useRef } from "react";
 
 export function CodeBlockCopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleCopy = async () => {
     try {

@@ -69,6 +69,9 @@ const rtkFilterPreserveSchema = z
   })
   .strict();
 
+const defaultRtkFilterRules = () => rtkFilterRulesSchema.parse({});
+const defaultRtkFilterPreserve = () => rtkFilterPreserveSchema.parse({});
+
 export const rtkFilterPackSchema = z
   .object({
     id: z.string().min(1),
@@ -77,8 +80,8 @@ export const rtkFilterPackSchema = z
     category: rtkFilterCategorySchema,
     priority: z.number().int().min(0).max(100).default(50),
     match: rtkFilterMatchSchema,
-    rules: rtkFilterRulesSchema.default({}),
-    preserve: rtkFilterPreserveSchema.default({}),
+    rules: rtkFilterRulesSchema.default(defaultRtkFilterRules),
+    preserve: rtkFilterPreserveSchema.default(defaultRtkFilterPreserve),
     tests: z.array(rtkInlineTestSchema).default([]),
   })
   .strict();

@@ -140,7 +140,7 @@ function appendOptionalFormValue(formData, key, value) {
 function appendImageFormValue(formData, key, source, filename) {
   formData.append(
     key,
-    new Blob([source.buffer], {
+    new Blob([source.buffer as BlobPart], {
       type: source.contentType || "application/octet-stream",
     }),
     filename
@@ -488,13 +488,15 @@ async function handleKieImageGeneration({
       payload,
       endpoint,
     });
-    const taskId = createData?.data?.taskId || createData?.taskId;
+    const createPayload = isJsonObject(createData) ? createData : {};
+    const nestedCreatePayload = isJsonObject(createPayload.data) ? createPayload.data : {};
+    const taskId = nestedCreatePayload.taskId || createPayload.taskId;
 
     if (!taskId) {
       const errorMessage =
-        createData?.msg ||
-        createData?.message ||
-        createData?.error ||
+        createPayload.msg ||
+        createPayload.message ||
+        createPayload.error ||
         "KIE image generation did not return taskId";
       if (log) {
         log.error("IMAGE", `KIE createTask failed: ${JSON.stringify(createData)}`);
@@ -1689,7 +1691,9 @@ async function handleTopazImageGeneration({
   try {
     const imageSource = await resolveImageSource(imageUrl);
     const formData = new FormData();
-    const blob = new Blob([imageSource.buffer], { type: imageSource.contentType || "image/png" });
+    const blob = new Blob([imageSource.buffer as BlobPart], {
+      type: imageSource.contentType || "image/png",
+    });
     formData.append("image", blob, "image.png");
 
     if (typeof body.size === "string" && body.size.includes("x")) {

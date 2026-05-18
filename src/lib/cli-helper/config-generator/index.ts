@@ -39,7 +39,7 @@ const TOOL_CONFIG_PATHS: Record<string, string> = {
   continue: path.join(os.homedir(), ".continue", "config.yaml"),
 };
 
-type Generator = (options: GenerateOptions) => string;
+type Generator = (options: GenerateOptions) => string | Promise<string>;
 
 const GENERATORS: Record<string, Generator> = {
   claude: generateClaudeConfig,
@@ -71,7 +71,7 @@ export async function generateConfig(
     if (!generate) {
       return { success: false, configPath: "", error: `Unknown tool: ${toolId}` };
     }
-    const content = generate(options);
+    const content = await generate(options);
     const configPath = TOOL_CONFIG_PATHS[toolId] || "";
     return { success: true, configPath, content };
   } catch (err) {

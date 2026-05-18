@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card, Button, ModelSelectModal, ManualConfigModal, CopyButton, RelativeTime } from "@/shared/components";
+import {
+  Card,
+  Button,
+  ModelSelectModal,
+  ManualConfigModal,
+  CopyButton,
+  RelativeTime,
+} from "@/shared/components";
 import ProviderIcon from "@/shared/components/ProviderIcon";
 import CliStatusBadge from "./CliStatusBadge";
 import { useTranslations } from "next-intl";
@@ -221,7 +228,7 @@ export default function ClaudeToolCard({
 
   // Generate settings.json content for manual copy
   const getManualConfigs = () => {
-    const env = { ANTHROPIC_BASE_URL: getEffectiveBaseUrl() };
+    const env: Record<string, string> = { ANTHROPIC_BASE_URL: getEffectiveBaseUrl() };
     if (selectedApiKey && selectedApiKey.trim()) {
       env.ANTHROPIC_AUTH_TOKEN = "<API_KEY_FROM_DASHBOARD>";
     } else if (cloudEnabled) {

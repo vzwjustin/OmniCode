@@ -6,7 +6,7 @@ import {
   resetAllAvailability,
 } from "@/domain/modelAvailability";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
-import { validateBody } from "@/shared/validation/helpers";
+import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
 const deleteCooldownSchema = z
   .object({
@@ -43,7 +43,7 @@ export async function DELETE(request: Request) {
   try {
     const rawBody = await request.json().catch(() => ({}));
     const validation = validateBody(deleteCooldownSchema, rawBody);
-    if (!validation.success) {
+    if (isValidationFailure(validation)) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
     const body = validation.data;

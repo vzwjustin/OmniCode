@@ -81,12 +81,19 @@ export interface BatchRecord {
   outputExpiresAfterAnchor?: string | null;
 }
 
-export function createBatch(
-  batch: Omit<
-    BatchRecord,
-    "id" | "createdAt" | "requestCountsTotal" | "requestCountsCompleted" | "requestCountsFailed"
-  >
-): BatchRecord {
+type CreateBatchInput = Omit<
+  BatchRecord,
+  | "id"
+  | "createdAt"
+  | "status"
+  | "requestCountsTotal"
+  | "requestCountsCompleted"
+  | "requestCountsFailed"
+> & {
+  status?: BatchRecord["status"];
+};
+
+export function createBatch(batch: CreateBatchInput): BatchRecord {
   const db = getDbInstance();
   const id = "batch_" + uuidv4().replaceAll("-", "").substring(0, 24);
   const createdAt = Math.floor(Date.now() / 1000);

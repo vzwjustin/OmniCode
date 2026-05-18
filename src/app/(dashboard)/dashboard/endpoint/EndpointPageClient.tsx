@@ -119,7 +119,7 @@ type EndpointModelSummary = {
   root?: string;
 };
 
-type CopyHandler = (text: string, key?: string) => void | Promise<void>;
+type CopyHandler = (text: string, key?: string) => void | Promise<void | boolean>;
 
 type EndpointTunnelVisibility = {
   showCloudflaredTunnel: boolean;

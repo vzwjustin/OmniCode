@@ -16,8 +16,9 @@ const loginRoute = await import("../../src/app/api/auth/login/route.ts");
 const logoutRoute = await import("../../src/app/api/auth/logout/route.ts");
 const providersRoute = await import("../../src/app/api/providers/route.ts");
 const providerByIdRoute = await import("../../src/app/api/providers/[id]/route.ts");
-const originalGetLoginCookieStore = loginRoute.authRouteInternals.getCookieStore;
-const originalGetLogoutCookieStore = logoutRoute.logoutRouteInternals.getCookieStore;
+const routeInternals = await import("../../src/server/auth/routeInternals.ts");
+const originalGetLoginCookieStore = routeInternals.authRouteInternals.getCookieStore;
+const originalGetLogoutCookieStore = routeInternals.logoutRouteInternals.getCookieStore;
 
 function resetDb() {
   core.resetDbInstance();
@@ -30,8 +31,8 @@ test.beforeEach(() => {
 });
 
 test.afterEach(() => {
-  loginRoute.authRouteInternals.getCookieStore = originalGetLoginCookieStore;
-  logoutRoute.logoutRouteInternals.getCookieStore = originalGetLogoutCookieStore;
+  routeInternals.authRouteInternals.getCookieStore = originalGetLoginCookieStore;
+  routeInternals.logoutRouteInternals.getCookieStore = originalGetLogoutCookieStore;
 });
 
 test.after(() => {
@@ -43,10 +44,10 @@ test("auth login/logout routes emit structured audit events with ip and request 
   const setCalls = [];
   const deleteCalls = [];
 
-  loginRoute.authRouteInternals.getCookieStore = async () => ({
+  routeInternals.authRouteInternals.getCookieStore = async () => ({
     set: (...args) => setCalls.push(args),
   });
-  logoutRoute.logoutRouteInternals.getCookieStore = async () => ({
+  routeInternals.logoutRouteInternals.getCookieStore = async () => ({
     delete: (...args) => deleteCalls.push(args),
   });
 
@@ -95,7 +96,7 @@ test("auth login/logout routes emit structured audit events with ip and request 
 });
 
 test("auth login route records failed password attempts", async () => {
-  loginRoute.authRouteInternals.getCookieStore = async () => ({
+  routeInternals.authRouteInternals.getCookieStore = async () => ({
     set() {},
   });
 

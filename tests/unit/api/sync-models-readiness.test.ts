@@ -4,7 +4,7 @@ import {
   selfFetchWithRetry,
   ensureLoopbackServerReady,
   __resetLoopbackReadinessForTests,
-} from "../../../src/app/api/providers/[id]/sync-models/route.ts";
+} from "../../../src/server/providers/modelSyncLoopback.ts";
 
 // ---------------------------------------------------------------------------
 // Test 1: retry succeeds on attempt 3

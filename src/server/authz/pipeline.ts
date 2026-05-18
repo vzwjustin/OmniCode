@@ -246,7 +246,7 @@ export async function runAuthzPipeline(
   const policy = POLICIES[classification.routeClass];
   const outcome = await policy.evaluate({ request, classification, requestId });
 
-  if (!outcome.allow) {
+  if (outcome.allow === false) {
     if (managementDashboardRoute) {
       return dashboardLoginRedirect(request, requestId);
     }

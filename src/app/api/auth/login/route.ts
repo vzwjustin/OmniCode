@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
 import { getSettings } from "@/lib/localDb";
 import { SignJWT } from "jose";
-import { cookies } from "next/headers";
 import {
   ensurePersistentManagementPasswordHash,
   getStoredManagementPassword,
@@ -11,6 +10,7 @@ import {
 import { loginSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { checkLoginGuard, clearLoginAttempts, recordLoginFailure } from "@/server/auth/loginGuard";
+import { authRouteInternals } from "@/server/auth/routeInternals";
 
 // SECURITY: No hardcoded fallback — JWT_SECRET must be configured.
 if (!process.env.JWT_SECRET) {
@@ -20,11 +20,6 @@ if (!process.env.JWT_SECRET) {
 function getJwtSecret(): Uint8Array {
   return new TextEncoder().encode(process.env.JWT_SECRET || "");
 }
-
-// Test seam for cookie store injection without affecting runtime behavior.
-export const authRouteInternals = {
-  getCookieStore: cookies,
-};
 
 export async function POST(request) {
   const auditContext = getAuditRequestContext(request);

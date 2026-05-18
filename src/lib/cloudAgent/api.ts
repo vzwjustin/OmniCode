@@ -1,18 +1,23 @@
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { getProviderConnections } from "@/lib/db/providers";
+import { resolveAllowedOrigin, STATIC_CORS_HEADERS } from "@/server/cors/origins";
 import type { AgentCredentials } from "./baseAgent.ts";
 import type { CloudAgentTaskRow } from "./db.ts";
 
 type JsonRecord = Record<string, unknown>;
 
 export function getCloudAgentCorsHeaders(request?: Request) {
+  const headers: Record<string, string> = { ...STATIC_CORS_HEADERS };
   const origin = request?.headers.get("origin");
-  return {
-    "Access-Control-Allow-Origin": origin || "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true",
-  };
+  const allowedOrigin = resolveAllowedOrigin(origin);
+  if (allowedOrigin !== null) {
+    headers["Access-Control-Allow-Origin"] = allowedOrigin;
+    headers["Vary"] = "Origin";
+    if (allowedOrigin !== "*") {
+      headers["Access-Control-Allow-Credentials"] = "true";
+    }
+  }
+  return headers;
 }
 
 export function withCloudAgentCors(response: Response, request?: Request): Response {

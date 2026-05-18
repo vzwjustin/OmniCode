@@ -29,7 +29,7 @@ import type { AutoVariant } from "@omniroute/open-sse/services/autoCombo/autoPre
 import * as log from "../utils/logger";
 import { checkAndRefreshToken } from "../services/tokenRefresh";
 import { deleteHandoff, getHandoff } from "@/lib/db/contextHandoffs";
-import { getCachedSettings, getCombos } from "@/lib/localDb";
+import { getCachedSettings, getCombos, getSettings } from "@/lib/localDb";
 import {
   ensureOpenAIStoreSessionFallback,
   isOpenAIResponsesStoreEnabled,

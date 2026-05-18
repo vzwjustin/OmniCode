@@ -15,6 +15,7 @@ const core = await import("../../../src/lib/db/core.ts");
 const ORIGINAL_OMNIROUTE_API_KEY = process.env.OMNIROUTE_API_KEY;
 const ORIGINAL_ROUTER_API_KEY = process.env.ROUTER_API_KEY;
 const ORIGINAL_JWT_SECRET = process.env.JWT_SECRET;
+const ORIGINAL_REQUIRE_API_KEY = process.env.REQUIRE_API_KEY;
 
 function resetStorage() {
   core.resetDbInstance();
@@ -24,6 +25,7 @@ function resetStorage() {
   delete process.env.OMNIROUTE_API_KEY;
   delete process.env.ROUTER_API_KEY;
   delete process.env.JWT_SECRET;
+  delete process.env.REQUIRE_API_KEY;
 }
 
 test.beforeEach(() => {
@@ -38,6 +40,8 @@ test.after(() => {
   else process.env.ROUTER_API_KEY = ORIGINAL_ROUTER_API_KEY;
   if (ORIGINAL_JWT_SECRET === undefined) delete process.env.JWT_SECRET;
   else process.env.JWT_SECRET = ORIGINAL_JWT_SECRET;
+  if (ORIGINAL_REQUIRE_API_KEY === undefined) delete process.env.REQUIRE_API_KEY;
+  else process.env.REQUIRE_API_KEY = ORIGINAL_REQUIRE_API_KEY;
 });
 
 async function loadPolicy() {
@@ -68,6 +72,7 @@ async function dashboardCookie(): Promise<string> {
 }
 
 test("clientApiPolicy: missing bearer is rejected with 401", async () => {
+  process.env.REQUIRE_API_KEY = "true";
   const policy = await loadPolicy();
   const out = await policy.evaluate(ctx(new Headers()));
   assert.equal(out.allow, false);
@@ -77,7 +82,17 @@ test("clientApiPolicy: missing bearer is rejected with 401", async () => {
   }
 });
 
+test("clientApiPolicy: missing bearer is allowed when REQUIRE_API_KEY is not enabled", async () => {
+  const policy = await loadPolicy();
+  const out = await policy.evaluate(ctx(new Headers()));
+  assert.equal(out.allow, true);
+  if (out.allow) {
+    assert.equal(out.subject.kind, "anonymous");
+  }
+});
+
 test("clientApiPolicy: dashboard session can read the model catalog without bearer", async () => {
+  process.env.REQUIRE_API_KEY = "true";
   const policy = await loadPolicy();
   const out = await policy.evaluate(
     ctx(new Headers({ cookie: await dashboardCookie() }), "GET", "/api/v1/models")
@@ -91,6 +106,7 @@ test("clientApiPolicy: dashboard session can read the model catalog without bear
 });
 
 test("clientApiPolicy: dashboard session does not bypass non-catalog client API auth", async () => {
+  process.env.REQUIRE_API_KEY = "true";
   const policy = await loadPolicy();
   const out = await policy.evaluate(
     ctx(new Headers({ cookie: await dashboardCookie() }), "POST", "/api/v1/chat/completions")

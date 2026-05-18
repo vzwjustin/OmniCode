@@ -92,7 +92,7 @@ export async function POST(request) {
     }
 
     const registryProxy = await resolveProxyForProvider(provider);
-    let proxyToUse = registryProxy;
+    let proxyToUse: unknown = registryProxy;
 
     if (!proxyToUse) {
       const providerProxy = await getProxyForLevel("provider", provider);

@@ -24,7 +24,7 @@ type JsonRecord = Record<string, unknown>;
 
 type SyncSource = "manual" | "scheduled";
 
-interface ProviderConnectionLike {
+interface ProviderConnectionLike extends JsonRecord {
   id: string;
   provider: string;
   authType?: string;

@@ -1,20 +1,11 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   detectCommandType,
   processRtkText,
 } from "@omniroute/open-sse/services/compression/engines/rtk";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
-import { rtkConfigSchema } from "@/shared/validation/compressionConfigSchemas";
-
-export const rtkTestSchema = z
-  .object({
-    text: z.string().min(1),
-    command: z.string().optional(),
-    config: rtkConfigSchema.optional(),
-  })
-  .strict();
+import { rtkTestSchema } from "@/server/compression/apiSchemas";
 
 export async function POST(request: Request) {
   const authError = await requireManagementAuth(request);

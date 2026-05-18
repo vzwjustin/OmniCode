@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { getModelInfoCore } from "../../open-sse/services/model.ts";
 import { REGISTRY } from "../../open-sse/config/providerRegistry.ts";
-import { getStaticModelsForProvider } from "../../src/app/api/providers/[id]/models/route.ts";
+import { getStaticModelsForProvider } from "../../src/server/providers/staticModels.ts";
 
 test("T28: gemini-cli catalog includes preview models, gemini uses API sync", () => {
   // Gemini (AI Studio) no longer has a hardcoded registry — models come from

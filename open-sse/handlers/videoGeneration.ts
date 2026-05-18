@@ -354,12 +354,14 @@ async function handleKieVideoGeneration({
 
   try {
     const createData = await kieExecutor.createTask({ baseUrl, token, payload });
-    const taskId = createData?.data?.taskId || createData?.taskId;
+    const createPayload = isJsonObject(createData) ? createData : {};
+    const nestedCreatePayload = isJsonObject(createPayload.data) ? createPayload.data : {};
+    const taskId = nestedCreatePayload.taskId || createPayload.taskId;
     if (!taskId) {
       const errorMessage =
-        createData?.msg ||
-        createData?.message ||
-        createData?.error ||
+        createPayload.msg ||
+        createPayload.message ||
+        createPayload.error ||
         "KIE video generation did not return taskId";
       if (log) {
         log.error("VIDEO", `KIE createTask failed: ${JSON.stringify(createData)}`);
@@ -444,7 +446,7 @@ async function handleRunwayVideoGeneration({
   );
   const headers = buildRunwayHeaders(token);
 
-  const upstreamBody = {
+  const upstreamBody: Record<string, unknown> = {
     model,
     promptText: body.prompt,
     ratio,

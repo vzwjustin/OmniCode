@@ -177,10 +177,8 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
             existing.index = tc.index;
           }
           if (tc?.function?.name && !existing.function?.name) {
-            existing.function = existing.function || {};
             existing.function.name = tc.function.name;
           }
-          existing.function = existing.function || {};
           existing.function.arguments = `${existing.function.arguments || ""}${deltaArgs}`;
           accumulatedToolCalls.set(key, existing);
         }
@@ -384,9 +382,9 @@ export function parseSSEToClaudeResponse(rawSSE, fallbackModel) {
 
   if (!sawClaudeEvent) return null;
 
-  const content = [...blocks.values()]
+  const content: Array<Record<string, unknown>> = [...blocks.values()]
     .sort((a, b) => a.index - b.index)
-    .flatMap((block) => {
+    .flatMap<Record<string, unknown>>((block) => {
       if (block.type === "text") {
         return block.text ? [{ type: "text", text: block.text }] : [];
       }

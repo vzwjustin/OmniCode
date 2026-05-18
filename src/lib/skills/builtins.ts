@@ -144,10 +144,10 @@ async function readResponseText(response: Response, maxBytes: number) {
   };
 }
 
-function normalizeBody(body: unknown, headers?: Record<string, string>) {
+function normalizeBody(body: unknown, headers?: Record<string, string>): BodyInit | undefined {
   if (body === undefined || body === null) return undefined;
   if (typeof body === "string") return body;
-  if (body instanceof Uint8Array) return body;
+  if (body instanceof Uint8Array) return body as unknown as BodyInit;
   if (typeof body === "object") {
     if (headers && !Object.keys(headers).some((key) => key.toLowerCase() === "content-type")) {
       headers["Content-Type"] = "application/json";

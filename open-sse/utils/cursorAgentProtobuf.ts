@@ -639,7 +639,7 @@ export function decodeKvServerEvent(payload: Buffer): KvServerEvent | null {
       let blobId = Buffer.alloc(0);
       for (const f of decodeFields(getBlobArgs)) {
         if (f.fieldNumber === GBA_BLOB_ID && f.wireType === 2) {
-          blobId = f.bytes;
+          blobId = Buffer.from(f.bytes);
         }
       }
       return { kind: "kv_get_blob", kvId, blobId, requestMetadata };
@@ -650,9 +650,9 @@ export function decodeKvServerEvent(payload: Buffer): KvServerEvent | null {
       let blobData = Buffer.alloc(0);
       for (const f of decodeFields(setBlobArgs)) {
         if (f.fieldNumber === SBA_BLOB_ID && f.wireType === 2) {
-          blobId = f.bytes;
+          blobId = Buffer.from(f.bytes);
         } else if (f.fieldNumber === SBA_BLOB_DATA && f.wireType === 2) {
-          blobData = f.bytes;
+          blobData = Buffer.from(f.bytes);
         }
       }
       return { kind: "kv_set_blob", kvId, blobId, blobData, requestMetadata };

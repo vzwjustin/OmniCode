@@ -1219,7 +1219,7 @@ export class MuseSparkWebExecutor extends BaseExecutor {
     const combinedSignal = signal ? mergeAbortSignals(signal, timeoutSignal) : timeoutSignal;
 
     const fetchResult = await postMetaAiRequest(headers, transformedBody, combinedSignal, log);
-    if (!fetchResult.ok) return fetchResult.result;
+    if (fetchResult.ok === false) return fetchResult.result;
 
     const upstreamResponse = fetchResult.response;
     if (!upstreamResponse.ok) {

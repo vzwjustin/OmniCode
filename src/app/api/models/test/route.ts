@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { POST as postChatCompletion } from "@/app/api/v1/chat/completions/route";
-import { handleValidatedEmbeddingRequestBody } from "@/app/api/v1/embeddings/route";
+import { handleValidatedEmbeddingRequestBody } from "@/server/embeddings/validatedRequest";
 import { POST as postRerank } from "@/app/api/v1/rerank/route";
 import { buildComboTestRequestBody, extractComboTestResponseText } from "@/lib/combos/testHealth";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";

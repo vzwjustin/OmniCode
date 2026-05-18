@@ -32,6 +32,7 @@ import {
   isIntelligentBuilderStrategy,
   parseQualifiedModel,
   resolveComboBuilderProviderId,
+  type ComboBuilderStage,
 } from "@/lib/combos/builderDraft";
 import { normalizeComboConfigMode } from "@/shared/constants/comboConfigMode";
 import BuilderIntelligentStep from "./BuilderIntelligentStep";
@@ -62,12 +63,12 @@ const STRATEGY_OPTIONS = ROUTING_STRATEGIES.map((strategy) => ({
   icon: strategy.icon,
 }));
 
-const STRATEGY_LABEL_FALLBACK = {
+const STRATEGY_LABEL_FALLBACK: Record<string, string> = {
   "context-relay": "Context Relay",
   "reset-aware": "Reset-Aware RR",
 };
 
-const STRATEGY_DESC_FALLBACK = {
+const STRATEGY_DESC_FALLBACK: Record<string, string> = {
   "context-relay":
     "Priority-style routing with automatic context handoffs when account rotation happens.",
   "reset-aware":
@@ -163,7 +164,7 @@ const LEGACY_COMBO_RESILIENCE_KEYS = new Set([
   "healthCheckTimeoutMs",
 ]);
 
-function sanitizeComboRuntimeConfig(config) {
+function sanitizeComboRuntimeConfig(config): Record<string, any> {
   if (!config || typeof config !== "object") return {};
   return Object.fromEntries(
     Object.entries(config).filter(
@@ -305,7 +306,12 @@ const STRATEGY_RECOMMENDATIONS_FALLBACK = {
 };
 
 const COMBO_USAGE_GUIDE_STORAGE_KEY = "omniroute:combos:hide-usage-guide";
-const COMBO_FORM_STAGE_META = [
+const COMBO_FORM_STAGE_META: Array<{
+  id: ComboBuilderStage;
+  fallbackLabel: string;
+  fallbackDescription: string;
+  icon: string;
+}> = [
   {
     id: "basics",
     fallbackLabel: "Basics",
@@ -1954,7 +1960,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
   const [manualModelError, setManualModelError] = useState("");
   const [builderComboRefName, setBuilderComboRefName] = useState("");
   const [builderError, setBuilderError] = useState("");
-  const [builderStage, setBuilderStage] = useState<string>(COMBO_BUILDER_STAGES[0]);
+  const [builderStage, setBuilderStage] = useState<ComboBuilderStage>(COMBO_BUILDER_STAGES[0]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [config, setConfig] = useState(sanitizeComboRuntimeConfig(combo?.config));
   const [showStrategyNudge, setShowStrategyNudge] = useState(false);
@@ -2979,8 +2985,9 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
                   ...previousConfig,
                   ...nextIntelligentConfig,
                   weights: {
-                    ...(previousConfig?.weights || {}),
-                    ...(nextIntelligentConfig?.weights || {}),
+                    ...((previousConfig as { weights?: Record<string, unknown> })?.weights || {}),
+                    ...((nextIntelligentConfig as { weights?: Record<string, unknown> })?.weights ||
+                      {}),
                   },
                 }))
               }

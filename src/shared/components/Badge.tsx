@@ -24,6 +24,7 @@ interface BadgeProps {
   dot?: boolean;
   icon?: React.ReactNode;
   className?: string;
+  title?: string;
 }
 
 export default function Badge({
@@ -33,9 +34,11 @@ export default function Badge({
   dot = false,
   icon,
   className,
+  title,
 }: BadgeProps) {
   return (
     <span
+      title={title}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full font-semibold",
         variants[variant],

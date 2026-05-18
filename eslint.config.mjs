@@ -67,6 +67,7 @@ const eslintConfig = [
       "app/**",
       "app/.next/**",
       "app/bin/**",
+      "app.bak/**",
       "app.__qa_backup/**",
       "app/app.__qa_backup/**",
       // CLI package copy directory

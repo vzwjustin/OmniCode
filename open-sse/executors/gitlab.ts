@@ -578,6 +578,9 @@ export class GitlabExecutor extends BaseExecutor {
     if (!prompt) {
       return {
         response: toOpenAIError(400, "GitLab Duo requires at least one user message"),
+        url: "",
+        headers: {},
+        transformedBody: input.body || {},
       };
     }
 
@@ -611,6 +614,9 @@ export class GitlabExecutor extends BaseExecutor {
     if (errorResponse || !target) {
       return {
         response: errorResponse || toOpenAIError(500, "GitLab Duo target resolution failed"),
+        url: "",
+        headers: {},
+        transformedBody,
       };
     }
     activeCredentials = resolvedCredentials;
