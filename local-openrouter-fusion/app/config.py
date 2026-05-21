@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     LOCAL_GEMINI_CMD: str = Field(default="")
     LOCAL_GEMINI_ARGS: Annotated[List[str], NoDecode] = Field(default_factory=list)
 
+    # Path where the UI-editable runtime config is persisted. Empty = no persistence.
+    LOCAL_FUSION_CONFIG_PATH: str = Field(default="./fusion_config.json")
+
     @field_validator(
         "SERVICE_API_KEYS",
         "DEFAULT_ANALYSIS_MODELS",

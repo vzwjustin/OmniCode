@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 # Set a deterministic env BEFORE importing the app.
 os.environ.setdefault("OPENROUTER_API_KEY", "sk-or-v1-test-key-for-tests-only")
 os.environ.setdefault("SERVICE_API_KEYS", "local-test-key-1,local-test-key-2")
+os.environ.setdefault("LOCAL_FUSION_CONFIG_PATH", "")  # disable persistence in tests
 os.environ.setdefault("RATE_LIMIT_CAPACITY", "1000")
 os.environ.setdefault("RATE_LIMIT_REFILL_PER_MINUTE", "1000")
 os.environ.setdefault("LOCAL_TOKEN_BUDGET_PER_KEY", "0")
@@ -40,6 +41,10 @@ from app.main import create_app  # noqa: E402
 from app.orchestrator import FusionOrchestrator  # noqa: E402
 from app.quota import TokenQuota  # noqa: E402
 from app.rate_limit import TokenBucketLimiter  # noqa: E402
+from app.runtime_config import (  # noqa: E402
+    ActiveConfigStore,
+    default_active_config_from_settings,
+)
 from app.schemas import UsageInfo  # noqa: E402
 
 
@@ -129,6 +134,12 @@ def test_app(fake_client: FakeOpenRouterClient):
         refill_per_minute=settings.RATE_LIMIT_REFILL_PER_MINUTE,
     )
     app.state.quota = TokenQuota(budget_per_key=settings.LOCAL_TOKEN_BUDGET_PER_KEY)
+    # In tests we do not persist; pass path=None so writes are in-memory only.
+    app.state.active_config = ActiveConfigStore(
+        path=None,
+        initial=default_active_config_from_settings(settings),
+    )
+    app.state.settings = settings
     return app
 
 

@@ -209,6 +209,57 @@ curl -X POST http://localhost:8000/v1/chat/completions \
   }'
 ```
 
+### Configuration UI (the "custom LLM" pattern)
+
+Open `http://localhost:8000/` in a browser. The dashboard lets you set the
+**default** fusion behavior the proxy uses for every incoming
+`/v1/chat/completions` request:
+
+- Analysis models (mix `local:*` and remote OpenRouter ids freely)
+- Judge model
+- Critic model + critique on/off
+- Mode (fast / balanced / deep / code)
+- Temperature, max_tokens, cache toggle
+- Quick presets: fully-local, local→remote judge, remote default, code-heavy
+
+Saving the config writes to the runtime store (persisted to
+`LOCAL_FUSION_CONFIG_PATH`, defaults to `./fusion_config.json`) and is
+applied immediately to incoming requests. The UI also has a test panel that
+fires a sample prompt through `/v1/chat/completions` — exactly the path
+your editor/CLI will take — so you can sanity-check the setup.
+
+**The custom-LLM pattern:** point Claude Code, Codex, or your IDE at this
+service with model `local-fusion`. The calling tool sends a normal OpenAI
+chat completion request; the proxy runs your configured fusion server-side
+and returns a single fused answer in the standard OpenAI response shape.
+The calling tool never knows fusion happened.
+
+Admin API (used by the UI, also callable directly):
+
+```bash
+# Read the current active config
+curl http://localhost:8000/v1/admin/config \
+  -H "Authorization: Bearer local-secret-key-1"
+
+# Update it
+curl -X PUT http://localhost:8000/v1/admin/config \
+  -H "Authorization: Bearer local-secret-key-1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "analysis_models": ["local:claude-code", "local:codex", "local:gemini"],
+    "judge_model": "anthropic/claude-opus-4.1",
+    "mode": "code",
+    "enable_critique": true
+  }'
+```
+
+Resolution order for each fusion field on `/v1/chat/completions`:
+
+1. Explicit field in the request body (e.g. `judge_model`) — highest priority.
+2. Inline model-name parsing (e.g. `local-fusion-code:m1+m2@judge`).
+3. Runtime ActiveConfig (what the UI sets).
+4. `Settings` defaults from `.env` — lowest priority.
+
 ### Claude Code usage
 
 Claude Code accepts any OpenAI-compatible base URL + key. Set:

@@ -153,6 +153,7 @@ def test_fuse_allowed_models_whitelist(monkeypatch, fake_client):
     from app.cache import TTLCache
     from app.rate_limit import TokenBucketLimiter
     from app.quota import TokenQuota
+    from app.runtime_config import ActiveConfigStore, default_active_config_from_settings
     from fastapi.testclient import TestClient
 
     settings = get_settings()
@@ -165,6 +166,10 @@ def test_fuse_allowed_models_whitelist(monkeypatch, fake_client):
         refill_per_minute=settings.RATE_LIMIT_REFILL_PER_MINUTE,
     )
     app.state.quota = TokenQuota(budget_per_key=settings.LOCAL_TOKEN_BUDGET_PER_KEY)
+    app.state.active_config = ActiveConfigStore(
+        path=None, initial=default_active_config_from_settings(settings)
+    )
+    app.state.settings = settings
     c = TestClient(app)
 
     r = c.post(

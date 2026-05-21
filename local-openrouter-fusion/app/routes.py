@@ -12,11 +12,16 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from pathlib import Path
+
+from fastapi.responses import FileResponse
+
 from .cache import TTLCache, make_cache_key
 from .logger import get_logger
 from .orchestrator import FusionOrchestrator
 from .quota import QuotaExceeded, TokenQuota
 from .rate_limit import TokenBucketLimiter
+from .runtime_config import ActiveConfig, ActiveConfigStore
 from .schemas import (
     ErrorResponse,
     FusionMeta,
@@ -34,10 +39,15 @@ router = APIRouter()
 
 # --- custom model names (OpenAI-compat) ---
 # Base name plus per-mode variants. Claude Code (and any OpenAI-compatible
-# client) can simply set `model` to one of these to drive fusion.
+# client) can simply set ``model`` to one of these to drive fusion.
+#
+# ``None`` means "no opinion — defer to ActiveConfig". This is what makes
+# ``local-fusion`` behave as a true custom-LLM alias: whatever the UI has
+# configured is what runs. The explicit ``-fast``/``-balanced``/``-deep``/
+# ``-code`` variants do override the active config when used.
 FUSION_MODEL_BASE = "local-fusion"
-FUSION_MODEL_ALIASES: Dict[str, FusionMode] = {
-    "local-fusion": "balanced",
+FUSION_MODEL_ALIASES: Dict[str, Optional[FusionMode]] = {
+    "local-fusion": None,
     "local-fusion-fast": "fast",
     "local-fusion-balanced": "balanced",
     "local-fusion-deep": "deep",
@@ -104,6 +114,10 @@ def get_limiter(request: Request) -> TokenBucketLimiter:
 
 def get_quota(request: Request) -> TokenQuota:
     return request.app.state.quota
+
+
+def get_active_config_store(request: Request) -> ActiveConfigStore:
+    return request.app.state.active_config
 
 
 async def _enforce_rate_limit(limiter: TokenBucketLimiter, client_hash: str) -> None:
@@ -220,13 +234,20 @@ def _coerce_message_content(content: Any) -> str:
     return str(content)
 
 
-def _parse_fusion_model_name(model_name: str) -> tuple[FusionMode, Optional[List[str]], Optional[str]]:
-    """Parse one of:
-       local-fusion
-       local-fusion-code
-       local-fusion-code:m1+m2+m3
-       local-fusion-code:m1+m2@judge
-       local-fusion@judge
+def _parse_fusion_model_name(
+    model_name: str,
+) -> tuple[Optional[FusionMode], Optional[List[str]], Optional[str]]:
+    """Parse a custom fusion model id.
+
+    Accepts:
+        local-fusion                                     (mode: defer to ActiveConfig)
+        local-fusion-code                                (mode: code)
+        local-fusion-code:m1+m2+m3                       (analysis from name)
+        local-fusion-code:m1+m2@judge                    (analysis + judge from name)
+        local-fusion@judge                               (judge from name)
+
+    Returns ``(mode_or_None, analysis_models_or_None, judge_or_None)``.
+    A ``None`` mode means "use the runtime ActiveConfig".
     """
     m = _FUSION_INLINE_RE.match(model_name.strip())
     if not m:
@@ -238,12 +259,12 @@ def _parse_fusion_model_name(model_name: str) -> tuple[FusionMode, Optional[List
             ),
         )
     base = m.group("base")
-    mode = FUSION_MODEL_ALIASES.get(base)
-    if mode is None:
+    if base not in FUSION_MODEL_ALIASES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unknown fusion base model '{base}'.",
         )
+    mode = FUSION_MODEL_ALIASES[base]
     analysis_raw = m.group("analysis")
     analysis_models: Optional[List[str]] = None
     if analysis_raw:
@@ -256,7 +277,17 @@ def _parse_fusion_model_name(model_name: str) -> tuple[FusionMode, Optional[List
     return mode, analysis_models, judge_model
 
 
-def _build_fusion_request_from_openai(req: _OpenAIChatRequest) -> FusionRequest:
+def _build_fusion_request_from_openai(
+    req: _OpenAIChatRequest, active: ActiveConfig
+) -> FusionRequest:
+    """Resolve a fusion request from an OpenAI-style payload.
+
+    Resolution order for each field (first non-None wins):
+        1. Request body explicit field (e.g. ``judge_model``)
+        2. Inline ``model`` string parsing (e.g. ``...@judge``)
+        3. Runtime ActiveConfig (mutated via the UI / admin API)
+        4. ``Settings`` defaults (handled later by the orchestrator)
+    """
     mode, parsed_analysis, parsed_judge = _parse_fusion_model_name(req.model)
 
     messages: List[Message] = []
@@ -277,26 +308,50 @@ def _build_fusion_request_from_openai(req: _OpenAIChatRequest) -> FusionRequest:
             detail="No non-empty messages in request.",
         )
 
-    explicit_mode = req.fusion_mode or mode
-    analysis_models = req.analysis_models or parsed_analysis
-    judge_model = req.judge_model or parsed_judge
-    critic_model = req.critic_model
+    # Mode: explicit > model-name suffix > active config
+    if req.fusion_mode is not None:
+        resolved_mode: FusionMode = req.fusion_mode
+    elif mode is not None:
+        resolved_mode = mode
+    else:
+        resolved_mode = active.mode
+
+    analysis_models = req.analysis_models or parsed_analysis or active.analysis_models
+    judge_model = req.judge_model or parsed_judge or active.judge_model
+    critic_model = req.critic_model or active.critic_model
+
+    temperature = (
+        float(req.temperature) if req.temperature is not None else float(active.temperature)
+    )
+    max_tokens = int(req.max_tokens) if req.max_tokens is not None else int(active.max_tokens)
+    enable_critique = (
+        bool(req.enable_critique) if req.enable_critique is not None else bool(active.enable_critique)
+    )
+    enable_cache = (
+        bool(req.enable_cache) if req.enable_cache is not None else bool(active.enable_cache)
+    )
 
     payload: Dict[str, Any] = {
         "messages": [m.model_dump() for m in messages],
         "analysis_models": analysis_models,
         "judge_model": judge_model,
         "critic_model": critic_model,
-        "mode": explicit_mode,
-        "temperature": 0.2 if req.temperature is None else float(req.temperature),
-        "max_tokens": 4000 if req.max_tokens is None else int(req.max_tokens),
+        "mode": resolved_mode,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
         "include_candidates": bool(req.include_candidates) if req.include_candidates is not None else False,
         "include_trace": bool(req.include_trace) if req.include_trace is not None else False,
-        "enable_critique": True if req.enable_critique is None else bool(req.enable_critique),
-        "enable_cache": True if req.enable_cache is None else bool(req.enable_cache),
+        "enable_critique": enable_critique,
+        "enable_cache": enable_cache,
     }
     try:
-        return FusionRequest(**{k: v for k, v in payload.items() if v is not None or k in ("analysis_models", "judge_model", "critic_model")})
+        return FusionRequest(
+            **{
+                k: v
+                for k, v in payload.items()
+                if v is not None or k in ("analysis_models", "judge_model", "critic_model")
+            }
+        )
     except ValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -399,11 +454,13 @@ async def post_chat_completions(
     cache: TTLCache = Depends(get_cache),
     limiter: TokenBucketLimiter = Depends(get_limiter),
     quota: TokenQuota = Depends(get_quota),
+    active_store: ActiveConfigStore = Depends(get_active_config_store),
 ):
     await _enforce_rate_limit(limiter, client_hash)
     await _enforce_quota(quota, client_hash)
 
-    fusion_request = _build_fusion_request_from_openai(payload)
+    active = await active_store.get()
+    fusion_request = _build_fusion_request_from_openai(payload, active)
     analysis_models, judge_model, critic_model = orchestrator._resolve_models(fusion_request)  # noqa: SLF001
 
     cache_key: Optional[str] = None
@@ -438,3 +495,66 @@ async def post_chat_completions(
         )
 
     return JSONResponse(_to_openai_completion_response(payload.model, fusion_response))
+
+
+# ---------- /v1/admin/config (UI-backed runtime config) ----------
+
+class _ConfigPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    analysis_models: Optional[List[str]] = None
+    judge_model: Optional[str] = None
+    critic_model: Optional[str] = None
+    mode: Optional[FusionMode] = None
+    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
+    max_tokens: Optional[int] = Field(default=None, ge=1, le=32_000)
+    enable_critique: Optional[bool] = None
+    enable_cache: Optional[bool] = None
+
+
+@router.get("/v1/admin/config", tags=["admin"])
+async def get_admin_config(
+    client_hash: str = Depends(require_api_key),
+    active_store: ActiveConfigStore = Depends(get_active_config_store),
+) -> Dict[str, Any]:
+    cfg = await active_store.get()
+    return {"active": cfg.model_dump()}
+
+
+@router.put("/v1/admin/config", tags=["admin"])
+async def put_admin_config(
+    patch: _ConfigPatch,
+    client_hash: str = Depends(require_api_key),
+    active_store: ActiveConfigStore = Depends(get_active_config_store),
+) -> Dict[str, Any]:
+    data = {k: v for k, v in patch.model_dump().items() if v is not None}
+    # Build a fully-validated replacement by merging onto the current state.
+    current = await active_store.get()
+    merged = current.model_dump()
+    merged.update(data)
+    try:
+        new_cfg = ActiveConfig(**merged)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=exc.errors())
+    updated = await active_store.replace(new_cfg)
+    return {"active": updated.model_dump()}
+
+
+# ---------- Frontend UI (single-page config dashboard) ----------
+
+_STATIC_DIR = Path(__file__).parent / "static"
+
+
+@router.get("/", include_in_schema=False)
+async def ui_index() -> FileResponse:
+    """Serve the configuration dashboard. No auth at the page level; the
+    UI calls the JSON APIs with the configured local API key."""
+    index = _STATIC_DIR / "index.html"
+    if not index.exists():
+        raise HTTPException(status_code=404, detail="UI bundle not found.")
+    return FileResponse(str(index), media_type="text/html")
+
+
+@router.get("/ui", include_in_schema=False)
+async def ui_index_alias() -> FileResponse:
+    return await ui_index()

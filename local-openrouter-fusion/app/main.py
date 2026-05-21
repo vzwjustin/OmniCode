@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException, Request
@@ -19,6 +20,10 @@ from .orchestrator import FusionOrchestrator
 from .quota import TokenQuota
 from .rate_limit import TokenBucketLimiter
 from .routes import router
+from .runtime_config import (
+    ActiveConfigStore,
+    default_active_config_from_settings,
+)
 
 logger = get_logger("local_fusion.main")
 
@@ -44,6 +49,14 @@ async def lifespan(app: FastAPI):
     )
     quota = TokenQuota(budget_per_key=settings.LOCAL_TOKEN_BUDGET_PER_KEY)
 
+    config_path: Path | None = None
+    if settings.LOCAL_FUSION_CONFIG_PATH:
+        config_path = Path(settings.LOCAL_FUSION_CONFIG_PATH).expanduser().resolve()
+    active_store = ActiveConfigStore.load(
+        path=config_path,
+        fallback=default_active_config_from_settings(settings),
+    )
+
     configured_locals = local_registry.configured_ids()
     if configured_locals:
         logger.info("Local CLI models enabled: %s", configured_locals)
@@ -52,9 +65,11 @@ async def lifespan(app: FastAPI):
     app.state.openrouter_client = openrouter_client
     app.state.local_registry = local_registry
     app.state.orchestrator = orchestrator
+    app.state.active_config = active_store
     app.state.cache = cache
     app.state.limiter = limiter
     app.state.quota = quota
+    app.state.settings = settings
     try:
         yield
     finally:
