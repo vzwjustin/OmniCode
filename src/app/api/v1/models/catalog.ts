@@ -1126,10 +1126,26 @@ export async function getUnifiedModelsResponse(
         : enriched;
     });
 
+    // Inject local-fusion virtual models so OpenAI-compatible clients can
+    // pick them via /v1/models. These are not associated with any provider.
+    const fusionVirtual = [
+      "local-fusion",
+      "local-fusion-fast",
+      "local-fusion-balanced",
+      "local-fusion-deep",
+      "local-fusion-code",
+    ].map((id) => ({
+      id,
+      object: "model",
+      created: Math.floor(Date.now() / 1000),
+      owned_by: "local-fusion",
+      root: id,
+    }));
+
     return Response.json(
       {
         object: "list",
-        data: enrichedModels,
+        data: [...fusionVirtual, ...enrichedModels],
       },
       {
         headers: {

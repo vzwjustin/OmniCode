@@ -16,6 +16,7 @@ import {
 } from "@omniroute/open-sse/services/accountFallback.ts";
 import { getModelInfo, getComboForModel } from "../services/model";
 import { errorResponse } from "@omniroute/open-sse/utils/error.ts";
+import { handleFusionChat, isFusionModelId } from "@omniroute/open-sse/handlers/fusion.ts";
 import { handleComboChat } from "@omniroute/open-sse/services/combo.ts";
 import { resolveComboConfig } from "@omniroute/open-sse/services/comboConfig.ts";
 import { injectHandoffIntoBody } from "@omniroute/open-sse/services/contextHandoff.ts";
@@ -320,6 +321,21 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
       registerKeySession(apiKeyInfo.id, sessionId);
     }
   }
+
+  // ── Local Fusion intercept ──────────────────────────────────────────────────
+  // If model starts with ``local-fusion`` (or one of its mode variants /
+  // inline-config forms), hand off to the fusion orchestrator. It fans out
+  // to N analysis models via internal sub-calls to ``handleChat`` (this
+  // function), then synthesizes a single answer through a judge model.
+  // The calling tool sees a normal OpenAI completion.
+  if (isFusionModelId(modelStr)) {
+    return await handleFusionChat({
+      body,
+      originalRequest: request,
+      handleChat: (req) => handleChat(req),
+    });
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   // T05 — Task-Aware Smart Routing
   // Detect the semantic task type and optionally route to the optimal model

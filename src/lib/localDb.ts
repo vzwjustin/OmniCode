@@ -84,6 +84,14 @@ export * from "./db/compressionCacheStats";
 export * from "./db/compressionCombos";
 
 export {
+  getFusionConfig,
+  setFusionConfig,
+  resetFusionConfig,
+  FUSION_CONFIG_DEFAULTS,
+} from "./db/fusionConfig";
+export type { FusionConfigData } from "./db/fusionConfig";
+
+export {
   // API Keys
   getApiKeys,
   getApiKeyById,
