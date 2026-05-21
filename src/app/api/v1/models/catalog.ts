@@ -1126,10 +1126,44 @@ export async function getUnifiedModelsResponse(
         : enriched;
     });
 
+    // Inject local-fusion virtual models so OpenAI-compatible clients can
+    // pick them via /v1/models. These are not associated with any provider.
+    const fusionVirtual = [
+      "local-fusion",
+      "local-fusion-fast",
+      "local-fusion-balanced",
+      "local-fusion-deep",
+      "local-fusion-code",
+    ].map((id) => ({
+      id,
+      object: "model",
+      created: Math.floor(Date.now() / 1000),
+      owned_by: "local-fusion",
+      root: id,
+    }));
+
+    // Also expose any local CLI adapters the operator has configured, so
+    // editors / scripts can see exactly which `local:<slug>` ids are
+    // ready to use.
+    let localCliVirtual: Array<Record<string, unknown>> = [];
+    try {
+      const { listLocalCliModelNames } = await import("@omniroute/open-sse/handlers/localCli.ts");
+      const ids = listLocalCliModelNames();
+      localCliVirtual = ids.map((id) => ({
+        id,
+        object: "model",
+        created: Math.floor(Date.now() / 1000),
+        owned_by: "local-cli",
+        root: id,
+      }));
+    } catch {
+      localCliVirtual = [];
+    }
+
     return Response.json(
       {
         object: "list",
-        data: enrichedModels,
+        data: [...fusionVirtual, ...localCliVirtual, ...enrichedModels],
       },
       {
         headers: {
