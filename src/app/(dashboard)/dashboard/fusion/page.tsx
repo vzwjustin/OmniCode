@@ -5,6 +5,18 @@ import { useNotificationStore } from "@/store/notificationStore";
 
 type FusionMode = "fast" | "balanced" | "deep" | "code";
 
+interface LocalCliAdapter {
+  cmd: string;
+  args: string[];
+}
+
+interface LocalCliConfig {
+  claudeCode: LocalCliAdapter;
+  codex: LocalCliAdapter;
+  gemini: LocalCliAdapter;
+  timeoutMs: number;
+}
+
 interface FusionConfigPayload {
   analysisModels: string[];
   judgeModel: string | null;
@@ -17,6 +29,7 @@ interface FusionConfigPayload {
   cacheTtlSeconds: number;
   perModelTimeoutMs: number;
   enabled: boolean;
+  localCli: LocalCliConfig;
   updatedAt: number;
 }
 
@@ -97,6 +110,30 @@ const PRESETS: Array<{
       enableCritique: false,
     },
   },
+  {
+    id: "fully-local",
+    label: "Fully local",
+    description: "Claude Code + Codex + Gemini CLIs → Claude Code judge",
+    patch: {
+      analysisModels: ["local:claude-code", "local:codex", "local:gemini"],
+      judgeModel: "local:claude-code",
+      criticModel: null,
+      mode: "balanced",
+      enableCritique: false,
+    },
+  },
+  {
+    id: "local-analysis-remote-judge",
+    label: "Local analysis, remote judge",
+    description: "CLIs do the legwork; remote model judges",
+    patch: {
+      analysisModels: ["local:claude-code", "local:codex", "local:gemini"],
+      judgeModel: "anthropic/claude-opus-4.1",
+      criticModel: "anthropic/claude-sonnet-4.5",
+      mode: "balanced",
+      enableCritique: true,
+    },
+  },
 ];
 
 function asInt(value: string, fallback: number): number {
@@ -167,6 +204,7 @@ export default function FusionPage() {
           cacheTtlSeconds: config.cacheTtlSeconds,
           perModelTimeoutMs: config.perModelTimeoutMs,
           enabled: config.enabled,
+          localCli: config.localCli,
         }),
       });
       if (!r.ok) {
@@ -501,6 +539,105 @@ export default function FusionPage() {
           </section>
 
           <section className="rounded-xl border border-border/40 bg-surface-raised/40 p-5">
+            <h2 className="text-base font-medium mb-3">Local CLIs as models</h2>
+            <p className="text-xs text-text-muted mb-4">
+              Use a locally installed CLI (Claude Code, Codex CLI, Gemini CLI, …) as a model.
+              Reference them anywhere a model id is accepted via{" "}
+              <code className="px-1.5 py-0.5 rounded bg-surface text-xs">local:claude-code</code>,{" "}
+              <code className="px-1.5 py-0.5 rounded bg-surface text-xs">local:codex</code>, or{" "}
+              <code className="px-1.5 py-0.5 rounded bg-surface text-xs">local:gemini</code>.
+              Prompts are sent on stdin; no shell, no interpolation. Leave a command empty to
+              disable that adapter.
+            </p>
+            {(["claudeCode", "codex", "gemini"] as const).map((slug) => {
+              const label =
+                slug === "claudeCode"
+                  ? "Claude Code (local:claude-code)"
+                  : slug === "codex"
+                    ? "OpenAI Codex CLI (local:codex)"
+                    : "Gemini CLI (local:gemini)";
+              const adapter = config.localCli[slug];
+              return (
+                <div key={slug} className="mb-4 grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-3">
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-text-muted mb-1">
+                      {label} — command
+                    </label>
+                    <input
+                      type="text"
+                      value={adapter.cmd}
+                      placeholder="e.g. claude  (leave blank to disable)"
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          localCli: {
+                            ...config.localCli,
+                            [slug]: { ...adapter, cmd: e.target.value },
+                          },
+                        })
+                      }
+                      className="w-full rounded-md border border-border/40 bg-surface px-3 py-2 text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-text-muted mb-1">
+                      Args (comma- or space-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={adapter.args.join(" ")}
+                      placeholder="e.g. -p --output-format text"
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          localCli: {
+                            ...config.localCli,
+                            [slug]: {
+                              ...adapter,
+                              args: e.target.value
+                                .split(/[\s,]+/)
+                                .map((s) => s.trim())
+                                .filter((s) => s.length > 0),
+                            },
+                          },
+                        })
+                      }
+                      className="w-full rounded-md border border-border/40 bg-surface px-3 py-2 text-sm font-mono"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="mt-2 max-w-xs">
+              <label className="block text-xs uppercase tracking-wide text-text-muted mb-1">
+                Per-CLI timeout (ms)
+              </label>
+              <input
+                type="number"
+                min={1000}
+                max={900000}
+                step={1000}
+                value={config.localCli.timeoutMs}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    localCli: {
+                      ...config.localCli,
+                      timeoutMs: asInt(e.target.value, 240000),
+                    },
+                  })
+                }
+                className="w-full rounded-md border border-border/40 bg-surface px-3 py-2 text-sm"
+              />
+            </div>
+            <p className="text-xs text-text-muted mt-3">
+              Tip: list these ids in <b>Analysis models</b> above to make fusion use the local CLIs
+              in parallel — or set <b>Judge model</b> to a <code>local:…</code> id to keep the whole
+              run on your machine.
+            </p>
+          </section>
+
+          <section className="rounded-xl border border-border/40 bg-surface-raised/40 p-5">
             <h2 className="text-base font-medium mb-3">Test prompt</h2>
             <p className="text-xs text-text-muted mb-3">
               Sends a request through{" "}
@@ -529,6 +666,15 @@ export default function FusionPage() {
                   <option value="local-fusion-balanced">local-fusion-balanced</option>
                   <option value="local-fusion-deep">local-fusion-deep</option>
                   <option value="local-fusion-code">local-fusion-code</option>
+                  {config.localCli.claudeCode.cmd ? (
+                    <option value="local:claude-code">local:claude-code (direct)</option>
+                  ) : null}
+                  {config.localCli.codex.cmd ? (
+                    <option value="local:codex">local:codex (direct)</option>
+                  ) : null}
+                  {config.localCli.gemini.cmd ? (
+                    <option value="local:gemini">local:gemini (direct)</option>
+                  ) : null}
                 </select>
                 <button
                   onClick={() => void onRunTest()}

@@ -21,6 +21,27 @@ import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { clearFusionCache } from "@omniroute/open-sse/handlers/fusion.ts";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
+const localCliAdapterSchema = z
+  .object({
+    cmd: z.string().max(512),
+    args: z.array(z.string().max(256)).max(32),
+  })
+  .strict();
+
+const localCliConfigSchema = z
+  .object({
+    claudeCode: localCliAdapterSchema.optional(),
+    codex: localCliAdapterSchema.optional(),
+    gemini: localCliAdapterSchema.optional(),
+    timeoutMs: z
+      .number()
+      .int()
+      .min(1000)
+      .max(15 * 60 * 1000)
+      .optional(),
+  })
+  .strict();
+
 const fusionConfigUpdateSchema = z
   .object({
     analysisModels: z.array(z.string().min(1).max(256)).max(16).optional(),
@@ -44,6 +65,7 @@ const fusionConfigUpdateSchema = z
       .max(15 * 60 * 1000)
       .optional(),
     enabled: z.boolean().optional(),
+    localCli: localCliConfigSchema.optional(),
     // ``reset: true`` clears the config back to defaults.
     reset: z.literal(true).optional(),
   })
@@ -101,6 +123,7 @@ export async function PUT(request: NextRequest) {
     if (body.cacheTtlSeconds !== undefined) patch.cacheTtlSeconds = body.cacheTtlSeconds;
     if (body.perModelTimeoutMs !== undefined) patch.perModelTimeoutMs = body.perModelTimeoutMs;
     if (body.enabled !== undefined) patch.enabled = body.enabled;
+    if (body.localCli !== undefined) patch.localCli = body.localCli;
 
     const updated = setFusionConfig(patch);
     // Cache is keyed by config — invalidate so the new settings take effect.

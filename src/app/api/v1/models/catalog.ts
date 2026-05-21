@@ -1142,10 +1142,28 @@ export async function getUnifiedModelsResponse(
       root: id,
     }));
 
+    // Also expose any local CLI adapters the operator has configured, so
+    // editors / scripts can see exactly which `local:<slug>` ids are
+    // ready to use.
+    let localCliVirtual: Array<Record<string, unknown>> = [];
+    try {
+      const { listLocalCliModelNames } = await import("@omniroute/open-sse/handlers/localCli.ts");
+      const ids = listLocalCliModelNames();
+      localCliVirtual = ids.map((id) => ({
+        id,
+        object: "model",
+        created: Math.floor(Date.now() / 1000),
+        owned_by: "local-cli",
+        root: id,
+      }));
+    } catch {
+      localCliVirtual = [];
+    }
+
     return Response.json(
       {
         object: "list",
-        data: [...fusionVirtual, ...enrichedModels],
+        data: [...fusionVirtual, ...localCliVirtual, ...enrichedModels],
       },
       {
         headers: {

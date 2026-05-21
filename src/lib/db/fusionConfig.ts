@@ -5,6 +5,18 @@
 
 import { getDbInstance } from "./core";
 
+export interface LocalCliAdapter {
+  cmd: string;
+  args: string[];
+}
+
+export interface LocalCliConfig {
+  claudeCode: LocalCliAdapter;
+  codex: LocalCliAdapter;
+  gemini: LocalCliAdapter;
+  timeoutMs: number;
+}
+
 export interface FusionConfigData {
   analysisModels: string[];
   judgeModel: string | null;
@@ -17,6 +29,7 @@ export interface FusionConfigData {
   cacheTtlSeconds: number;
   perModelTimeoutMs: number;
   enabled: boolean;
+  localCli: LocalCliConfig;
   updatedAt: number;
 }
 
@@ -34,8 +47,38 @@ export const FUSION_CONFIG_DEFAULTS: FusionConfigData = {
   cacheTtlSeconds: 600,
   perModelTimeoutMs: 240_000,
   enabled: true,
+  localCli: {
+    claudeCode: { cmd: "", args: [] },
+    codex: { cmd: "", args: [] },
+    gemini: { cmd: "", args: [] },
+    timeoutMs: 240_000,
+  },
   updatedAt: 0,
 };
+
+function normalizeAdapter(raw: unknown): LocalCliAdapter {
+  if (!raw || typeof raw !== "object") return { cmd: "", args: [] };
+  const r = raw as Partial<LocalCliAdapter>;
+  const cmd = typeof r.cmd === "string" ? r.cmd.trim() : "";
+  const args = Array.isArray(r.args)
+    ? r.args.map((a) => String(a)).filter((a) => a.length > 0)
+    : [];
+  return { cmd, args };
+}
+
+function normalizeLocalCli(raw: unknown): LocalCliConfig {
+  if (!raw || typeof raw !== "object") return { ...FUSION_CONFIG_DEFAULTS.localCli };
+  const r = raw as Partial<LocalCliConfig>;
+  return {
+    claudeCode: normalizeAdapter((r as { claudeCode?: unknown }).claudeCode),
+    codex: normalizeAdapter((r as { codex?: unknown }).codex),
+    gemini: normalizeAdapter((r as { gemini?: unknown }).gemini),
+    timeoutMs:
+      typeof r.timeoutMs === "number" && Number.isFinite(r.timeoutMs) && r.timeoutMs > 0
+        ? Math.min(15 * 60 * 1000, Math.floor(r.timeoutMs))
+        : FUSION_CONFIG_DEFAULTS.localCli.timeoutMs,
+  };
+}
 
 function normalize(raw: Partial<FusionConfigData> | null | undefined): FusionConfigData {
   const r = raw ?? {};
@@ -85,6 +128,7 @@ function normalize(raw: Partial<FusionConfigData> | null | undefined): FusionCon
         ? Math.min(15 * 60 * 1000, Math.floor(r.perModelTimeoutMs))
         : FUSION_CONFIG_DEFAULTS.perModelTimeoutMs,
     enabled: typeof r.enabled === "boolean" ? r.enabled : FUSION_CONFIG_DEFAULTS.enabled,
+    localCli: normalizeLocalCli((r as { localCli?: unknown }).localCli),
     updatedAt: typeof r.updatedAt === "number" ? r.updatedAt : 0,
   };
 }
