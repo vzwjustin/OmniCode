@@ -158,7 +158,7 @@ export async function resolveModelOrError(
       const { getCombos } = await import("@/lib/localDb");
       const all = await getCombos();
       for (const c of all) {
-        if (c.name?.startsWith("auto/")) available.push(c.name);
+        if (typeof c.name === "string" && c.name.startsWith("auto/")) available.push(c.name);
       }
     } catch {
       /* DB unavailable */

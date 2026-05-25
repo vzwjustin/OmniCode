@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requireManagementAuth } from "@/lib/api/requireManagementAuth";
-import { compressionPreviewConfigSchema } from "@/shared/validation/compressionConfigSchemas";
+import { PreviewRequestSchema } from "@/server/compression/apiSchemas";
 import { applyCompression } from "@omniroute/open-sse/services/compression/strategySelector";
 import type {
   CompressionConfig,
@@ -9,26 +8,11 @@ import type {
 } from "@omniroute/open-sse/services/compression/types";
 import { buildCompressionPreviewDiff } from "@omniroute/open-sse/services/compression/diffHelper";
 
-export const PreviewCompressionConfigSchema = compressionPreviewConfigSchema;
-
-export const PreviewRequestSchema = z.object({
-  messages: z
-    .array(
-      z.object({
-        role: z.string(),
-        content: z.union([z.string(), z.array(z.unknown())]),
-      })
-    )
-    .min(1),
-  mode: z.enum(["off", "lite", "standard", "aggressive", "ultra", "rtk", "stacked"]),
-  config: PreviewCompressionConfigSchema.optional(),
-});
-
 function countTokens(text: string): number {
   return Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.33);
 }
 
-function messagesToText(messages: Array<{ role: string; content: unknown }>): string {
+function messagesToText(messages: Array<{ role: string; content?: unknown }>): string {
   return messages
     .map((m) => {
       const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content);

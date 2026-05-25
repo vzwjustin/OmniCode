@@ -525,7 +525,7 @@ export function getModelLockoutInfo(
   };
 }
 
-type ModelLockoutInfo = {
+export type ModelLockoutInfo = {
   provider: string;
   connectionId: string;
   model: string;

@@ -192,6 +192,17 @@ export function ActivityHeatmap({ activityMap }) {
 
     return { days, maxVal };
   }, [activityMap]);
+  const totalTokens = useMemo(
+    () =>
+      Object.values((activityMap || {}) as Record<string, unknown>).reduce<number>(
+        (total, value) => {
+          const numericValue = typeof value === "number" ? value : Number(value);
+          return total + (Number.isFinite(numericValue) ? numericValue : 0);
+        },
+        0
+      ),
+    [activityMap]
+  );
 
   const weeks = useMemo(() => {
     const w = [];
@@ -261,9 +272,7 @@ export function ActivityHeatmap({ activityMap }) {
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">Activity</h3>
         <span className="text-xs text-text-muted">
-          {Object.keys(activityMap || {}).length} active days ·{" "}
-          {fmt(Object.values(activityMap || {}).reduce((a: number, b: number) => a + b, 0))} tokens
-          · 365 days
+          {Object.keys(activityMap || {}).length} active days · {fmt(totalTokens)} tokens · 365 days
         </span>
       </div>
 

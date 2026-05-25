@@ -28,6 +28,12 @@ type TranscriptionCredentials = {
   accessToken?: string;
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 /**
  * Return a CORS error response from an upstream fetch failure
  */
@@ -349,11 +355,14 @@ async function pollKieTranscriptionResult(baseUrl, modelId, taskId, token) {
     });
 
     if (state === "success") {
+      const payload = asRecord(data);
+      const nested = asRecord(payload.data);
+      const response = asRecord(nested.response);
       const text =
-        data?.data?.response?.text ||
-        data?.data?.resultText ||
-        data?.data?.text ||
-        data?.text ||
+        (typeof response.text === "string" && response.text) ||
+        (typeof nested.resultText === "string" && nested.resultText) ||
+        (typeof nested.text === "string" && nested.text) ||
+        (typeof payload.text === "string" && payload.text) ||
         "";
       return Response.json({ text }, { headers: { ...CORS_HEADERS } });
     }

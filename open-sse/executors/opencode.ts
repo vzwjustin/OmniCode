@@ -70,13 +70,11 @@ export class OpencodeExecutor extends BaseExecutor {
     credentials: ProviderCredentials
   ): any {
     const modifiedBody = super.transformRequest(model, body, stream, credentials);
-    if (
-      modifiedBody &&
-      typeof modifiedBody === "object" &&
-      Array.isArray(modifiedBody.tools) &&
-      modifiedBody.tools.length > 128
-    ) {
-      modifiedBody.tools = modifiedBody.tools.slice(0, 128);
+    if (modifiedBody && typeof modifiedBody === "object") {
+      const requestBody = modifiedBody as { tools?: unknown[] };
+      if (Array.isArray(requestBody.tools) && requestBody.tools.length > 128) {
+        requestBody.tools = requestBody.tools.slice(0, 128);
+      }
     }
     return modifiedBody;
   }

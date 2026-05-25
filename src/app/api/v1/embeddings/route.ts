@@ -10,8 +10,11 @@ import { v1EmbeddingsSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
 import { getAllCustomModels, getApiKeyMetadata } from "@/lib/localDb";
-import { createEmbeddingResponse, type EmbeddingHandlerOptions } from "@/lib/embeddings/service";
 import { extractApiKey, isValidApiKey } from "@/sse/services/auth";
+import {
+  handleValidatedEmbeddingRequestBody,
+  type ValidatedEmbeddingBody,
+} from "@/server/embeddings/validatedRequest";
 
 function toProviderScopedModelId(providerId: string, modelId: string): string {
   return modelId.startsWith(`${providerId}/`) ? modelId : `${providerId}/${modelId}`;
@@ -63,15 +66,6 @@ export async function GET() {
   return new Response(JSON.stringify({ object: "list", data }), {
     headers: { "Content-Type": "application/json" },
   });
-}
-
-type ValidatedEmbeddingBody = Record<string, unknown> & { model: string };
-
-export async function handleValidatedEmbeddingRequestBody(
-  body: ValidatedEmbeddingBody,
-  options: EmbeddingHandlerOptions = {}
-) {
-  return createEmbeddingResponse(body, options);
 }
 
 export async function POST(request) {

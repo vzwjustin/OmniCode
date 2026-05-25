@@ -11,12 +11,12 @@ const OPENAI_SIZE_TO_ASPECT_RATIO: Record<string, string> = {
 // Supports direct aspect ratios (e.g. "16:9")
 const ASPECT_RATIO_PASSTHROUGH = /^\d+:\d+$/;
 
-export function mapImageSize(sizeParam?: string | null): string {
-  if (!sizeParam) return "1:1"; // default
+export function mapImageSize(sizeParam?: string | null, fallback = "1:1"): string {
+  if (!sizeParam) return fallback;
 
   // Native aspect ratio (e.g. "16:9") — pass-through
   if (ASPECT_RATIO_PASSTHROUGH.test(sizeParam)) return sizeParam;
 
   // Map OpenAI sizes to aspect ratios
-  return OPENAI_SIZE_TO_ASPECT_RATIO[sizeParam] ?? "1:1";
+  return OPENAI_SIZE_TO_ASPECT_RATIO[sizeParam] ?? fallback;
 }

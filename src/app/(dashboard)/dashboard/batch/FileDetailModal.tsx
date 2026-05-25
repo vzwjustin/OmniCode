@@ -42,6 +42,8 @@ interface FileRecord {
   purpose: string;
   createdAt: number;
   expiresAt?: number | null;
+  created_at?: number;
+  expires_at?: number | null;
 }
 
 interface FileDetailModalProps {

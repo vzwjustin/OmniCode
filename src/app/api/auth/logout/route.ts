@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuditRequestContext, logAuditEvent } from "@/lib/compliance/index";
-import { cookies } from "next/headers";
-
-export const logoutRouteInternals = {
-  getCookieStore: cookies,
-};
+import { logoutRouteInternals } from "@/server/auth/routeInternals";
 
 export async function POST(request) {
   const auditContext = getAuditRequestContext(request);

@@ -8,7 +8,7 @@ import {
   type AssessmentTrigger,
   type ModelCategory,
 } from "@/domain/assessment/types";
-import { validateBody } from "@/shared/validation/helpers";
+import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 
 const assessor = new Assessor(
   process.env.OMNIROUTe_API_KEY ?? process.env.API_KEY ?? "",
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.json();
     const validation = validateBody(assessmentPostSchema, rawBody);
-    if (!validation.success) {
+    if (isValidationFailure(validation)) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 

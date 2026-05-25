@@ -23,7 +23,12 @@ import {
   extractComfyOutputFiles,
 } from "../utils/comfyuiClient.ts";
 import { saveCallLog } from "@/lib/usageDb";
-import { getKieCallbackUrl, isJsonObject, parseKieResultJson } from "../utils/kieTask.ts";
+import {
+  getKieCallbackUrl,
+  isJsonObject,
+  parseKieResultJson,
+  type KieCallbackBody,
+} from "../utils/kieTask.ts";
 
 function normalizeKieSunoModel(model: string): string {
   const map: Record<string, string> = {
@@ -230,11 +235,12 @@ async function handleKieMusicGeneration({
     baseUrl: string;
     statusUrl?: string;
   };
-  body: Record<string, unknown> & {
-    prompt?: unknown;
-    timeout_ms?: unknown;
-    poll_interval_ms?: unknown;
-  };
+  body: Record<string, unknown> &
+    KieCallbackBody & {
+      prompt?: unknown;
+      timeout_ms?: unknown;
+      poll_interval_ms?: unknown;
+    };
   credentials?: {
     apiKey?: string;
     accessToken?: string;
@@ -295,12 +301,14 @@ async function handleKieMusicGeneration({
   try {
     const endpoint = new URL(url).pathname;
     const createData = await kieExecutor.createTask({ baseUrl, token, payload, endpoint });
-    const taskId = createData?.data?.taskId || createData?.taskId;
+    const createPayload = isJsonObject(createData) ? createData : {};
+    const nestedCreatePayload = isJsonObject(createPayload.data) ? createPayload.data : {};
+    const taskId = nestedCreatePayload.taskId || createPayload.taskId;
     if (!taskId) {
       const errorMessage =
-        createData?.msg ||
-        createData?.message ||
-        createData?.error ||
+        createPayload.msg ||
+        createPayload.message ||
+        createPayload.error ||
         "KIE music generation did not return taskId";
       if (log) {
         log.error("MUSIC", `KIE createTask failed: ${JSON.stringify(createData)}`);

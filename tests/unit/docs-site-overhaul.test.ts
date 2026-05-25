@@ -6,7 +6,7 @@ import {
   getDocItemBySlug,
   getAllDocSlugsFlat,
   getPrevNextSlugs,
-} from "../../src/app/docs/[slug]/page";
+} from "../../src/app/docs/lib/docsPageHelpers";
 import { docsNavigation } from "../../src/app/docs/lib/docsNavigation";
 import { SEARCH_INDEX } from "../../src/app/docs/lib/searchIndex";
 
@@ -263,7 +263,7 @@ test("SEARCH_INDEX entries have non-empty content", () => {
 // ──────────────────────────────────────────────
 
 test("extractMermaidCharts extracts mermaid blocks from content", async () => {
-  const { extractMermaidCharts } = await import("../../src/app/docs/[slug]/page");
+  const { extractMermaidCharts } = await import("../../src/app/docs/lib/docsPageHelpers");
   const content =
     "## Diagram\n\n```mermaid\ngraph TD\n    A-->B\n```\n\nSome text\n\n```mermaid\nsequenceDiagram\n    Alice->>Bob: Hi\n```";
   const charts = extractMermaidCharts(content);
@@ -273,7 +273,7 @@ test("extractMermaidCharts extracts mermaid blocks from content", async () => {
 });
 
 test("extractMermaidCharts returns empty array when no mermaid blocks", async () => {
-  const { extractMermaidCharts } = await import("../../src/app/docs/[slug]/page");
+  const { extractMermaidCharts } = await import("../../src/app/docs/lib/docsPageHelpers");
   const content = "## Heading\n\nSome text with ```js\ncode\n```";
   const charts = extractMermaidCharts(content);
   assert.equal(charts.length, 0);

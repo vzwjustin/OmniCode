@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { CodexExecutor } from "@omniroute/open-sse/executors/codex.ts";
 import { getApiKeyMetadata } from "@/lib/db/apiKeys";
@@ -7,6 +6,7 @@ import { authorizeWebSocketHandshake, extractWsTokenFromRequest } from "@/lib/ws
 import { getModelInfo } from "@/sse/services/model";
 import { getProviderCredentialsWithQuotaPreflight } from "@/sse/services/auth";
 import { checkAndRefreshToken } from "@/sse/services/tokenRefresh";
+import { bridgeSecretMatches } from "@/server/codex/bridgeSecret";
 
 const CODEX_RESPONSES_WS_URL = "wss://chatgpt.com/backend-api/codex/responses";
 const executor = new CodexExecutor();
@@ -28,17 +28,6 @@ function isRecord(value: unknown): value is JsonRecord {
 
 function getBridgeSecret(): string {
   return process.env.OMNIROUTE_WS_BRIDGE_SECRET || "";
-}
-
-function hashBridgeSecret(value: string): Buffer {
-  return createHash("sha256").update(value).digest();
-}
-
-export function bridgeSecretMatches(expectedSecret: string, receivedSecret: string): boolean {
-  if (!expectedSecret || !receivedSecret) return false;
-  const expectedHash = hashBridgeSecret(expectedSecret);
-  const receivedHash = hashBridgeSecret(receivedSecret);
-  return timingSafeEqual(expectedHash, receivedHash);
 }
 
 function getAuthRequest(body: JsonRecord): Request {

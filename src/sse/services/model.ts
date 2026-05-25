@@ -119,7 +119,7 @@ export async function getModelInfo(modelStr) {
 export async function getCombo(modelStr) {
   // Try exact match first (supports combos actually named "combo/ANY")
   let combo = await getComboByName(modelStr);
-  if (combo && combo.models && combo.models.length > 0) {
+  if (combo && Array.isArray(combo.models) && combo.models.length > 0) {
     return combo;
   }
 
@@ -127,7 +127,7 @@ export async function getCombo(modelStr) {
   if (modelStr.startsWith("combo/")) {
     const nameToSearch = modelStr.substring(6);
     combo = await getComboByName(nameToSearch);
-    if (combo && combo.models && combo.models.length > 0) {
+    if (combo && Array.isArray(combo.models) && combo.models.length > 0) {
       return combo;
     }
   }
@@ -170,7 +170,8 @@ export async function getComboForModel(modelStr) {
 export async function getComboModels(modelStr) {
   const combo = await getCombo(modelStr);
   if (!combo) return null;
-  return (combo.models || [])
+  const models = Array.isArray(combo.models) ? combo.models : [];
+  return models
     .map((entry) => getComboStepTarget(entry))
     .filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
 }

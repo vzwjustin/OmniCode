@@ -36,6 +36,14 @@ function toTrimmedString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
+function slugifyStepId(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug.length > 0 ? slug : "step";
+}
+
 export function parseQualifiedModel(
   value: unknown
 ): { providerId: string; modelId: string } | null {
@@ -75,6 +83,9 @@ export function buildPrecisionComboModelStep({
   const normalizedConnectionLabel = toTrimmedString(connectionLabel);
 
   return {
+    id: `draft-model-${slugifyStepId(
+      `${normalizedProviderId}-${normalizedModelId}-${normalizedConnectionId || "auto"}`
+    )}`,
     kind: "model",
     providerId: normalizedProviderId,
     model: `${normalizedProviderId}/${normalizedModelId}`,

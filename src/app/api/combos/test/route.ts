@@ -12,7 +12,7 @@ async function getInternalApiKey(): Promise<string | null> {
   try {
     const keys = await getApiKeys();
     const active = (
-      keys as Array<{ key: string; isActive?: boolean; revokedAt?: string | null }>
+      keys as unknown as Array<{ key?: string; isActive?: boolean; revokedAt?: string | null }>
     ).find((k) => k.key && k.isActive !== false && !k.revokedAt);
     return active?.key ?? null;
   } catch {

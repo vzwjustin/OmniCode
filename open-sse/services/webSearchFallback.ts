@@ -126,7 +126,7 @@ export function supportsNativeWebSearchFallbackBypass({
 }: {
   provider?: string | null;
   sourceFormat?: string | null;
-  targetFormat: string | null | undefined;
+  targetFormat?: string | null;
   nativeCodexPassthrough: boolean;
 }): boolean {
   if (nativeCodexPassthrough) return true;
@@ -192,10 +192,10 @@ export function prepareWebSearchFallbackBody<T extends JsonRecord>(
   };
 
   if (isBuiltInWebSearchToolChoice(body.tool_choice)) {
-    nextBody.tool_choice = {
+    (nextBody as JsonRecord).tool_choice = {
       type: "function",
       function: { name: OMNIROUTE_WEB_SEARCH_FALLBACK_TOOL_NAME },
-    } as T["tool_choice"];
+    };
   }
 
   return {

@@ -17,6 +17,12 @@ function getProviderBaseUrl(providerSpecificData: unknown): string | undefined {
   return typeof baseUrl === "string" && baseUrl.trim().length > 0 ? baseUrl : undefined;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 export async function POST(request) {
   let rawBody;
   try {
@@ -75,7 +81,7 @@ export async function POST(request) {
       refreshToken: connection.refreshToken,
       copilotToken: connection.copilotToken,
       projectId: connection.projectId,
-      providerSpecificData: connection.providerSpecificData,
+      providerSpecificData: asRecord(connection.providerSpecificData),
     };
     targetFormat = getTargetFormat(provider, connection.providerSpecificData);
 
@@ -83,7 +89,7 @@ export async function POST(request) {
     const url = buildProviderUrl(provider, body.model || "test-model", true, {
       baseUrlIndex: 0,
       baseUrl: getProviderBaseUrl(connection.providerSpecificData),
-      providerSpecificData: connection.providerSpecificData,
+      providerSpecificData: asRecord(connection.providerSpecificData),
     });
     const headers = buildProviderHeaders(provider, credentials, true, body);
 

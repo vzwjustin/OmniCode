@@ -14,6 +14,17 @@ import {
 import { normalizeDiscoveredModels } from "@/lib/providerModels/modelDiscovery";
 
 type JsonRecord = Record<string, unknown>;
+type ImportedModelLike = {
+  id?: unknown;
+  name?: unknown;
+  source?: unknown;
+  apiFormat?: unknown;
+  supportedEndpoints?: unknown;
+  inputTokenLimit?: unknown;
+  outputTokenLimit?: unknown;
+  description?: unknown;
+  supportsThinking?: unknown;
+};
 
 export type ManagedModelImportMode = "merge" | "sync";
 
@@ -67,13 +78,13 @@ function isImportedSource(source: unknown): boolean {
   return normalizeManagedSource(source) === "imported";
 }
 
-function getModelId(model: JsonRecord): string | null {
+function getModelId(model: ImportedModelLike): string | null {
   return toNonEmptyString(model.id);
 }
 
 function summarizeImportedChanges(
-  previousModels: JsonRecord[],
-  nextModels: JsonRecord[],
+  previousModels: ImportedModelLike[],
+  nextModels: ImportedModelLike[],
   importedIds: Set<string>
 ) {
   let added = 0;
@@ -83,7 +94,7 @@ function summarizeImportedChanges(
   const previousMap = new Map(previousModels.map((model) => [String(model.id), model]));
   const nextMap = new Map(nextModels.map((model) => [String(model.id), model]));
 
-  const toComparable = (model: JsonRecord | undefined) => {
+  const toComparable = (model: ImportedModelLike | undefined) => {
     if (!model) return null;
     const id = toNonEmptyString(model.id) || "";
     const supportedEndpoints = Array.isArray(model.supportedEndpoints)
@@ -136,7 +147,7 @@ function summarizeImportedChanges(
 }
 
 function collectAddedImportedModels(
-  previousModels: JsonRecord[],
+  previousModels: ImportedModelLike[],
   importedModels: ManagedImportedModel[]
 ): ManagedImportedModel[] {
   const previousIds = new Set(
@@ -249,12 +260,12 @@ export async function importManagedModels({
   }
 
   const importedChanges = summarizeImportedChanges(
-    previousSyncedAvailableModels as JsonRecord[],
-    discoveredModels as JsonRecord[],
+    previousSyncedAvailableModels,
+    discoveredModels,
     importedIds
   );
   const importedModels = collectAddedImportedModels(
-    previousSyncedAvailableModels as JsonRecord[],
+    previousSyncedAvailableModels,
     candidateImportedModels
   );
 

@@ -127,17 +127,18 @@ export class GuardrailRegistry {
 
       try {
         const result = await guardrail.preCall(currentPayload, context);
-        const modified = result?.modifiedPayload !== undefined;
-        const meta = result?.meta || null;
+        const guardrailResult = result || {};
+        const modified = guardrailResult.modifiedPayload !== undefined;
+        const meta = guardrailResult.meta || null;
 
         if (modified) {
-          currentPayload = result?.modifiedPayload as TPayload;
+          currentPayload = guardrailResult.modifiedPayload as TPayload;
         }
 
         const execution: GuardrailExecutionResult = {
-          blocked: result?.block === true,
+          blocked: guardrailResult.block === true,
           guardrail: guardrail.name,
-          message: result?.message,
+          message: guardrailResult.message,
           meta,
           modified,
           skipped: false,
@@ -155,7 +156,7 @@ export class GuardrailRegistry {
           return {
             blocked: true,
             guardrail: guardrail.name,
-            message: result?.message,
+            message: guardrailResult.message,
             payload: currentPayload,
             results,
           };
@@ -200,17 +201,18 @@ export class GuardrailRegistry {
 
       try {
         const result = await guardrail.postCall(currentResponse, context);
-        const modified = result?.modifiedResponse !== undefined;
-        const meta = result?.meta || null;
+        const guardrailResult = result || {};
+        const modified = guardrailResult.modifiedResponse !== undefined;
+        const meta = guardrailResult.meta || null;
 
         if (modified) {
-          currentResponse = result?.modifiedResponse as TResponse;
+          currentResponse = guardrailResult.modifiedResponse as TResponse;
         }
 
         const execution: GuardrailExecutionResult = {
-          blocked: result?.block === true,
+          blocked: guardrailResult.block === true,
           guardrail: guardrail.name,
-          message: result?.message,
+          message: guardrailResult.message,
           meta,
           modified,
           skipped: false,
@@ -228,7 +230,7 @@ export class GuardrailRegistry {
           return {
             blocked: true,
             guardrail: guardrail.name,
-            message: result?.message,
+            message: guardrailResult.message,
             response: currentResponse,
             results,
           };

@@ -105,8 +105,8 @@ export const updateSettingsSchema = z.object({
     .optional(),
 });
 
-export const databaseSettingsSchema = z.object(
-  {
+export const databaseSettingsSchema = z
+  .object({
     // Logs settings
     logs: z.object({
       detailedLogsEnabled: z.boolean(),
@@ -170,8 +170,7 @@ export const databaseSettingsSchema = z.object(
     }),
 
     // Skip location and stats as they're read-only
-  },
-  { strict: true }
-);
+  })
+  .strict();
 
 export type DatabaseSettingsSchema = z.infer<typeof databaseSettingsSchema>;

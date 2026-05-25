@@ -100,6 +100,7 @@ const nextConfig = {
       "./coverage/**/*",
       "./test-results/**/*",
       "./playwright-report/**/*",
+      "./app.bak/**/*",
       "./app.__qa_backup/**/*",
       "./tests/**/*",
       "./logs/**/*",
@@ -135,8 +136,7 @@ const nextConfig = {
   transpilePackages: ["@omniroute/open-sse", "@lobehub/icons"],
   allowedDevOrigins: ["localhost", "127.0.0.1", "192.168.*"],
   typescript: {
-    // TODO: Re-enable after fixing all sub-component useTranslations scope issues
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     unoptimized: true,

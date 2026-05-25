@@ -160,6 +160,19 @@ async function validateBearerApiKey(apiKey: string | null): Promise<boolean> {
   }
 }
 
+async function validateManagementApiKey(apiKey: string | null): Promise<boolean> {
+  if (!apiKey) return false;
+
+  try {
+    const { getApiKeyMetadata, validateApiKey } = await import("@/lib/db/apiKeys");
+    if (!(await validateApiKey(apiKey))) return false;
+    const metadata = await getApiKeyMetadata(apiKey);
+    return Boolean(metadata?.scopes.includes("manage") || metadata?.scopes.includes("admin"));
+  } catch {
+    return false;
+  }
+}
+
 export function isManagementApiRequest(request: RequestLike | Request): boolean {
   const pathname = getRequestPathname(request);
   if (!pathname?.startsWith("/api/")) return false;
@@ -221,6 +234,7 @@ export async function verifyAuth(request: any): Promise<string | null> {
 
   const bearerToken = getBearerToken(request);
   if (isManagementApiRequest(request)) {
+    if (await validateManagementApiKey(bearerToken)) return null;
     return bearerToken ? "Invalid management token" : "Authentication required";
   }
 
@@ -251,7 +265,7 @@ export async function isAuthenticated(request: Request): Promise<boolean> {
   }
 
   if (isManagementApiRequest(request)) {
-    return false;
+    return validateManagementApiKey(getBearerToken(request));
   }
 
   return validateBearerApiKey(getBearerToken(request));

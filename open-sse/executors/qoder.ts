@@ -95,7 +95,7 @@ export class QoderExecutor extends BaseExecutor {
 
     mergeUpstreamExtraHeaders(headers, upstreamExtraHeaders);
 
-    const payload = this.transformRequest(mappedModel, body, stream, credentials);
+    const payload = this.transformRequest(mappedModel, body);
 
     const bodyStr = JSON.stringify(payload);
 

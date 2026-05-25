@@ -10,6 +10,9 @@ import { getDatabaseStats } from "./stats";
 const DATABASE_SETTINGS_NAMESPACE = "databaseSettings";
 
 export type UserDatabaseSettings = Omit<DatabaseSettings, "location" | "stats">;
+export type UserDatabaseSettingsPatch = {
+  [TSection in keyof UserDatabaseSettings]?: Partial<UserDatabaseSettings[TSection]>;
+};
 type DatabaseSettingsSection = keyof UserDatabaseSettings;
 
 const DATABASE_SETTINGS_SECTIONS = Object.keys(
@@ -221,9 +224,7 @@ export function getDatabaseSettings(): DatabaseSettings {
   };
 }
 
-export function updateDatabaseSettings(
-  updates: Partial<UserDatabaseSettings>
-): UserDatabaseSettings {
+export function updateDatabaseSettings(updates: UserDatabaseSettingsPatch): UserDatabaseSettings {
   const nextSettings = getUserDatabaseSettings();
 
   for (const section of DATABASE_SETTINGS_SECTIONS) {
