@@ -464,29 +464,34 @@ function applyApiKeyLifecycleMigration(db: SqliteAdapter): void {
  * every row whose `key_hash` is already populated.
  *
  * SQLite has no native sha256() so the row-level backfill must run in TS.
- * The companion SQL file (db/migrations/056_api_keys_hash_only.sql) keeps
+ * The companion SQL file (db/migrations/073_api_keys_hash_only.sql) keeps
  * a documentation-friendly canonical form of the NULL update so fresh
  * databases can still exec() the file directly via testing harnesses.
  *
+ * Note: the migration was renumbered from 056 → 073 during the May 2026
+ * upstream sync because upstream's 056_mcp_accessibility_compression took
+ * the same slot. The idempotent boot-time sweep below keeps existing fork
+ * DBs (where the old 056 was already recorded as applied) hashed correctly.
+ *
  * Step 1: hash any row whose key_hash IS NULL but key IS NOT NULL.
  * Step 2 (deferred): the plaintext `key` column is intentionally NOT
- *   NULLed by this sweep. Migration 056 still does that for fresh DBs,
+ *   NULLed by this sweep. The SQL migration still does that for fresh DBs,
  *   but on existing deployments we keep the plaintext value around as a
  *   safety net behind OMNIROUTE_LEGACY_PLAINTEXT_KEYS=1 until the next
  *   release cuts the legacy code path entirely. Future drop migration
  *   will retire the column.
  *
  * Hotfix 2026-05-14: a downstream incident showed that a separate
- * migration (`056_usage_history_observability_columns`) had been applied
- * at version slot 056 on existing deployments BEFORE this branch
- * renumbered the on-disk file to 056_api_keys_hash_only. Because the
- * migration runner keys "already applied" by version-only, the renumber
- * caused this migration to be silently skipped on every existing DB —
- * leaving plaintext api_keys rows without key_hash and breaking
- * authentication after A6.b made validation hash-only. The fix is to
- * promote the body of this migration to an idempotent, table-guarded
+ * migration had been applied at version slot 056 on existing deployments
+ * BEFORE this branch renumbered the on-disk file to 056_api_keys_hash_only.
+ * Because the migration runner keys "already applied" by version-only,
+ * the renumber caused this migration to be silently skipped on every
+ * existing DB — leaving plaintext api_keys rows without key_hash and
+ * breaking authentication after A6.b made validation hash-only. The fix
+ * is to promote the body of this migration to an idempotent, table-guarded
  * boot-time sweep that runs unconditionally regardless of which version
- * slot the migration runner thinks is applied.
+ * slot the migration runner thinks is applied. The 2026-05-28 upstream-sync
+ * renumber (056 → 073) preserves the same boot-time sweep behaviour.
  */
 function applyApiKeysHashOnlyMigration(db: SqliteAdapter): void {
   // Ensure the column exists; older databases may not have hit
@@ -965,14 +970,14 @@ export function runMigrations(db: SqliteAdapter, options?: { isNewDb?: boolean }
       console.error(`[Migration] Legacy-encryption sweep failed: ${message}`);
     }
     // Hotfix 2026-05-14: api_keys hash sweep must also run on every boot.
-    // Migration 056 (api_keys_hash_only) was silently skipped on existing
-    // deployments because version slot 056 had previously been applied as
-    // usage_history_observability_columns. The version-only check in
-    // getAppliedVersions() then treats 056 as already-applied and the
-    // dispatch table never fires. The idempotent sweep here closes that
-    // hole — any plaintext key that still lacks key_hash gets one, and
-    // authentication continues to work after A6.b made validation
-    // hash-only.
+    // The api_keys_hash_only migration (originally 056, renumbered to 073
+    // during the 2026-05-28 upstream sync) was silently skipped on existing
+    // deployments where version slot 056 had previously been applied as a
+    // different migration. The version-only check in getAppliedVersions()
+    // treats 056 as already-applied and the dispatch table never fires.
+    // The idempotent sweep here closes that hole — any plaintext key that
+    // still lacks key_hash gets one, and authentication continues to work
+    // after A6.b made validation hash-only.
     try {
       runApiKeysHashSweep(db);
     } catch (error) {
@@ -1047,7 +1052,7 @@ export function runMigrations(db: SqliteAdapter, options?: { isNewDb?: boolean }
         applyCompressionReceiptsMigration(db);
       } else if (migration.version === "042") {
         applyCompressionCombosMigration(db, migration.path);
-      } else if (migration.version === "056" && migration.name === "api_keys_hash_only") {
+      } else if (migration.version === "073" && migration.name === "api_keys_hash_only") {
         applyApiKeysHashOnlyMigration(db);
       } else {
         const sql = fs.readFileSync(migration.path, "utf-8");

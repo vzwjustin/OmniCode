@@ -155,7 +155,7 @@ const MAX_CACHE_SIZE = 1000;
 /**
  * Tranche A — Task A6.b: hash-only validation.
  *
- * After A6.a's migration (`db/migrations/056_api_keys_hash_only.sql`)
+ * After A6.a's migration (`db/migrations/073_api_keys_hash_only.sql`)
  * back-fills `key_hash` and NULLs out the plaintext `api_keys.key` column,
  * the validator queries by `key_hash` exclusively. Operators who still
  * carry rows that only have a plaintext `key` can opt back into the

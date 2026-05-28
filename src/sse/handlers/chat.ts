@@ -321,6 +321,32 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
   // so every upstream call sees bare model ids.
   stripToolModelPrefixes(body);
 
+  // ── Local CLI intercept ─────────────────────────────────────────────────────
+  // ``local:<slug>`` model ids dispatch to a configured local CLI binary
+  // (Claude Code, Codex CLI, Gemini CLI) rather than going through the
+  // provider/executor pipeline. The prompt is fed via stdin; argv is
+  // configured by the admin via Dashboard → Fusion → Local CLIs.
+  if (isLocalCliModelId(modelStr)) {
+    return await handleLocalCliChat({ body, originalRequest: request });
+  }
+  // ── Local Fusion intercept ──────────────────────────────────────────────────
+  // If model starts with ``local-fusion`` (or one of its mode variants /
+  // inline-config forms), hand off to the fusion orchestrator. It fans out
+  // to N analysis models via internal sub-calls to ``handleChat`` (this
+  // function), then synthesizes a single answer through a judge model.
+  // The calling tool sees a normal OpenAI completion. Fusion calls
+  // ``handleChat`` recursively, so a ``local:`` model id used inside fusion
+  // (as analysis/judge/critic) will hit the local CLI intercept above on
+  // the recursive call.
+  if (isFusionModelId(modelStr)) {
+    return await handleFusionChat({
+      body,
+      originalRequest: request,
+      handleChat: (req) => handleChat(req),
+    });
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   // T08: per-key active session limit (0 = unlimited).
   if (apiKeyInfo?.id && sessionId) {
     const maxSessions =

@@ -190,7 +190,7 @@ test("fusion can use local CLIs as analysis models with a remote judge", async (
   await seedConnection("anthropic", { apiKey: "sk-ant-test" });
   setFusionConfig({
     analysisModels: ["local:claude-code", "local:codex"],
-    judgeModel: "anthropic/claude-opus-4.1",
+    judgeModel: "anthropic/claude-opus-4.7",
     criticModel: null,
     enableCritique: false,
     enableCache: false,
@@ -225,7 +225,7 @@ test("fusion can use local CLIs as analysis models with a remote judge", async (
           type: "message",
           role: "assistant",
           content: [{ type: "text", text: "REMOTE-JUDGE-FUSED" }],
-          model: "claude-opus-4.1",
+          model: "claude-opus-4.7",
           stop_reason: "end_turn",
           usage: { input_tokens: 4, output_tokens: 8 },
         }),
@@ -249,7 +249,7 @@ test("fusion can use local CLIs as analysis models with a remote judge", async (
     const json = (await response.json()) as any;
     assert.equal(json.choices?.[0]?.message?.content, "REMOTE-JUDGE-FUSED");
     assert.deepEqual(json.x_local_fusion.analysis_models, ["local:claude-code", "local:codex"]);
-    assert.equal(json.x_local_fusion.judge_model, "anthropic/claude-opus-4.1");
+    assert.equal(json.x_local_fusion.judge_model, "anthropic/claude-opus-4.7");
     assert.equal(json.x_local_fusion.judge_failed, false);
   } finally {
     globalThis.fetch = original;
