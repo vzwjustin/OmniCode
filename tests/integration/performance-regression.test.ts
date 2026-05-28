@@ -4,7 +4,7 @@
  * Tests bulk data operations against acceptable time thresholds.
  * Thresholds are 2x the expected target to account for slow CI machines.
  *
- * Run: node --import tsx/esm --test tests/integration/performance-regression.test.ts
+ * Run: node --import tsx --test tests/integration/performance-regression.test.ts
  */
 
 import { describe, it, before, after } from "node:test";
@@ -17,6 +17,9 @@ import path from "node:path";
 const TEST_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "omniroute-perf-regression-"));
 process.env.DATA_DIR = TEST_DATA_DIR;
 process.env.REQUIRE_API_KEY = "false";
+if (!process.env.API_KEY_SECRET) {
+  process.env.API_KEY_SECRET = "test-perf-secret-" + Date.now();
+}
 
 // --- Dynamic imports after env setup ---
 const core = await import("../../src/lib/db/core.ts");

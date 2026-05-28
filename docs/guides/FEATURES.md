@@ -1,6 +1,6 @@
 ---
-title: "OmniCode — Dashboard Features Gallery"
-version: 3.8.0
+title: "OmniRoute — Dashboard Features Gallery"
+version: 3.8.2
 lastUpdated: 2026-05-13
 ---
 

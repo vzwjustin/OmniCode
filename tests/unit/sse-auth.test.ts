@@ -104,6 +104,59 @@ test("getProviderCredentials reports rate limiting when only inactive suppressed
   assert.match(String(result.retryAfterHuman), /reset after/i);
 });
 
+test("codex session account affinity is opt-in and honors TTL", async () => {
+  const affinityDb = await import("../../src/lib/db/sessionAccountAffinity.ts");
+  await settingsDb.updateSettings({ fallbackStrategy: "least-used" });
+  await seedConnection("codex", { name: "codex-affinity-a", priority: 1 });
+  await seedConnection("codex", { name: "codex-affinity-b", priority: 2 });
+
+  const withoutAffinityA = await auth.getProviderCredentials("codex", null, null, "gpt-5", {
+    sessionKey: "session-without-affinity",
+  });
+  const withoutAffinityB = await auth.getProviderCredentials("codex", null, null, "gpt-5", {
+    sessionKey: "session-without-affinity",
+  });
+
+  assert.equal(typeof withoutAffinityA.connectionId, "string");
+  assert.equal(typeof withoutAffinityB.connectionId, "string");
+  assert.equal(
+    affinityDb.getSessionAccountAffinity("session-without-affinity", "codex", 60_000),
+    null
+  );
+
+  await settingsDb.updateSettings({ codexSessionAffinityTtlMs: 60_000 });
+
+  const withAffinityA = await auth.getProviderCredentials("codex", null, null, "gpt-5", {
+    sessionKey: "session-with-affinity",
+  });
+  const withAffinityB = await auth.getProviderCredentials("codex", null, null, "gpt-5", {
+    sessionKey: "session-with-affinity",
+  });
+
+  assert.equal(withAffinityB.connectionId, withAffinityA.connectionId);
+  assert.equal(
+    affinityDb.getSessionAccountAffinity("session-with-affinity", "codex", 60_000)?.connectionId,
+    withAffinityA.connectionId
+  );
+});
+
+test("session account affinity expires when TTL has passed", async () => {
+  const affinityDb = await import("../../src/lib/db/sessionAccountAffinity.ts");
+  const now = Date.now();
+
+  affinityDb.upsertSessionAccountAffinity("expiring-session", "codex", "conn-a", now, 1000);
+
+  assert.equal(
+    affinityDb.getSessionAccountAffinity("expiring-session", "codex", 1000, now + 500)
+      ?.connectionId,
+    "conn-a"
+  );
+  assert.equal(
+    affinityDb.getSessionAccountAffinity("expiring-session", "codex", 1000, now + 1001),
+    null
+  );
+});
+
 test("getProviderCredentials returns last error metadata when active accounts are all rate limited", async () => {
   const retryAfter = futureIso();
   await seedConnection("openai", {
@@ -203,8 +256,120 @@ test("getProviderCredentialsWithQuotaPreflight returns allRateLimited when a for
   assert.match(selected.lastError, /quota preflight/i);
 });
 
+test("getProviderCredentialsWithQuotaPreflight skips the upstream fetcher when no limits are configured", async () => {
+  // Latency gate regression test. When a connection has no per-window
+  // overrides AND its provider has no per-(provider, window) defaults seeded
+  // AND the legacy quotaPreflightEnabled flag isn't set, the dispatch loop
+  // must NOT call the registered quota fetcher. We assert by registering a
+  // fetcher that throws if invoked — any invocation surfaces as a test
+  // failure either via the thrown error or via the connection getting
+  // skipped (we expect it to pass through cleanly).
+  const conn = await seedConnection("openai", {
+    name: "quota-preflight-no-limits",
+    apiKey: "sk-no-limits",
+    // Crucially: no quotaPreflightEnabled flag, no overrides.
+  });
+
+  const quotaPreflight = await import("../../open-sse/services/quotaPreflight.ts");
+  let fetcherCalls = 0;
+  quotaPreflight.registerQuotaFetcher("openai", async () => {
+    fetcherCalls++;
+    throw new Error(
+      "quota fetcher must not run when no per-window overrides or provider defaults are set"
+    );
+  });
+
+  const selected = await auth.getProviderCredentialsWithQuotaPreflight("openai");
+
+  assert.equal((selected as any).connectionId, conn.id);
+  assert.equal(fetcherCalls, 0, "fetcher should not have been invoked");
+});
+
+test("getProviderCredentialsWithQuotaPreflight invokes the fetcher when the global default is restrictive", async () => {
+  // No per-connection override and no provider-window defaults — but the
+  // operator has raised the global default cutoff above the factory no-op
+  // level (2% remaining). Preflight must run so the tighter floor applies.
+  const conn = await seedConnection("openai", {
+    name: "quota-preflight-restrictive-global",
+    apiKey: "sk-restrictive-global",
+  });
+  await settingsDb.updateSettings({
+    resilienceSettings: {
+      quotaPreflight: {
+        defaultThresholdPercent: 20, // stop at 20% remaining = 80% used
+        warnThresholdPercent: 30,
+        providerWindowDefaults: {},
+      },
+    },
+  });
+
+  const quotaPreflight = await import("../../open-sse/services/quotaPreflight.ts");
+  let fetcherCalls = 0;
+  quotaPreflight.registerQuotaFetcher("openai", async () => {
+    fetcherCalls++;
+    return null;
+  });
+
+  await auth.getProviderCredentialsWithQuotaPreflight("openai");
+  assert.equal(
+    fetcherCalls,
+    1,
+    "fetcher should run when global default is stricter than the factory no-op level"
+  );
+
+  // Reset settings so subsequent tests see factory defaults.
+  await settingsDb.updateSettings({ resilienceSettings: {} });
+  // Verify the gate immediately returns to skip mode.
+  fetcherCalls = 0;
+  quotaPreflight.registerQuotaFetcher("openai", async () => {
+    fetcherCalls++;
+    throw new Error("must not run with factory global default");
+  });
+  await auth.getProviderCredentialsWithQuotaPreflight("openai");
+  assert.equal(fetcherCalls, 0, "fetcher should not run after settings reset to factory default");
+});
+
+test("getProviderCredentialsWithQuotaPreflight invokes the fetcher when an override IS set", async () => {
+  // Counterpart to the no-limits test: if the connection has a
+  // quotaWindowThresholds override, preflight must run.
+  const conn = await seedConnection("openai", {
+    name: "quota-preflight-with-override",
+    apiKey: "sk-with-override",
+  });
+  const updated = await providersDb.updateProviderConnection(conn.id, {
+    quotaWindowThresholds: { primary: 50 },
+  });
+  // Sanity: the override must be readable on the connection row (this is
+  // what the dispatch loop reads through getProviderCredentials).
+  assert.deepEqual(
+    (updated as any)?.quotaWindowThresholds,
+    { primary: 50 },
+    "override must be persisted on the connection row"
+  );
+  const refetched = await providersDb.getProviderConnectionById(conn.id);
+  assert.deepEqual(
+    (refetched as any)?.quotaWindowThresholds,
+    { primary: 50 },
+    "override must round-trip through getProviderConnectionById"
+  );
+
+  const quotaPreflight = await import("../../open-sse/services/quotaPreflight.ts");
+  let fetcherCalls = 0;
+  quotaPreflight.registerQuotaFetcher("openai", async () => {
+    fetcherCalls++;
+    return null; // null → preflight proceeds, no skip
+  });
+
+  await auth.getProviderCredentialsWithQuotaPreflight("openai");
+  assert.equal(fetcherCalls, 1, "fetcher should have been invoked exactly once");
+});
+
 test("getProviderCredentials keeps separate codex affinity per session", async () => {
-  await settingsDb.updateSettings({ fallbackStrategy: "round-robin", stickyRoundRobinLimit: 10 });
+  await settingsDb.updateSettings({
+    fallbackStrategy: "round-robin",
+    stickyRoundRobinLimit: 10,
+    codexSessionAffinityTtlMs: 60_000,
+  });
   const first = await seedConnection("codex", {
     name: "codex-affinity-a",
     lastUsedAt: new Date(Date.now() - 20_000).toISOString(),
@@ -234,7 +399,11 @@ test("getProviderCredentials keeps separate codex affinity per session", async (
 });
 
 test("getProviderCredentials rebinds codex session when affinity connection is excluded", async () => {
-  await settingsDb.updateSettings({ fallbackStrategy: "round-robin", stickyRoundRobinLimit: 10 });
+  await settingsDb.updateSettings({
+    fallbackStrategy: "round-robin",
+    stickyRoundRobinLimit: 10,
+    codexSessionAffinityTtlMs: 60_000,
+  });
   const first = await seedConnection("codex", {
     name: "codex-affinity-excluded-a",
     lastUsedAt: new Date(Date.now() - 20_000).toISOString(),
@@ -438,6 +607,22 @@ test("getProviderCredentials retains rate-limited accounts when allowSuppressedC
   assert.equal(blocked.allRateLimited, true);
   assert.equal(bypassed.connectionId, connection.id);
 });
+
+test("getProviderCredentials retains rate-limited accounts when allowRateLimitedConnections is enabled", async () => {
+  const connection = await seedConnection("openai", {
+    name: "allow-rate-limit-option",
+    rateLimitedUntil: futureIso(),
+  });
+
+  const blocked = await auth.getProviderCredentials("openai");
+  const bypassed = await auth.getProviderCredentials("openai", null, null, null, {
+    allowRateLimitedConnections: true,
+  });
+
+  assert.equal(blocked.allRateLimited, true);
+  assert.equal(bypassed.connectionId, connection.id);
+});
+
 
 test("getProviderCredentials retains terminal accounts for combo live tests", async () => {
   const connection = await seedConnection("openai", {

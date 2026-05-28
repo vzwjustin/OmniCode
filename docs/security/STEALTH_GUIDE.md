@@ -1,6 +1,6 @@
 ---
 title: "Stealth Guide"
-version: 3.8.0
+version: 3.8.2
 lastUpdated: 2026-05-13
 ---
 
@@ -88,7 +88,7 @@ Applied to: `system` blocks, all `messages[].content`, and `tools[].description`
 
 For third-party Anthropic relays that only accept "real Claude Code" traffic:
 
-- `CLAUDE_CODE_COMPATIBLE_USER_AGENT = "claude-cli/2.1.137 (external, sdk-cli)"`
+- `CLAUDE_CODE_COMPATIBLE_USER_AGENT = "claude-cli/2.1.146 (external, sdk-cli)"`
 - `CLAUDE_CODE_COMPATIBLE_STAINLESS_PACKAGE_VERSION = "0.81.0"`
 - `CLAUDE_CODE_COMPATIBLE_STAINLESS_RUNTIME_VERSION = "v24.3.0"`
 - `anthropic-beta = "claude-code-20250219,interleaved-thinking-2025-05-14,effort-2025-11-24"`
@@ -112,6 +112,34 @@ Same zero-width-joiner trick as Claude Code, but with an expanded word list that
 ### `antigravityHeaderScrub.ts`
 
 Strips Stainless SDK markers (`x-stainless-lang`, `x-stainless-package-version`, `x-stainless-os`, `x-stainless-arch`, `x-stainless-runtime`, `x-stainless-runtime-version`, `x-stainless-timeout`, `x-stainless-retry-count`, `x-stainless-helper-method`) before forwarding.
+
+### ⚠️ Risk: `ANTIGRAVITY_CREDITS=always` (account-ban hot spot)
+
+`ANTIGRAVITY_CREDITS=always` (consumed by `open-sse/executors/antigravity.ts`) routes **every** request through Antigravity AI Credit Overages (paid Google credits) instead of letting Google's free-tier quota gate things. This is documented as a feature, but it is **the single most common ToS-violation report we see** — multiple Google Ultra accounts have been banned with `403 / "service disabled for ToS violation" / insufficient_quota` after running for a few hours with `=always`.
+
+The upstream enforcement is on **Google's side**, not anything OmniRoute can prevent. The env var name and the existing docs make it sound like a safe knob to flip; it isn't.
+
+**Why this draws abuse detection more aggressively than free-tier-only usage:**
+
+- Sustained automated spend on a single Google account flags differently than free-tier hits-quota-and-stops.
+- Credit overages have no rate ceiling, so a misconfigured client can burn through several hundred USD in minutes and look like API-key resale or bot traffic.
+- Multiple OmniRoute users hitting overage credits in parallel from the same external IP compounds the signal.
+
+**Recommended posture:**
+
+1. **Default to `ANTIGRAVITY_CREDITS=retry`** — overages are used only when free-tier returns 429, not on every request. This is the safer of the two non-zero modes.
+2. **Spread load across providers via Auto-Combo** (`model: "auto"` or `kr/glm/etc`-combo) instead of saturating a single Antigravity account.
+3. **Set per-connection RPM limits** in the Antigravity provider's edit page (Dashboard → Providers → Antigravity → connection → rate limit). 30–60 RPM is a defensible upper bound for sustained use.
+4. **Use distinct upstream IPs** per Antigravity account when possible (residential proxies aimed at the same account from many users compounds the abuse signal).
+5. **If banned**: appeal via `support.google.com` → "Restore Workspace/Account access" with the exact `quota_exceeded` / `service disabled` response body Google sent. Restoration is not guaranteed.
+
+This warning is also surfaced inline in the dashboard near the Antigravity provider edit screen when `ANTIGRAVITY_CREDITS` is set to `always` (or will be in v3.8.0; tracked separately).
+
+Touch points:
+
+- `open-sse/executors/antigravity.ts` — reads `process.env.ANTIGRAVITY_CREDITS`
+- `src/lib/oauth/providers/antigravity.ts` — credential plumbing
+- Original incident report: Discussion [#1183](https://github.com/diegosouzapw/OmniRoute/discussions/1183)
 
 ---
 
@@ -184,10 +212,10 @@ All MITM endpoints require management auth (`requireCliToolsAuth`). The sudo pas
 
 | Variable                 | Default                                       |
 | ------------------------ | --------------------------------------------- |
-| `CLAUDE_USER_AGENT`      | `claude-cli/2.1.137 (external, cli)`          |
-| `CODEX_USER_AGENT`       | `codex-cli/0.130.0 (Windows 10.0.26200; x64)` |
+| `CLAUDE_USER_AGENT`      | `claude-cli/2.1.146 (external, cli)`          |
+| `CODEX_USER_AGENT`       | `codex-cli/0.132.0 (Windows 10.0.26200; x64)` |
 | `GITHUB_USER_AGENT`      | `GitHubCopilotChat/0.45.1`                    |
-| `ANTIGRAVITY_USER_AGENT` | `antigravity/1.23.2 darwin/arm64`             |
+| `ANTIGRAVITY_USER_AGENT` | `antigravity/2.0.1 darwin/arm64`              |
 | `KIRO_USER_AGENT`        | `AWS-SDK-JS/3.0.0 kiro-ide/1.0.0`             |
 | `QODER_USER_AGENT`       | `Qoder-Cli`                                   |
 | `QWEN_USER_AGENT`        | `QwenCode/0.15.9 (linux; x64)`                |

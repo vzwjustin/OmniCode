@@ -92,7 +92,13 @@ import {
 import { memoryTools } from "./tools/memoryTools.ts";
 import { skillTools } from "./tools/skillTools.ts";
 import { compressionTools } from "./tools/compressionTools.ts";
+import { gamificationTools } from "./tools/gamificationTools.ts";
 import { compressMcpRegistryMetadata } from "./descriptionCompressor.ts";
+import { smartFilterText } from "../services/compression/engines/mcpAccessibility/index.ts";
+import {
+  DEFAULT_MCP_ACCESSIBILITY_CONFIG,
+  type McpAccessibilityConfig,
+} from "../services/compression/engines/mcpAccessibility/constants.ts";
 import { getDbInstance } from "../../src/lib/db/core.ts";
 import { normalizeQuotaResponse } from "../../src/shared/contracts/quota.ts";
 import { resolveOmniRouteBaseUrl } from "../../src/shared/utils/resolveOmniRouteBaseUrl.ts";
@@ -109,7 +115,10 @@ const MCP_ALLOWED_SCOPES = new Set(
     .filter(Boolean)
 );
 const TOTAL_MCP_TOOL_COUNT =
-  MCP_TOOLS.length + Object.keys(memoryTools).length + Object.keys(skillTools).length;
+  MCP_TOOLS.length +
+  Object.keys(memoryTools).length +
+  Object.keys(skillTools).length +
+  gamificationTools.length;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -122,6 +131,20 @@ function readMcpDescriptionCompressionEnabled(): boolean {
     return JSON.parse(row.value) !== false;
   } catch {
     return true;
+  }
+}
+
+function readMcpAccessibilityConfig(): McpAccessibilityConfig {
+  try {
+    const row = getDbInstance()
+      .prepare("SELECT value FROM key_value WHERE namespace = ? AND key = ?")
+      .get("compression", "mcpAccessibility") as { value?: string } | undefined;
+    if (!row?.value) return { ...DEFAULT_MCP_ACCESSIBILITY_CONFIG };
+    const parsed = JSON.parse(row.value);
+    if (!parsed || typeof parsed !== "object") return { ...DEFAULT_MCP_ACCESSIBILITY_CONFIG };
+    return { ...DEFAULT_MCP_ACCESSIBILITY_CONFIG, ...parsed };
+  } catch {
+    return { ...DEFAULT_MCP_ACCESSIBILITY_CONFIG };
   }
 }
 
@@ -608,12 +631,29 @@ export function createMcpServer(): McpServer {
     version: process.env.npm_package_version || "1.8.1",
   });
   const mcpDescriptionCompressionEnabled = readMcpDescriptionCompressionEnabled();
+  const mcpAccessibilityConfig = readMcpAccessibilityConfig();
   const registerTool = server.registerTool.bind(server);
   server.registerTool = ((name: string, config: Record<string, unknown>, handler: unknown) => {
     const metadata = compressMcpRegistryMetadata(config, {
       enabled: mcpDescriptionCompressionEnabled,
     });
-    return registerTool(name, metadata, handler as never);
+    const filteredHandler = mcpAccessibilityConfig.enabled
+      ? async (args: unknown, extra?: unknown) => {
+          const result = await (handler as (a: unknown, e?: unknown) => Promise<TextToolResult>)(
+            args,
+            extra
+          );
+          if (Array.isArray(result?.content)) {
+            for (const block of result.content) {
+              if (block && block.type === "text" && typeof block.text === "string") {
+                block.text = smartFilterText(block.text, mcpAccessibilityConfig);
+              }
+            }
+          }
+          return result;
+        }
+      : handler;
+    return registerTool(name, metadata, filteredHandler as never);
   }) as typeof server.registerTool;
   const registerPrompt = server.registerPrompt.bind(server);
   server.registerPrompt = ((name: string, config: Record<string, unknown>, handler: unknown) => {
@@ -1036,7 +1076,7 @@ export function createMcpServer(): McpServer {
       withScopeEnforcement(toolDef.name, async (args) => {
         try {
           const parsedArgs = toolDef.inputSchema.parse(args ?? {});
-          // @ts-ignore: handler expected specific object
+          // @ts-expect-error - handler type lost through dynamic Object.values() access
           const result = await toolDef.handler(parsedArgs);
           return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
         } catch (err) {
@@ -1059,7 +1099,7 @@ export function createMcpServer(): McpServer {
       withScopeEnforcement(toolDef.name, async (args) => {
         try {
           const parsedArgs = toolDef.inputSchema.parse(args ?? {});
-          // @ts-ignore: handler expected specific object
+          // @ts-expect-error - handler type lost through dynamic Object.values() access
           const result = await toolDef.handler(parsedArgs);
           return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
         } catch (err) {
@@ -1072,6 +1112,29 @@ export function createMcpServer(): McpServer {
 
   // ── Compression Tools ─────────────────────────
   Object.values(compressionTools).forEach((toolDef) => {
+    server.registerTool(
+      toolDef.name,
+      {
+        description: toolDef.description,
+        // @ts-ignore: dynamic zod access
+        inputSchema: toolDef.inputSchema,
+      },
+      withScopeEnforcement(toolDef.name, async (args) => {
+        try {
+          const parsedArgs = toolDef.inputSchema.parse(args ?? {});
+          // @ts-expect-error - handler type lost through dynamic Object.values() access
+          const result = await toolDef.handler(parsedArgs);
+          return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return { content: [{ type: "text" as const, text: `Error: ${msg}` }], isError: true };
+        }
+      })
+    );
+  });
+
+  // ── Gamification Tools ────────────────────────
+  gamificationTools.forEach((toolDef) => {
     server.registerTool(
       toolDef.name,
       {

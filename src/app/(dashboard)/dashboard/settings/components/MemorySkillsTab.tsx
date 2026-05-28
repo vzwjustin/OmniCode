@@ -203,18 +203,23 @@ export default function MemorySkillsTab() {
       const data = await res.json().catch(() => null);
       if (res.ok && data?.ok) {
         setQdrantCleanupMsg(
-          `OK: removeu ${data.deletedCount ?? 0} ponto(s) (retencao: ${data.retentionDays} dias)`
+          t("qdrantCleanupSuccess", {
+            count: data.deletedCount ?? 0,
+            days: data.retentionDays,
+          })
         );
       } else {
-        const err = data?.error || "Falha na limpeza";
-        setQdrantCleanupMsg(`Erro: ${String(err)}`);
+        const err = data?.error || t("qdrantCleanupFailed");
+        setQdrantCleanupMsg(t("qdrantCleanupError", { error: String(err) }));
       }
     } catch (e) {
-      setQdrantCleanupMsg(`Erro: ${e instanceof Error ? e.message : String(e)}`);
+      setQdrantCleanupMsg(
+        t("qdrantCleanupError", { error: e instanceof Error ? e.message : String(e) })
+      );
     } finally {
       setQdrantCleanupLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const saveSkillsmpApiKey = useCallback(async () => {
     setSkillsmpSaving(true);
@@ -760,7 +765,7 @@ export default function MemorySkillsTab() {
             </span>
           </div>
           <div>
-            <h3 className="text-lg font-semibold">SkillsMP Marketplace</h3>
+            <h3 className="text-lg font-semibold">{t("memorySkillsSkillsmpMarketplace")}</h3>
             <p className="text-sm text-text-muted">
               Connect to SkillsMP to discover and install skills from the marketplace.
             </p>
@@ -772,12 +777,14 @@ export default function MemorySkillsTab() {
             </span>
           )}
           {skillsmpStatus === "error" && (
-            <span className="ml-auto text-xs font-medium text-red-500">Failed to save</span>
+            <span className="ml-auto text-xs font-medium text-red-500">
+              {t("memorySkillsFailedToSave")}
+            </span>
           )}
         </div>
 
         <div className="p-4 rounded-lg bg-surface/30 border border-border/30">
-          <label className="text-sm font-medium block mb-2">API Key</label>
+          <label className="text-sm font-medium block mb-2">{t("memorySkillsApiKey")}</label>
           <div className="flex gap-2">
             <input
               type="password"
@@ -810,7 +817,7 @@ export default function MemorySkillsTab() {
             </span>
           </div>
           <div>
-            <h3 className="text-lg font-semibold">Active Skills Provider</h3>
+            <h3 className="text-lg font-semibold">{t("memorySkillsActiveSkillsProvider")}</h3>
             <p className="text-sm text-text-muted">
               Choose which provider the Skills page uses for search and install.
             </p>
@@ -822,7 +829,9 @@ export default function MemorySkillsTab() {
             </span>
           )}
           {skillsProviderStatus === "error" && (
-            <span className="ml-auto text-xs font-medium text-red-500">Failed to save</span>
+            <span className="ml-auto text-xs font-medium text-red-500">
+              {t("memorySkillsFailedToSave")}
+            </span>
           )}
         </div>
 

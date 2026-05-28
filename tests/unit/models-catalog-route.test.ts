@@ -925,7 +925,7 @@ test("v1 models catalog tolerates custom model lookup failures and keeps builtin
     const body = (await response.json()) as any;
 
     assert.equal(response.status, 200);
-    assert.ok(body.data.some((item) => item.id === "openai/gpt-4o"));
+    assert.ok(body.data.some((item) => item.id === "openai/gpt-4o-2024-11-20"));
     assert.ok(logs.some((entry) => entry.includes("Could not fetch custom models")));
   } finally {
     db.prepare = originalPrepare;
@@ -1044,6 +1044,30 @@ test("v1 models catalog uses synced models.dev limits instead of provider defaul
   }
 });
 
+test("v1 models catalog exposes Bedrock Claude token limits from static metadata", async () => {
+  await seedConnection("bedrock", { name: "bedrock-limits" });
+
+  const response = await v1ModelsCatalog.getUnifiedModelsResponse(
+    new Request("http://localhost/api/v1/models")
+  );
+  const body = (await response.json()) as any;
+  const sonnet46 = body.data.find((item) => item.id === "bedrock/anthropic.claude-sonnet-4-6");
+  const sonnet45 = body.data.find((item) => item.id === "bedrock/anthropic.claude-sonnet-4-5");
+  const opus46 = body.data.find((item) => item.id === "bedrock/anthropic.claude-opus-4-6");
+
+  assert.equal(response.status, 200);
+  assert.ok(sonnet46);
+  assert.equal(sonnet46.context_length, 1000000);
+  assert.equal(sonnet46.max_input_tokens, 1000000);
+  assert.equal(sonnet46.max_output_tokens, 64000);
+  assert.ok(sonnet45);
+  assert.equal(sonnet45.context_length, 200000);
+  assert.equal(sonnet45.max_output_tokens, 64000);
+  assert.ok(opus46);
+  assert.equal(opus46.context_length, 1000000);
+  assert.equal(opus46.max_output_tokens, 128000);
+});
+
 test("v1 models catalog lets provider-specific synced limits beat global static specs", async () => {
   await seedConnection("github", {
     authType: "oauth",
@@ -1151,14 +1175,14 @@ test("v1 models catalog skips duplicate built-ins and custom models from inactiv
     isActive: false,
   });
 
-  await modelsDb.addCustomModel("openai", "gpt-4o", "Duplicate Builtin");
+  await modelsDb.addCustomModel("openai", "gpt-4o-2024-11-20", "Duplicate Builtin");
   await modelsDb.addCustomModel("cline", "inactive-only", "Inactive Only");
 
   const response = await v1ModelsCatalog.getUnifiedModelsResponse(
     new Request("http://localhost/api/v1/models")
   );
   const body = (await response.json()) as any;
-  const duplicateBuiltins = body.data.filter((item) => item.id === "openai/gpt-4o");
+  const duplicateBuiltins = body.data.filter((item) => item.id === "openai/gpt-4o-2024-11-20");
 
   assert.equal(response.status, 200);
   assert.equal(duplicateBuiltins.length, 1);

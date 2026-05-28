@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/shared/components/Button";
 import Card from "@/shared/components/Card";
@@ -34,6 +35,7 @@ import {
   resolveComboBuilderProviderId,
 } from "@/lib/combos/builderDraft";
 import { normalizeComboConfigMode } from "@/shared/constants/comboConfigMode";
+import AutoComboCatalog from "./AutoComboCatalog";
 import BuilderIntelligentStep from "./BuilderIntelligentStep";
 import IntelligentComboPanel from "./IntelligentComboPanel";
 import {
@@ -52,8 +54,8 @@ const ProxyConfigModal = dynamic(() => import("@/shared/components/ProxyConfigMo
   ssr: false,
 });
 
-// Validate combo name: letters, numbers, -, _, /, .
-const VALID_NAME_REGEX = /^[a-zA-Z0-9_/.-]+$/;
+// Validate combo name: letters, numbers, spaces, -, _, /, ., [ and ].
+const VALID_NAME_REGEX = /^[a-zA-Z0-9_/.\-\[\] ]+$/;
 
 const STRATEGY_OPTIONS = ROUTING_STRATEGIES.map((strategy) => ({
   value: strategy.value,
@@ -155,6 +157,14 @@ const ADVANCED_FIELD_HELP_FALLBACK = {
     "Round-robin combo/model limit: max simultaneous requests sent to each model target. This is separate from any provider account-only cap.",
   queueTimeout:
     "How long a request can wait for a round-robin model slot before timing out. This queue is separate from any account-only concurrency cap.",
+  failoverBeforeRetry:
+    "When enabled, a 429 from the upstream triggers immediate target failover instead of retrying the same URL first.",
+  targetTimeoutMs:
+    "Optional combo target timeout. Empty inherits the current request timeout; larger values are capped to that timeout.",
+  maxSetRetries:
+    "Number of times to retry the full target set when every target fails. 0 = no set-level retry.",
+  setRetryDelayMs:
+    "Delay between set-level retry attempts, giving transient issues time to resolve.",
 };
 
 const LEGACY_COMBO_RESILIENCE_KEYS = new Set([
@@ -162,6 +172,20 @@ const LEGACY_COMBO_RESILIENCE_KEYS = new Set([
   "healthCheckEnabled",
   "healthCheckTimeoutMs",
 ]);
+const MS_PER_SECOND = 1000;
+
+function msToOptionalSecondsInput(value) {
+  const ms = Number(value);
+  if (!Number.isFinite(ms) || ms <= 0) return "";
+  return String(Math.round(ms / MS_PER_SECOND));
+}
+
+function secondsInputToOptionalMs(value, maxSeconds = 86400) {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) return undefined;
+  return Math.min(maxSeconds, Math.round(seconds)) * MS_PER_SECOND;
+}
 
 function sanitizeComboRuntimeConfig(config) {
   if (!config || typeof config !== "object") return {};
@@ -959,6 +983,7 @@ export default function CombosPage() {
           <h1 className="text-2xl font-semibold">{t("title")}</h1>
           <p className="text-sm text-text-muted mt-1">{t("description")}</p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-2 rounded-lg border border-black/8 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.02] px-2.5 py-1.5">
             <span className="hidden lg:inline text-xs text-text-muted">
@@ -996,6 +1021,8 @@ export default function CombosPage() {
           </Button>
         </div>
       </div>
+
+      <AutoComboCatalog />
 
       {showUsageGuide && (
         <ComboUsageGuide
@@ -1440,12 +1467,14 @@ function StrategyRecommendationsPanel({ strategy, onApply, showNudge }) {
   );
 }
 
-function FieldLabelWithHelp({ label, help, showHelp = true }) {
+function FieldLabelWithHelp({ label, help, showHelp = true, htmlFor = undefined }) {
   return (
     <div className="flex items-center gap-1 mb-0.5">
-      <label className="text-[10px] text-text-muted">{label}</label>
+      <label htmlFor={htmlFor} className="text-[10px] text-text-muted">
+        {label}
+      </label>
       {showHelp && (
-        <Tooltip content={help}>
+        <Tooltip position="bottom" content={help}>
           <span className="material-symbols-outlined text-[12px] text-text-muted cursor-help">
             help
           </span>
@@ -1749,17 +1778,37 @@ function ComboCard({
                 value={compressionOverride}
                 onChange={(e) => handleCompressionOverrideChange(e.target.value)}
                 disabled={isSavingCompression}
-                className="text-xs py-1 px-2 rounded border border-black/10 dark:border-white/10 bg-white dark:bg-bg-main text-text-main focus:border-primary focus:outline-none transition-colors disabled:opacity-50 max-w-[130px] md:max-w-none"
-                title="Compression Override"
+                className="text-xs py-1 px-2 rounded border border-black/10 dark:border-white/10 bg-surface text-text-main focus:border-primary focus:outline-none transition-colors disabled:opacity-50 max-w-[130px] md:max-w-none"
+                title={t("compressionOverride")}
               >
-                <option value="">Default</option>
-                <option value="off">Off</option>
-                <option value="lite">Lite</option>
-                <option value="standard">Standard</option>
-                <option value="aggressive">Aggressive</option>
-                <option value="ultra">Ultra</option>
+                <option value="" className="bg-surface text-text-main">
+                  Default
+                </option>
+                <option value="off" className="bg-surface text-text-main">
+                  Off
+                </option>
+                <option value="lite" className="bg-surface text-text-main">
+                  Lite
+                </option>
+                <option value="standard" className="bg-surface text-text-main">
+                  Standard
+                </option>
+                <option value="aggressive" className="bg-surface text-text-main">
+                  Aggressive
+                </option>
+                <option value="ultra" className="bg-surface text-text-main">
+                  Ultra
+                </option>
               </select>
             )}
+            <Link
+              href={`/dashboard/combos/${combo.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors"
+              title={getI18nOrFallback(t, "controlCenter", "Control Center")}
+            >
+              <span className="material-symbols-outlined text-[16px]">monitoring</span>
+            </Link>
             <button
               onClick={onTest}
               disabled={testing}
@@ -2682,7 +2731,9 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
         configToSave.concurrencyPerModel = config.concurrencyPerModel;
       if (config.queueTimeoutMs !== undefined) configToSave.queueTimeoutMs = config.queueTimeoutMs;
     }
-    if (Object.keys(configToSave).length > 0) {
+    const hasConfigToSave = Object.keys(configToSave).length > 0;
+    const hadExistingConfig = Object.keys(sanitizeComboRuntimeConfig(combo?.config)).length > 0;
+    if (hasConfigToSave || (isEdit && hadExistingConfig)) {
       saveData.config = configToSave;
     }
 
@@ -3552,6 +3603,122 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, combo
                           setConfig({
                             ...config,
                             retryDelayMs: e.target.value ? Number(e.target.value) : undefined,
+                          })
+                        }
+                        className="w-full text-xs py-1.5 px-2 rounded border border-black/10 dark:border-white/10 bg-transparent focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabelWithHelp
+                        label={getI18nOrFallback(t, "targetTimeout", "Target timeout (seconds)")}
+                        help={getI18nOrFallback(
+                          t,
+                          "advancedHelp.targetTimeoutMs",
+                          ADVANCED_FIELD_HELP_FALLBACK.targetTimeoutMs
+                        )}
+                        showHelp={!isExpertMode}
+                        htmlFor="combo-target-timeout-ms"
+                      />
+                      <input
+                        id="combo-target-timeout-ms"
+                        type="number"
+                        min="1"
+                        max="86400"
+                        step="1"
+                        value={msToOptionalSecondsInput(config.targetTimeoutMs)}
+                        placeholder={getI18nOrFallback(t, "inheritRequestTimeout", "inherit")}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            targetTimeoutMs: secondsInputToOptionalMs(e.target.value),
+                          })
+                        }
+                        className="w-full text-xs py-1.5 px-2 rounded border border-black/10 dark:border-white/10 bg-transparent focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  {/* failoverBeforeRetry + maxSetRetries + setRetryDelayMs */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-black/5 dark:border-white/5">
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-2 py-1">
+                        <input
+                          type="checkbox"
+                          id="failoverBeforeRetry"
+                          checked={!!config.failoverBeforeRetry}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              failoverBeforeRetry: e.target.checked || undefined,
+                            })
+                          }
+                          className="w-3.5 h-3.5 rounded border border-black/20 dark:border-white/20 accent-primary cursor-pointer"
+                        />
+                        <label
+                          htmlFor="failoverBeforeRetry"
+                          className="text-xs text-text-muted cursor-pointer select-none"
+                        >
+                          {t("failoverBeforeRetry")}
+                        </label>
+                        <Tooltip
+                          position="bottom"
+                          content={getI18nOrFallback(
+                            t,
+                            "advancedHelp.failoverBeforeRetry",
+                            ADVANCED_FIELD_HELP_FALLBACK.failoverBeforeRetry
+                          )}
+                        >
+                          <span className="material-symbols-outlined text-[12px] text-text-muted cursor-help">
+                            help
+                          </span>
+                        </Tooltip>
+                      </div>
+                    </div>
+                    <div>
+                      <FieldLabelWithHelp
+                        label={t("maxSetRetries")}
+                        help={getI18nOrFallback(
+                          t,
+                          "advancedHelp.maxSetRetries",
+                          ADVANCED_FIELD_HELP_FALLBACK.maxSetRetries
+                        )}
+                        showHelp={!isExpertMode}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={config.maxSetRetries ?? ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            maxSetRetries: e.target.value ? Number(e.target.value) : undefined,
+                          })
+                        }
+                        className="w-full text-xs py-1.5 px-2 rounded border border-black/10 dark:border-white/10 bg-transparent focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabelWithHelp
+                        label={t("setRetryDelayMs")}
+                        help={getI18nOrFallback(
+                          t,
+                          "advancedHelp.setRetryDelayMs",
+                          ADVANCED_FIELD_HELP_FALLBACK.setRetryDelayMs
+                        )}
+                        showHelp={!isExpertMode}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="60000"
+                        step="500"
+                        value={config.setRetryDelayMs ?? ""}
+                        placeholder="2000"
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            setRetryDelayMs: e.target.value ? Number(e.target.value) : undefined,
                           })
                         }
                         className="w-full text-xs py-1.5 px-2 rounded border border-black/10 dark:border-white/10 bg-transparent focus:border-primary focus:outline-none"

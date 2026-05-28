@@ -4,9 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { createDecipheriv, scryptSync } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { parseArgs, getStringFlag, hasFlag } from "../args.mjs";
 import { resolveDataDir, resolveStoragePath } from "../data-dir.mjs";
 import { printHeading } from "../io.mjs";
+import { t } from "../i18n.mjs";
+import { readDatabaseHealth, readEncryptedCredentialSamples } from "../sqlite.mjs";
 
 const STATIC_SALT = "omniroute-field-encryption-v1";
 const KEY_LENGTH = 32;
@@ -78,14 +79,6 @@ function checkConfig(dataDir) {
   return ok("Config", `.env found at ${envFile}`, { envFile });
 }
 
-async function loadBetterSqlite() {
-  try {
-    return (await import("better-sqlite3")).default;
-  } catch (error) {
-    return { error };
-  }
-}
-
 function resolveMigrationsDir(rootDir) {
   const configured = process.env.OMNIROUTE_MIGRATIONS_DIR;
   const candidates = [
@@ -115,18 +108,9 @@ async function checkDatabase(dbPath, rootDir) {
     return warn("Database", `SQLite database not found at ${dbPath}`, { dbPath });
   }
 
-  const Database = await loadBetterSqlite();
-  if (Database.error) {
-    return fail("Database", "better-sqlite3 could not be loaded", {
-      error: Database.error instanceof Error ? Database.error.message : String(Database.error),
-    });
-  }
-
-  let db;
   try {
-    db = new Database(dbPath, { readonly: true, fileMustExist: true });
-    const quickCheck = db.prepare("PRAGMA quick_check").get();
-    const quickCheckValue = Object.values(quickCheck || {})[0];
+    const { quickCheckValue, hasMigrationTable, appliedMigrationVersions } =
+      await readDatabaseHealth(dbPath);
     if (quickCheckValue !== "ok") {
       return fail("Database", `SQLite quick_check failed: ${quickCheckValue}`, { dbPath });
     }
@@ -137,18 +121,11 @@ async function checkDatabase(dbPath, rootDir) {
       return ok("Database", "SQLite quick_check passed", { dbPath, migrations: "not_checked" });
     }
 
-    const table = db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
-      .get("_omniroute_migrations");
-    if (!table) {
+    if (!hasMigrationTable) {
       return warn("Database", "SQLite is readable, but migration table is missing", { dbPath });
     }
 
-    const appliedRows = db
-      .prepare("SELECT version FROM _omniroute_migrations")
-      .all()
-      .map((row) => row.version);
-    const applied = new Set(appliedRows);
+    const applied = new Set(appliedMigrationVersions);
     const pending = migrationFiles.filter((migration) => !applied.has(migration.version));
 
     if (pending.length > 0) {
@@ -164,8 +141,6 @@ async function checkDatabase(dbPath, rootDir) {
       dbPath,
       error: error instanceof Error ? error.message : String(error),
     });
-  } finally {
-    if (db) db.close();
   }
 }
 
@@ -181,8 +156,11 @@ function decryptCredentialSample(value, key) {
   const [ivHex, encryptedHex, authTagHex] = body.split(":");
   if (!ivHex || !encryptedHex || !authTagHex) throw new Error("Malformed encrypted value");
 
-  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"));
-  decipher.setAuthTag(Buffer.from(authTagHex, "hex"));
+  const authTagBuf = Buffer.from(authTagHex, "hex");
+  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"), {
+    authTagLength: authTagBuf.length,
+  });
+  decipher.setAuthTag(authTagBuf);
   let decrypted = decipher.update(encryptedHex, "hex", "utf8");
   decrypted += decipher.final("utf8");
   return decrypted;
@@ -200,41 +178,13 @@ async function checkStorageEncryption(dbPath) {
       : warn("Storage/encryption", "No STORAGE_ENCRYPTION_KEY configured; passthrough mode");
   }
 
-  const Database = await loadBetterSqlite();
-  if (Database.error) {
-    return fail("Storage/encryption", "Could not inspect encrypted credentials", {
-      error: Database.error instanceof Error ? Database.error.message : String(Database.error),
-    });
-  }
-
-  let db;
   try {
-    db = new Database(dbPath, { readonly: true, fileMustExist: true });
-    const hasProviderTable = db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
-      .get("provider_connections");
+    const { hasProviderTable, encryptedValues } = await readEncryptedCredentialSamples(dbPath);
     if (!hasProviderTable) {
       return secret
         ? ok("Storage/encryption", "Encryption key is configured; provider table not initialized")
         : warn("Storage/encryption", "No STORAGE_ENCRYPTION_KEY configured; passthrough mode");
     }
-
-    const rows = db
-      .prepare(
-        `SELECT api_key, access_token, refresh_token, id_token
-         FROM provider_connections
-         WHERE api_key LIKE 'enc:v1:%'
-            OR access_token LIKE 'enc:v1:%'
-            OR refresh_token LIKE 'enc:v1:%'
-            OR id_token LIKE 'enc:v1:%'
-         LIMIT 20`
-      )
-      .all();
-    const encryptedValues = rows.flatMap((row) =>
-      ["api_key", "access_token", "refresh_token", "id_token"]
-        .filter((key) => typeof row[key] === "string" && row[key].startsWith("enc:v1:"))
-        .map((key) => row[key])
-    );
 
     if (encryptedValues.length === 0) {
       return secret
@@ -265,8 +215,6 @@ async function checkStorageEncryption(dbPath) {
     return fail("Storage/encryption", "Encrypted credential check failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-  } finally {
-    if (db) db.close();
   }
 }
 
@@ -360,7 +308,7 @@ async function checkNativeBinary(rootDir) {
 
   try {
     const { isNativeBinaryCompatible } = await import(
-      pathToFileURL(path.join(rootDir, "scripts", "native-binary-compat.mjs")).href
+      pathToFileURL(path.join(rootDir, "scripts", "build", "native-binary-compat.mjs")).href
     );
     const compatible = isNativeBinaryCompatible(binaryPath);
     if (!compatible) {
@@ -468,7 +416,7 @@ export async function collectDoctorChecks(context = {}, options = {}) {
 
   // CLI tool health checks
   try {
-    const { collectCliToolChecks } = await import("../../../src/lib/cli-helper/doctor/checks.js");
+    const { collectCliToolChecks } = await import("../../../src/lib/cli-helper/doctor/checks.ts");
     const cliChecks = await collectCliToolChecks();
     checks.push(...cliChecks);
   } catch (err) {
@@ -487,25 +435,6 @@ export async function collectDoctorChecks(context = {}, options = {}) {
   };
 }
 
-function printDoctorHelp() {
-  console.log(`
-Usage:
-  omniroute doctor
-  omniroute doctor --json
-  omniroute doctor --no-liveness
-  omniroute doctor --host 0.0.0.0
-
-Options:
-  --json                 Print machine-readable JSON
-  --no-liveness          Skip HTTP health endpoint probing
-  --host <host>          Host for server liveness probing (default: 127.0.0.1)
-  --liveness-url <url>   Full health endpoint URL override
-
-Checks:
-  config, database, storage/encryption, ports, Node runtime, native binary, memory, server liveness, CLI tools
-`);
-}
-
 function printCheck(check) {
   const label = check.status.toUpperCase().padEnd(4);
   const color =
@@ -513,20 +442,31 @@ function printCheck(check) {
   console.log(`${color}${label}\x1b[0m ${check.name}: ${check.message}`);
 }
 
-export async function runDoctorCommand(argv, context = {}) {
-  const { flags } = parseArgs(argv);
-  if (hasFlag(flags, "help") || hasFlag(flags, "h")) {
-    printDoctorHelp();
-    return 0;
-  }
+export function registerDoctor(program) {
+  program
+    .command("doctor")
+    .description(t("doctor.title"))
+    .option("--no-liveness", "Skip HTTP health endpoint probing")
+    .option("--host <host>", "Host for server liveness probing", "127.0.0.1")
+    .option("--liveness-url <url>", "Full health endpoint URL override")
+    .action(async (opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals();
+      const exitCode = await runDoctorCommand({ ...opts, output: globalOpts.output });
+      if (exitCode !== 0) process.exit(exitCode);
+    });
+}
+
+export async function runDoctorCommand(opts = {}, context = {}) {
+  const isJson = (opts.output ?? "table") === "json";
+  const skipLiveness = !(opts.liveness ?? true);
 
   const result = await collectDoctorChecks(context, {
-    skipLiveness: hasFlag(flags, "no-liveness"),
-    livenessHost: getStringFlag(flags, "host"),
-    livenessUrl: getStringFlag(flags, "liveness-url"),
+    skipLiveness,
+    livenessHost: opts.host,
+    livenessUrl: opts.livenessUrl,
   });
 
-  if (hasFlag(flags, "json")) {
+  if (isJson) {
     console.log(JSON.stringify(result, null, 2));
   } else {
     printHeading("OmniRoute Doctor");

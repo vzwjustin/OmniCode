@@ -31,7 +31,12 @@ test("next config exposes standalone build settings and canonical rewrites", asy
   assert.equal(nextConfig.distDir, ".next-task607");
   assert.equal(nextConfig.output, "standalone");
   assert.equal(nextConfig.images.unoptimized, true);
-  assert.deepEqual(nextConfig.transpilePackages, ["@omniroute/open-sse", "@lobehub/icons"]);
+  assert.deepEqual(nextConfig.transpilePackages, [
+    "@omniroute/open-sse",
+    "@lobehub/icons",
+    "fumadocs-ui",
+    "fumadocs-core",
+  ]);
   assert.equal(headers[0].source, "/:path*");
   assert.match(securityHeaders["Content-Security-Policy"], /default-src 'self'/);
   assert.match(securityHeaders["Content-Security-Policy"], /frame-ancestors 'none'/);
@@ -90,19 +95,23 @@ test("next config declares Turbopack aliases, runtime assets and server external
   }
 });
 
-test("next-intl webpack hook preserves caller webpack config without legacy fallbacks", async () => {
+test("next-intl webpack hook preserves caller config and filters known extractor warnings", async () => {
   const { default: nextConfig } = await loadNextConfig("webpack-pass-through");
-  const config = {
+  const config: any = {
     context: process.cwd(),
     plugins: [],
     externals: [],
+    ignoreWarnings: [],
     resolve: { fallback: { http: true } },
   };
 
   nextConfig.webpack(config, {
     isServer: false,
+    defaultLoaders: { babel: {} } as any,
     webpack: {
       IgnorePlugin: class {
+        options: any;
+
         constructor(options) {
           this.options = options;
         }
@@ -113,4 +122,35 @@ test("next-intl webpack hook preserves caller webpack config without legacy fall
   assert.deepEqual(config.plugins, []);
   assert.deepEqual(config.externals, []);
   assert.deepEqual(config.resolve.fallback, { http: true });
+  assert.equal(config.ignoreWarnings.length, 1);
+  assert.equal(
+    config.ignoreWarnings[0]({
+      message:
+        "Parsing of /repo/node_modules/next-intl/dist/esm/production/extractor/format/index.js for build dependencies failed at 'import(t)'.",
+      module: {
+        resource: "/repo/node_modules/next-intl/dist/esm/production/extractor/format/index.js",
+      },
+    }),
+    true
+  );
+  assert.equal(
+    config.ignoreWarnings[0]({
+      message:
+        "Parsing of /repo/node_modules/next-intl/dist/esm/production/extractor/format/index.js for build dependencies failed at 'import(t)'.",
+    }),
+    false
+  );
+  assert.equal(
+    config.ignoreWarnings[0]({
+      message: "Critical dependency: the request of a dependency is an expression",
+      module: {
+        resource: "/repo/node_modules/next-intl/dist/esm/production/extractor/format/index.js",
+      },
+    }),
+    true
+  );
+  assert.equal(
+    config.ignoreWarnings[0]({ message: "Critical dependency: request is expression" }),
+    false
+  );
 });

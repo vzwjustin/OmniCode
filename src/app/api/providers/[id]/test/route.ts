@@ -22,6 +22,7 @@ import {
   resolveGitLabOAuthBaseUrl,
 } from "@/lib/oauth/gitlab";
 import { providerAllowsOptionalApiKey } from "@/shared/constants/providers";
+import { removeConnectionHealth } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 
 // OAuth provider test endpoints
 const OAUTH_TEST_CONFIG = {
@@ -102,11 +103,7 @@ const OAUTH_TEST_CONFIG = {
   },
 };
 
-const CLI_RUNTIME_PROVIDER_MAP = {
-  cline: "cline",
-  kilocode: "kilo",
-  qoder: "qoder",
-};
+import { CLI_RUNTIME_PROVIDER_MAP } from "./cliRuntimeProviderMap";
 
 /** POST body is optional; when present, only known fields are validated. */
 const providerConnectionTestBodySchema = z.object({
@@ -220,9 +217,42 @@ function classifyFailure({
   );
 }
 
+function hasQoderToken(connection: any): boolean {
+  if (typeof connection?.apiKey === "string" && connection.apiKey.trim().length > 0) return true;
+  const psd = connection?.providerSpecificData;
+  if (psd && typeof psd === "object") {
+    const pat =
+      (psd as Record<string, unknown>).personalAccessToken ??
+      (psd as Record<string, unknown>).pat ??
+      (psd as Record<string, unknown>).accessToken;
+    if (typeof pat === "string" && pat.trim().length > 0) return true;
+  }
+  return false;
+}
+
 async function getProviderRuntimeStatus(connection: any) {
   const provider = typeof connection?.provider === "string" ? connection.provider : "";
   let toolId = CLI_RUNTIME_PROVIDER_MAP[provider];
+
+  // Issue #2247: detect Qoder in OAuth/CLI-flavored mode with a PAT pasted
+  // BEFORE the CLI-runtime early-return below, otherwise the disambiguation
+  // message never reaches the user (they keep seeing the generic "CLI not
+  // installed" + 401 cascade). For Qoder, this short-circuits the runtime
+  // check entirely with an actionable diagnosis.
+  const isQoderOauthWithToken =
+    provider === "qoder" && connection?.authType !== "apikey" && hasQoderToken(connection);
+  if (isQoderOauthWithToken) {
+    const message =
+      "Qoder OAuth/Local CLI mode is selected but a Personal Access Token is stored on this connection. Switch this connection to API Key auth instead.";
+    return {
+      installed: false,
+      runnable: false,
+      reason: "qoder_oauth_with_token",
+      diagnosis: makeDiagnosis("runtime_error", "local", message, "qoder_oauth_with_token"),
+      error: message,
+    };
+  }
+
   if (provider === "qoder" && connection?.authType !== "apikey") {
     toolId = null;
   }
@@ -273,13 +303,46 @@ async function refreshOAuthToken(connection: any) {
   if (!refreshToken) return null;
 
   try {
-    // Kiro needs extra fields the generic function expects
+    // Fix B: Pass connectionId + accessToken + expiresAt so getAccessToken enters
+    // the per-connection mutex (Layer 1) instead of falling through to the
+    // token-hash fallback (Layer 2). Without connectionId, parallel dashboard
+    // batch-tests would each acquire a separate Layer-2 lock keyed by token hash
+    // and concurrently POST the same refresh_token to Codex/OpenAI, triggering
+    // refresh_token_reused on rotating providers.
     const credentials = {
+      connectionId: connection.id,
+      accessToken: connection.accessToken,
       refreshToken,
+      expiresAt: connection.expiresAt,
       providerSpecificData: connection.providerSpecificData || {},
     };
 
-    const result = await getAccessToken(provider, credentials, console);
+    // Fix A: onPersist runs INSIDE the mutex inside getAccessToken so the DB
+    // write happens before the lock releases. This prevents a concurrent caller
+    // from reading the stale refresh_token between the network call and the DB
+    // update.
+    const result = await getAccessToken(provider, credentials, console, null, async (refreshed) => {
+      if (!refreshed?.accessToken) return;
+      const update: any = {
+        accessToken: refreshed.accessToken,
+      };
+      if (refreshed.refreshToken) update.refreshToken = refreshed.refreshToken;
+      if (refreshed.expiresAt) {
+        update.expiresAt = refreshed.expiresAt;
+        update.tokenExpiresAt = refreshed.expiresAt;
+      } else if (refreshed.expiresIn) {
+        const expiresAt = new Date(Date.now() + refreshed.expiresIn * 1000).toISOString();
+        update.expiresAt = expiresAt;
+        update.tokenExpiresAt = expiresAt;
+      }
+      if (refreshed.providerSpecificData) {
+        update.providerSpecificData = {
+          ...(connection.providerSpecificData || {}),
+          ...refreshed.providerSpecificData,
+        };
+      }
+      await updateProviderConnection(connection.id, update);
+    });
     return result; // { accessToken, expiresIn, refreshToken } or null
   } catch (err) {
     console.log(`Error refreshing ${provider} token:`, (err as any).message);
@@ -650,6 +713,16 @@ export async function testSingleConnection(connectionId: string, validationModel
 
   if (result.valid) {
     updateData.backoffLevel = 0;
+
+    const psd = connection?.providerSpecificData as Record<string, unknown> | undefined;
+    updateData.providerSpecificData = {
+      ...(psd || {}),
+      apiKeyHealth: {},
+    };
+
+    try {
+      removeConnectionHealth(connectionId);
+    } catch {}
   }
 
   // If token was refreshed, update tokens in DB

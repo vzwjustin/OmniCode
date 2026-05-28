@@ -53,7 +53,6 @@ const MODEL_ALIAS_MAP: Record<string, string> = {
   "swe-1.6": "swe-1-6",
   "swe-1.5-fast": "swe-1p5", // fast variant
   "swe-1.5": "swe-1p5",
-  "swe-check": "swe-check",
   // ── Claude Opus 4.7 ──────────────────────────────────────────────────────
   "claude-opus-4.7-max": "claude-opus-4-7-max",
   "claude-opus-4.7-xhigh": "claude-opus-4-7-xhigh",
@@ -80,17 +79,6 @@ const MODEL_ALIAS_MAP: Record<string, string> = {
   "claude-4.5-sonnet-thinking": "MODEL_PRIVATE_3",
   "claude-4.5-sonnet": "MODEL_PRIVATE_2",
   "claude-4.5-haiku": "MODEL_PRIVATE_11",
-  // ── Claude 4 ─────────────────────────────────────────────────────────────
-  "claude-4-opus-thinking": "MODEL_CLAUDE_4_OPUS_THINKING",
-  "claude-4-opus": "MODEL_CLAUDE_4_OPUS",
-  "claude-4-sonnet-thinking": "MODEL_CLAUDE_4_SONNET_THINKING",
-  "claude-4-sonnet": "MODEL_CLAUDE_4_SONNET",
-  "claude-4.1-opus-thinking": "MODEL_CLAUDE_4_1_OPUS_THINKING",
-  "claude-4.1-opus": "MODEL_CLAUDE_4_1_OPUS",
-  // ── Claude 3.x ───────────────────────────────────────────────────────────
-  "claude-3.7-sonnet-thinking": "CLAUDE_3_7_SONNET_20250219_THINKING",
-  "claude-3.7-sonnet": "CLAUDE_3_7_SONNET_20250219",
-  "claude-3.5-sonnet": "CLAUDE_3_5_SONNET_20241022",
   // ── GPT-5.5 ──────────────────────────────────────────────────────────────
   "gpt-5.5-xhigh-fast": "gpt-5-5-xhigh-priority",
   "gpt-5.5-high-fast": "gpt-5-5-high-priority",
@@ -138,41 +126,26 @@ const MODEL_ALIAS_MAP: Record<string, string> = {
   "gpt-5.2-none": "MODEL_GPT_5_2_NONE",
   "gpt-5.2": "MODEL_GPT_5_2_MEDIUM",
   // ── GPT-5 ────────────────────────────────────────────────────────────────
-  "gpt-5-codex": "gpt-5-codex",
   "gpt-5": "gpt-5",
   // ── GPT-4.1 / 4o ─────────────────────────────────────────────────────────
   "gpt-4.1": "MODEL_CHAT_GPT_4_1_2025_04_14",
   "gpt-4.1-mini": "gpt-4.1-mini",
-  "gpt-4.1-nano": "gpt-4.1-nano",
   "gpt-4o": "MODEL_CHAT_GPT_4O_2024_08_06",
-  "gpt-4o-mini": "gpt-4o-mini",
   // ── Gemini ────────────────────────────────────────────────────────────────
   "gemini-3.1-pro-high": "gemini-3-1-pro-high",
   "gemini-3.1-pro-low": "gemini-3-1-pro-low",
   "gemini-3.1-pro": "gemini-3-1-pro-high",
-  "gemini-3.0-pro": "gemini-3-pro",
   "gemini-3.0-flash-high": "MODEL_GOOGLE_GEMINI_3_0_FLASH_HIGH",
   "gemini-3.0-flash-medium": "MODEL_GOOGLE_GEMINI_3_0_FLASH_MEDIUM",
   "gemini-3.0-flash-low": "MODEL_GOOGLE_GEMINI_3_0_FLASH_LOW",
   "gemini-3.0-flash-minimal": "MODEL_GOOGLE_GEMINI_3_0_FLASH_MINIMAL",
   "gemini-3.0-flash": "MODEL_GOOGLE_GEMINI_3_0_FLASH_HIGH",
   "gemini-2.5-pro": "MODEL_GOOGLE_GEMINI_2_5_PRO",
-  "gemini-2.5-flash": "gemini-2.5-flash",
   // ── Others ───────────────────────────────────────────────────────────────
   "deepseek-v4": "deepseek-v4",
-  "deepseek-r1": "deepseek-r1",
-  "deepseek-v3-2": "deepseek-v3-2",
-  "deepseek-v3": "deepseek-v3",
-  "grok-3-mini-thinking": "MODEL_XAI_GROK_3_MINI_REASONING",
-  "grok-3-mini": "grok-3-mini",
-  "grok-3": "MODEL_XAI_GROK_3",
-  "grok-code-fast-1": "grok-code-fast-1",
   "kimi-k2.6": "kimi-k2-6",
   "kimi-k2.5": "kimi-k2-5",
-  "kimi-k2": "MODEL_KIMI_K2",
   "glm-5.1": "glm-5-1",
-  "glm-5": "glm-5",
-  "glm-4.7": "MODEL_GLM_4_7",
 };
 
 function resolveWsModelId(model: string): string {
@@ -469,28 +442,6 @@ function openAIMessagesToWs(messages: OpenAIMessage[]): WsChatMessage[] {
   return out;
 }
 
-// ─── gRPC-web response stream parser ─────────────────────────────────────────
-//
-// gRPC-web frame layout:
-//   byte 0:    flag (0x00 = data, 0x80 = trailers)
-//   bytes 1-4: message length (big-endian uint32)
-//   bytes 5…:  protobuf payload
-//
-// The response body is a concatenated sequence of these frames.
-
-function* parseGrpcWebFrames(buf: Uint8Array): Generator<{ flag: number; payload: Uint8Array }> {
-  let offset = 0;
-  while (offset + 5 <= buf.length) {
-    const flag = buf[offset];
-    const len =
-      (buf[offset + 1] << 24) | (buf[offset + 2] << 16) | (buf[offset + 3] << 8) | buf[offset + 4];
-    offset += 5;
-    if (len < 0 || offset + len > buf.length) break;
-    yield { flag, payload: buf.slice(offset, offset + len) };
-    offset += len;
-  }
-}
-
 // ─── WindsurfExecutor ─────────────────────────────────────────────────────────
 
 export class WindsurfExecutor extends BaseExecutor {
@@ -577,19 +528,6 @@ export class WindsurfExecutor extends BaseExecutor {
     const responseId = `chatcmpl-ws-${Date.now()}`;
     const created = Math.floor(Date.now() / 1000);
 
-    const transformStream = new TransformStream<Uint8Array, Uint8Array>({
-      async transform(chunk, controller) {
-        // Accumulate — gRPC-web frames may arrive split across fetch chunks.
-        // For simplicity we buffer the entire message set in flush().
-        controller.enqueue(chunk);
-      },
-    });
-
-    // We need to buffer the full response to parse gRPC frames.
-    // Use a ReadableStream that:
-    //   1. reads the entire upstream body
-    //   2. parses gRPC-web frames
-    //   3. emits SSE events
     const sseStream = new ReadableStream<Uint8Array>({
       async start(controller) {
         const enc = new TextEncoder();
@@ -604,9 +542,10 @@ export class WindsurfExecutor extends BaseExecutor {
         }
 
         try {
-          const bodyBytes = upstream.body ? await readStream(upstream.body) : new Uint8Array(0);
+          let pending = new Uint8Array(0);
+          const reader = upstream.body?.getReader();
 
-          for (const { flag, payload } of parseGrpcWebFrames(bodyBytes)) {
+          const handleFrame = (flag: number, payload: Uint8Array) => {
             if (flag === 0x80) {
               // Trailer frame — contains grpc-status, grpc-message
               const trailer = TEXT_DEC.decode(payload);
@@ -617,10 +556,10 @@ export class WindsurfExecutor extends BaseExecutor {
                   ? decodeURIComponent(msgMatch[1].trim())
                   : `gRPC status ${statusMatch[1]}`;
               }
-              continue;
+              return;
             }
 
-            if (flag !== 0x00) continue; // skip unknown flags
+            if (flag !== 0x00) return; // skip unknown flags
 
             const chunk = decodeCompletionChunk(payload);
 
@@ -655,7 +594,38 @@ export class WindsurfExecutor extends BaseExecutor {
             } else if (chunk.kind === "error") {
               hadError = chunk.message;
             }
+          };
+
+          const drainFrames = () => {
+            let offset = 0;
+            while (offset + 5 <= pending.length) {
+              const flag = pending[offset];
+              const len =
+                (pending[offset + 1] << 24) |
+                (pending[offset + 2] << 16) |
+                (pending[offset + 3] << 8) |
+                pending[offset + 4];
+              if (len < 0 || offset + 5 + len > pending.length) break;
+              handleFrame(flag, pending.slice(offset + 5, offset + 5 + len));
+              offset += 5 + len;
+            }
+            if (offset > 0) pending = pending.slice(offset);
+          };
+
+          if (reader) {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (!value) continue;
+                pending = pending.length === 0 ? value : concatBytes([pending, value]);
+                drainFrames();
+              }
+            } finally {
+              reader.releaseLock();
+            }
           }
+          drainFrames();
 
           if (hadError) {
             emit(
@@ -724,8 +694,6 @@ export class WindsurfExecutor extends BaseExecutor {
       },
     });
 
-    void transformStream; // unused — kept for reference
-
     return new Response(sseStream, {
       status: 200,
       headers: {
@@ -735,20 +703,4 @@ export class WindsurfExecutor extends BaseExecutor {
       },
     });
   }
-}
-
-/** Read an entire ReadableStream<Uint8Array> into a single Uint8Array. */
-async function readStream(readable: ReadableStream<Uint8Array>): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  const reader = readable.getReader();
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  return concatBytes(chunks);
 }

@@ -36,7 +36,7 @@ test.afterEach(() => {
   comboMetrics.resetAllComboMetrics();
 });
 
-test("gemini thought signature store handles invalid input, TTL expiry and max-size pruning", () => {
+test("gemini thought signature store handles invalid input, memory TTL and max-size pruning", () => {
   signatureStore.storeGeminiThoughtSignature("", "sig");
   signatureStore.storeGeminiThoughtSignature("call-empty", "");
   assert.equal(signatureStore.getGeminiThoughtSignature(""), null);
@@ -49,7 +49,8 @@ test("gemini thought signature store handles invalid input, TTL expiry and max-s
   assert.equal(signatureStore.getGeminiThoughtSignature("call-live"), "sig-live");
 
   now += 60 * 60 * 1000 + 1;
-  assert.equal(signatureStore.getGeminiThoughtSignature("call-live"), null);
+  assert.equal(signatureStore.getGeminiThoughtSignatureMemorySizeForTests(), 0);
+  assert.equal(signatureStore.getGeminiThoughtSignature("call-live"), "sig-live");
 
   now = 10_000;
   for (let index = 0; index < 1002; index++) {
@@ -57,7 +58,8 @@ test("gemini thought signature store handles invalid input, TTL expiry and max-s
     now += 1;
   }
 
-  assert.equal(signatureStore.getGeminiThoughtSignature("call-0"), null);
+  assert.equal(signatureStore.getGeminiThoughtSignatureMemorySizeForTests(), 1000);
+  assert.equal(signatureStore.getGeminiThoughtSignature("call-0"), "sig-0");
   assert.equal(signatureStore.getGeminiThoughtSignature("call-1001"), "sig-1001");
 });
 
@@ -203,8 +205,19 @@ test("rate limit semaphore covers immediate acquire, timeout, cooldown drain and
 test("combo metrics cover empty reads, intent tracking, per-model stats and resets", () => {
   assert.equal(comboMetrics.getComboMetrics("missing"), null);
 
+  comboMetrics.recordComboShadowRequest("shadow-only", "openai/shadow", {
+    success: true,
+    latencyMs: 40,
+  });
+  const shadowOnlyMetrics = comboMetrics.getComboMetrics("shadow-only");
+  assert.equal(shadowOnlyMetrics.productionTraffic, false);
+  assert.equal(shadowOnlyMetrics.totalRequests, 0);
+  assert.equal(shadowOnlyMetrics.shadow.totalRequests, 1);
+  comboMetrics.resetComboMetrics("shadow-only");
+
   comboMetrics.recordComboIntent("idle", "chat");
   const idleMetrics = comboMetrics.getComboMetrics("idle");
+  assert.equal(idleMetrics.productionTraffic, false);
   assert.equal(idleMetrics.avgLatencyMs, 0);
   assert.equal(idleMetrics.successRate, 0);
   assert.equal(idleMetrics.fallbackRate, 0);
@@ -246,6 +259,7 @@ test("combo metrics cover empty reads, intent tracking, per-model stats and rese
   });
 
   const writer = comboMetrics.getComboMetrics("writer");
+  assert.equal(writer.productionTraffic, true);
   assert.equal(writer.strategy, "least-used");
   assert.equal(writer.totalRequests, 3);
   assert.equal(writer.totalSuccesses, 2);
@@ -352,11 +366,11 @@ test("model helpers cover malformed input, alias maps, wildcard aliases, ambigui
     model: "gemini-custom",
     extendedContext: false,
   });
-  assert.deepEqual(await modelService.getModelInfoCore("made-up-model", {}), {
-    provider: "openai",
-    model: "made-up-model",
-    extendedContext: false,
-  });
+  const unknownModel = await modelService.getModelInfoCore("made-up-model", {});
+  assert.equal(unknownModel.provider, null);
+  assert.equal(unknownModel.errorType, "model_not_found");
+  assert.ok(unknownModel.errorMessage.includes("made-up-model"));
+  assert.ok(unknownModel.errorMessage.includes("provider/model prefix"));
 });
 
 test("error classifier covers empty-content helpers, context overflow and remaining error classes", () => {

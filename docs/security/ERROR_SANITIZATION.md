@@ -1,6 +1,6 @@
 ---
 title: "Error Message Sanitization"
-version: 3.8.0
+version: 3.8.2
 lastUpdated: 2026-05-14
 ---
 
@@ -131,6 +131,43 @@ When adding a new route or executor, copy the assertion pattern from this file. 
 - `js/stack-trace-exposure` CodeQL alerts in `.github/security` should always be **either** fixed via these helpers **or** dismissed with a comment citing this doc.
 - The `pino` redaction config (`src/lib/log/redaction.ts` — if present) handles structured log redaction separately. This doc covers only the response-message surface.
 - Upstream-header denylist (`src/shared/constants/upstreamHeaders.ts`) covers header leakage — keep both files aligned when adding a new exfiltration concern.
+
+## Upstream details passthrough
+
+`buildErrorBody` accepts an optional third argument `upstreamDetails` (raw
+parsed body from the upstream provider). When provided, it is sanitized by
+`sanitizeUpstreamDetails` before inclusion in the response as `upstream_details`.
+
+Sanitization rules applied to `upstreamDetails`:
+
+1. String leaves: run through `sanitizeErrorMessage` (strips stacks + absolute paths).
+2. Key blocklist: keys matching `/stack|trace|path|file|cwd|dir|password|secret|token|key/i`
+   are removed.
+3. Depth cap: nesting beyond 4 levels is replaced with the string `"[truncated]"`.
+4. Arrays are capped at 32 elements.
+
+Only the seven upstream-error `createErrorResult` call sites in `chatCore.ts` pass
+`upstreamErrorBody`. Internal OmniRoute errors (SSE parse failures, empty content,
+guardrail blocks) do not include `upstream_details`.
+
+Do NOT pass raw `err.stack`, `err.message`, or any string from a runtime exception to
+`upstreamDetails`. Those must still go through `errorResponse` / `buildErrorBody(code, msg)`
+without an upstream body.
+
+## Known CodeQL limitation: custom sanitizers not recognized
+
+The CodeQL query [`js/stack-trace-exposure`](https://codeql.github.com/codeql-query-help/javascript/js-stack-trace-exposure/) uses a fixed allowlist of sanitizer patterns (e.g. inline `.split("\n")[0]`, `String#replace` with specific regex shapes, access to `.message` on `Error`). It does **not** recognize indirection through a custom helper like our `sanitizeErrorMessage()`.
+
+This means callsites that demonstrably sanitize via this module — for example `open-sse/utils/error.ts::errorResponse` and `open-sse/executors/cursor.ts::buildErrorResponse` — may continue to raise the alert even though the code is functionally safe. Precedent dismissals: `#224`, `#231` (May 2026), both marked `false positive` with technical justification.
+
+**How to handle a new occurrence:**
+
+1. Confirm the callsite actually routes the message through `sanitizeErrorMessage` / `buildErrorBody` / one of the wrappers documented above (read the call chain end-to-end — don't trust a comment).
+2. Confirm `tests/unit/error-message-sanitization.test.ts` exercises the path (or add coverage).
+3. Dismiss the alert via `gh api ... -X PATCH state=dismissed -f 'dismissed_reason=false positive'` referencing this doc.
+4. Do **not** "fix" by inlining `.split("\n")[0]` everywhere — the helper is the single source of truth; duplicating the pattern weakens the sanitizer (loses path scrubbing, length cap, type coercion) for the appearance of placating the scanner.
+
+Adopting opt-in features like CodeQL's [`@codeql/javascript-models` custom sanitizer config](https://codeql.github.com/docs/codeql-language-guides/customizing-library-models-for-javascript/) is the long-term fix; it lives outside this doc.
 
 ## References
 

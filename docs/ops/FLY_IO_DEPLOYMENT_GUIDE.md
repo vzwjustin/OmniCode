@@ -1,6 +1,6 @@
 ---
-title: "OmniCode Fly.io 部署指南"
-version: 3.8.0
+title: "OmniRoute Fly.io 部署指南"
+version: 3.8.2
 lastUpdated: 2026-05-13
 ---
 

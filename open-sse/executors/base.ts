@@ -1,8 +1,18 @@
 import { HTTP_STATUS, FETCH_TIMEOUT_MS } from "../config/constants.ts";
 import { applyFingerprint, isCliCompatEnabled } from "../config/cliFingerprints.ts";
 import { supportsXHighEffort } from "../config/providerModels.ts";
-import { getRotatingApiKey } from "../services/apiKeyRotator.ts";
+import {
+  getRotatingApiKey,
+  getValidApiKey,
+  resolveKeyForRequest,
+} from "../services/apiKeyRotator.ts";
+import type { KeyHealth } from "../services/apiKeyRotator.ts";
 import { getOpenAICompatibleType, isClaudeCodeCompatible } from "../services/provider.ts";
+import {
+  runWithOnPersist,
+  getRefreshLeadMs,
+  isUnrecoverableRefreshError,
+} from "../services/tokenRefresh.ts";
 import type { ProviderRequestDefaults } from "../services/providerRequestDefaults.ts";
 import { signRequestBody } from "../services/claudeCodeCCH.ts";
 import {
@@ -13,6 +23,13 @@ import {
 import { getClaudeCodeCompatibleRequestDefaults } from "@/lib/providers/requestDefaults";
 import { remapToolNamesInRequest } from "../services/claudeCodeToolRemapper.ts";
 import { obfuscateInBody } from "../services/claudeCodeObfuscation.ts";
+import { sanitizeResponsesInputItems } from "../services/responsesInputSanitizer.ts";
+import { applySystemTransformPipeline, PROVIDER_CLAUDE } from "../services/systemTransforms.ts";
+import {
+  fixToolPairs,
+  fixToolAdjacency,
+  stripTrailingAssistantOrphanToolUse,
+} from "../services/contextManager.ts";
 import { randomUUID } from "node:crypto";
 import {
   CLAUDE_CODE_VERSION,
@@ -96,8 +113,15 @@ export type ExecuteInput = {
   upstreamExtraHeaders?: Record<string, string> | null;
   /** Original client request headers (read-only). Executors may forward select headers upstream. */
   clientHeaders?: Record<string, string> | null;
-  /** Callback to persist tokens that are proactively refreshed during execution. */
-  onCredentialsRefreshed?: (newCredentials: ProviderCredentials) => Promise<void> | void;
+  /** Callback to persist tokens that are proactively refreshed during execution.
+   * Accepts a partial credentials patch (e.g. `{ accessToken, refreshToken }` or
+   * `{ testStatus: "expired", isActive: false }`); the caller merges into the
+   * stored connection row. */
+  onCredentialsRefreshed?: (
+    newCredentials: Partial<ProviderCredentials> & Record<string, unknown>
+  ) => Promise<void> | void;
+  /** When true, skip the intra-URL 429 retry in execute() so the caller handles fallback. */
+  skipUpstreamRetry?: boolean;
 };
 
 export type CountTokensInput = {
@@ -189,6 +213,11 @@ export function mergeAbortSignals(primary: AbortSignal, secondary: AbortSignal):
   return controller.signal;
 }
 
+function hasActiveClaudeThinking(body: Record<string, unknown>): boolean {
+  const thinking = body.thinking as Record<string, unknown> | undefined;
+  return thinking?.type === "enabled" || thinking?.type === "adaptive";
+}
+
 /**
  * Sanitize reasoning_effort for providers that don't accept all values.
  *
@@ -221,6 +250,7 @@ export function sanitizeReasoningEffortForProvider(
     b.reasoning && typeof b.reasoning === "object" && !Array.isArray(b.reasoning)
       ? (b.reasoning as Record<string, unknown>)
       : null;
+  const hasTopLevelReasoningEffort = Object.prototype.hasOwnProperty.call(b, "reasoning_effort");
   const effort = b.reasoning_effort ?? reasoning?.effort;
   if (effort === undefined) return body;
   const effortStr = typeof effort === "string" ? effort.toLowerCase() : "";
@@ -231,7 +261,10 @@ export function sanitizeReasoningEffortForProvider(
       "REASONING_SANITIZE",
       `${provider}/${modelStr}: downgraded reasoning_effort xhigh → high`
     );
-    const next: Record<string, unknown> = { ...b, reasoning_effort: "high" };
+    const next: Record<string, unknown> = { ...b };
+    if (hasTopLevelReasoningEffort) {
+      next.reasoning_effort = "high";
+    }
     if (reasoning) {
       next.reasoning = { ...reasoning, effort: "high" };
     }
@@ -328,7 +361,8 @@ export class BaseExecutor {
     credentials: ProviderCredentials,
     stream = true,
     clientHeaders?: Record<string, string> | null,
-    model?: string
+    model?: string,
+    health?: Record<string, KeyHealth>
   ): Record<string, string> {
     void clientHeaders;
     void model;
@@ -351,13 +385,25 @@ export class BaseExecutor {
     if (credentials.accessToken) {
       headers["Authorization"] = `Bearer ${credentials.accessToken}`;
     } else if (credentials.apiKey) {
-      // T07: rotate between primary + extra API keys when extraApiKeys is configured
       const extraKeys =
         (credentials.providerSpecificData?.extraApiKeys as string[] | undefined) ?? [];
-      const effectiveKey =
-        extraKeys.length > 0 && credentials.connectionId
-          ? getRotatingApiKey(credentials.connectionId, credentials.apiKey, extraKeys)
-          : credentials.apiKey;
+      const selectedKeyId = (
+        credentials.providerSpecificData as Record<string, unknown> | undefined
+      )?.selectedKeyId as string | undefined;
+      let effectiveKey = credentials.apiKey;
+      if (extraKeys.length > 0 && credentials.connectionId) {
+        const resolved = resolveKeyForRequest(
+          credentials.connectionId,
+          credentials.apiKey,
+          extraKeys,
+          selectedKeyId ?? null
+        );
+        effectiveKey = resolved?.key ?? credentials.apiKey;
+        if (resolved && credentials.providerSpecificData) {
+          (credentials.providerSpecificData as Record<string, unknown>).selectedKeyId =
+            resolved.keyId;
+        }
+      }
       headers["Authorization"] = `Bearer ${effectiveKey}`;
     }
 
@@ -381,6 +427,10 @@ export class BaseExecutor {
     // like tool descriptions to avoid upstream validation failures.
     if (body && typeof body === "object" && !Array.isArray(body)) {
       const cloned = { ...body } as Record<string, unknown>;
+
+      if (Array.isArray(cloned.input)) {
+        cloned.input = sanitizeResponsesInputItems(cloned.input, false);
+      }
 
       if (Array.isArray(cloned.tools)) {
         cloned.tools = cloned.tools.map((tool: unknown) => {
@@ -445,7 +495,12 @@ export class BaseExecutor {
   needsRefresh(credentials?: ProviderCredentials | null) {
     if (!credentials?.expiresAt) return false;
     const expiresAtMs = new Date(credentials.expiresAt).getTime();
-    return expiresAtMs - Date.now() < 5 * 60 * 1000;
+    // Use the provider-specific lead time (REFRESH_LEAD_MS) so rotating-token
+    // providers like Codex refresh proactively far ahead of expiry. Keeping the
+    // refresh_token "warm" prevents Auth0 from marking it as stale and revoking
+    // the token family on first use after long idle.
+    const lead = getRefreshLeadMs(this.provider);
+    return expiresAtMs - Date.now() < lead;
   }
 
   parseError(response: Response, bodyText: string) {
@@ -522,17 +577,20 @@ export class BaseExecutor {
     }
   }
 
-  async execute({
-    model,
-    body,
-    stream,
-    credentials,
-    signal,
-    log,
-    extendedContext,
-    upstreamExtraHeaders,
-    clientHeaders,
-  }: ExecuteInput) {
+  async execute(input: ExecuteInput) {
+    const {
+      model,
+      body,
+      stream,
+      credentials,
+      signal,
+      log,
+      extendedContext,
+      upstreamExtraHeaders,
+      clientHeaders,
+      skipUpstreamRetry = false,
+      onCredentialsRefreshed,
+    } = input;
     const fallbackCount = this.getFallbackCount();
     let lastError: unknown = null;
     let lastStatus = 0;
@@ -542,20 +600,86 @@ export class BaseExecutor {
 
     if (this.needsRefresh(credentials)) {
       try {
-        const refreshed = await this.refreshCredentials(credentials, log || null);
-        if (refreshed) {
-          activeCredentials = {
-            ...credentials,
-            ...refreshed,
-          };
-          // Persist the proactively refreshed credentials to prevent consuming rotating tokens
-          // without updating the central database connection.
-          if (arguments[0].onCredentialsRefreshed) {
-            await arguments[0].onCredentialsRefreshed(refreshed);
+        // Fix A: wire onCredentialsRefreshed through runWithOnPersist so it runs
+        // INSIDE the per-connection mutex inside getAccessToken. Not every
+        // executor routes through getAccessToken (e.g. github.ts), so use a flag
+        // to detect whether the persist callback actually fired and fall back to
+        // post-refresh mutation when it didn't.
+        let proactivePersistRan = false;
+        const proactiveOnPersist = onCredentialsRefreshed
+          ? async (refreshResult: Record<string, unknown>) => {
+              proactivePersistRan = true;
+              activeCredentials = {
+                ...credentials,
+                ...(refreshResult as Partial<ProviderCredentials>),
+              };
+              await onCredentialsRefreshed(refreshResult as Partial<ProviderCredentials>);
+            }
+          : null;
+
+        const refreshed = await runWithOnPersist(proactiveOnPersist, () =>
+          this.refreshCredentials(credentials, log || null)
+        );
+
+        if (refreshed && !proactivePersistRan) {
+          // ─────────────────────────────────────────────────────────────────────
+          // ⚠️ SOURCE OF TRUTH — do not flip the proactive path back to
+          //    "persist expired+inactive". Ask the operator first.
+          //
+          // History (do not repeat past regressions):
+          //   - ad3d4b696 (#2718, 2026-05-25): per-connection mutex + onPersist
+          //     wiring so multi-account Codex (rotating refresh tokens) stops
+          //     hitting refresh_token_reused under concurrent load.
+          //   - 0c94c397d (#2743, 2026-05-26): a multi-agent review added a
+          //     `await onCredentialsRefreshed({ testStatus: "expired",
+          //     isActive: false })` here. That BROKE multi-account Codex —
+          //     transient sentinels (refresh_token_reused recoverable via
+          //     rotation map; generic invalid_request blips) were treated as
+          //     terminal, so the proactive path sequentially disabled
+          //     working accounts in the DB before any upstream call confirmed
+          //     the failure. Reverted intentionally.
+          //
+          // Contract for the PROACTIVE refresh path:
+          //   - Classify the sentinel ONLY to avoid spreading it into
+          //     activeCredentials (which would send a non-token upstream).
+          //   - DO NOT persist `{ testStatus: "expired", isActive: false }`
+          //     from here. That decision belongs to the REACTIVE path in
+          //     open-sse/handlers/chatCore.ts:~3912, which runs AFTER the
+          //     upstream confirmed the auth failure. By then the rotation
+          //     map (tokenRefresh.ts:~1541) and the DB-staleness check have
+          //     already had their chance to recover the request.
+          //
+          // If a future review/agent thinks the expired-flip is "missing"
+          // here, STOP — flipping it here re-introduces the multi-account
+          // Codex regression. Discuss with the operator before touching.
+          // ─────────────────────────────────────────────────────────────────────
+          if (isUnrecoverableRefreshError(refreshed)) {
+            const refreshCode = (refreshed as Record<string, unknown>).code;
+            log?.warn?.(
+              "TOKEN",
+              `${this.provider.toUpperCase()} | proactive refresh returned unrecoverable sentinel (code=${String(refreshCode ?? "unknown")}); keeping stale credentials, deferring to reactive path.`
+            );
+            // Intentionally NOT spreading the sentinel and NOT persisting
+            // expired status. The next upstream call either succeeds (rotation
+            // map / DB-staleness saved us) or fails — chatCore.ts then marks
+            // the account expired with confidence.
+          } else {
+            activeCredentials = {
+              ...credentials,
+              ...refreshed,
+            };
+            if (onCredentialsRefreshed) {
+              await onCredentialsRefreshed(refreshed);
+            }
           }
         }
       } catch (error) {
-        log?.warn?.(
+        // tokenRefresh.ts:1352 documents that onPersist throws are re-thrown so
+        // the caller is aware of the persistence failure. Honor that contract:
+        // log at error level (not warn), with sanitized message — and let the
+        // request continue with stale credentials so the user-visible error
+        // surfaces upstream rather than being silently absorbed here.
+        log?.error?.(
           "TOKEN",
           `Credential refresh failed for ${this.provider}: ${error instanceof Error ? error.message : String(error)}`
         );
@@ -642,6 +766,15 @@ export class BaseExecutor {
           remapToolNamesInRequest(tb);
           obfuscateInBody(tb);
 
+          // NOTE (issue #2260): This is the native `claude` provider OAuth path.
+          // It is intentionally NOT routed through applyCcBridgeTransformPipeline.
+          // The native OAuth path already prepends its own billing line + sentinel
+          // (see lines ~744-773 below, dayStamp-based, cc_entrypoint=cli, cch=00000
+          // placeholder, signed at body level). The CC bridge transforms DSL is
+          // wired into buildAndSignClaudeCodeRequest (claudeCodeCompatible.ts step 5b)
+          // which is the anthropic-compatible-cc-* relay path — a different,
+          // separately classified surface. Do not double-prepend here.
+
           // Real CLI never sets cache_control on tools.
           if (Array.isArray(tb.tools)) {
             for (const t of tb.tools as Array<Record<string, unknown>>) {
@@ -702,7 +835,9 @@ export class BaseExecutor {
             // Default CC logic when no override headers are present
             const isHaiku = typeof tb.model === "string" && tb.model.includes("haiku");
             if (isHaiku) {
-              delete tb.thinking;
+              // Keep tb.thinking — real Claude Desktop keeps thinking enabled for Haiku
+              // (issue #2454). Only strip output_config (effort) which Haiku rejects;
+              // context_management is re-paired with the preserved thinking below.
               delete tb.output_config;
               delete tb.context_management;
             } else if (tb.thinking === undefined && tb.output_config === undefined) {
@@ -714,27 +849,15 @@ export class BaseExecutor {
             }
           }
 
-          // Real CLI pairs context_management with thinking, but Anthropic's
-          // `clear_thinking_20251015` strategy is strict: it requires
-          // `thinking.type` to be "enabled" or "adaptive". Any other state —
-          // missing, disabled, non-object, or a different type — returns
-          // 400 "`clear_thinking_20251015` strategy requires `thinking` to be
-          // enabled or adaptive". Enforce the invariant in both directions:
-          //   1. thinking active   + no context_management → add the edit
-          //   2. thinking inactive + clear_thinking present → strip the edit
-          //      (and drop context_management entirely if it becomes empty)
-          const thinkingType =
-            tb.thinking && typeof tb.thinking === "object"
-              ? (tb.thinking as { type?: unknown }).type
-              : undefined;
-          const thinkingActive = thinkingType === "enabled" || thinkingType === "adaptive";
-
-          if (thinkingActive && !tb.context_management) {
+          // Real CLI always pairs context_management with thinking. Mirror
+          // that invariant so long sessions don't accumulate thinking blocks
+          // toward the context cap.
+          if (hasActiveClaudeThinking(tb) && !tb.context_management) {
             tb.context_management = {
               edits: [{ type: "clear_thinking_20251015", keep: "all" }],
             };
           } else if (
-            !thinkingActive &&
+            !hasActiveClaudeThinking(tb) &&
             tb.context_management &&
             typeof tb.context_management === "object"
           ) {
@@ -827,6 +950,22 @@ export class BaseExecutor {
           sysBlocks.unshift({ type: "text", text: billingLine }, { type: "text", text: SENTINEL });
           tb.system = sysBlocks;
 
+          // Run the configurable system-transforms pipeline for the native
+          // `claude` provider (issue #2260 / comment 4459544580). The default
+          // claude pipeline runs cosmetic ops only (Open WebUI paragraph
+          // anchors, identity-prefix paragraph drop, ZWJ obfuscation of
+          // sensitive words). It deliberately does NOT include
+          // `inject_billing_header` — billing + sentinel are already
+          // prepended above. Users can extend the pipeline via Settings UI.
+          {
+            const transformResult = applySystemTransformPipeline(PROVIDER_CLAUDE, tb);
+            if (transformResult.appliedOpKinds.length > 0) {
+              console.log(
+                `[SystemTransforms] claude-native: ${transformResult.appliedOpKinds.join(", ")}`
+              );
+            }
+          }
+
           if (!tb.metadata || typeof tb.metadata !== "object") tb.metadata = {};
           (tb.metadata as Record<string, unknown>).user_id = buildUserIdJson({
             deviceId,
@@ -885,6 +1024,35 @@ export class BaseExecutor {
         // CLI fingerprint ordering — always-on for native Claude OAuth, opt-in
         // for other providers. Header + body field order is itself a fingerprint.
         let finalHeaders = headers;
+        // Strip internal sentinel fields set by remapToolNamesInRequest before
+        // serializing — Anthropic rejects unknown top-level fields (issue #2260).
+        delete (transformedBody as Record<string, unknown>)[
+          "_claudeCodeRequiresLowercaseToolNames"
+        ];
+        // Guard against orphan tool_use / tool_result pairs. Clients can ship
+        // truncated histories mid-tool-call which Anthropic rejects with
+        // `messages.N: tool_use ids were found without tool_result blocks
+        // immediately after: toolu_...`. fixToolPairs strips orphans, then
+        // stripTrailingAssistantOrphanToolUse catches the case where the
+        // request body itself ends on an unmatched assistant(tool_use) —
+        // invalid for an upstream-send turn since the body must end on a
+        // user message. Both are idempotent on clean histories.
+        {
+          const tb = transformedBody as Record<string, unknown>;
+          if (Array.isArray(tb?.messages)) {
+            const fixed = fixToolPairs(tb.messages as Record<string, unknown>[]);
+            // fixToolAdjacency enforces Claude's strict adjacency rule
+            // (tool_result must be in immediately next message).
+            // Only apply for Claude/Claude-compatible — OpenAI allows results
+            // spread across multiple subsequent messages.
+            const isClaude = this.provider === "claude" || isClaudeCodeCompatible(this.provider);
+            // For Claude, fixToolAdjacency may strip tool_use blocks whose
+            // tool_result isn't in the next message; re-run fixToolPairs to
+            // drop any tool_result orphaned by that strip (discussion #2410).
+            const adjacent = isClaude ? fixToolPairs(fixToolAdjacency(fixed)) : fixed;
+            tb.messages = stripTrailingAssistantOrphanToolUse(adjacent);
+          }
+        }
         let bodyString = JSON.stringify(transformedBody);
 
         const shouldFingerprint =
@@ -923,6 +1091,7 @@ export class BaseExecutor {
 
         // Intra-URL retry: if 429 and we haven't exhausted per-URL retries, wait and retry the same URL
         if (
+          !skipUpstreamRetry &&
           response.status === HTTP_STATUS.RATE_LIMITED &&
           (retryAttemptsByUrl[urlIndex] ?? 0) < BaseExecutor.RETRY_CONFIG.maxAttempts
         ) {
@@ -937,7 +1106,12 @@ export class BaseExecutor {
           continue;
         }
 
-        if (this.shouldRetry(response.status, urlIndex)) {
+        // T07: Handle 401 authentication errors — log and continue to fallback
+        if (response.status === 401 && credentials.connectionId && credentials.apiKey) {
+          log?.warn?.("AUTH", `401 on ${url} - API key may be invalid`);
+        }
+
+        if (!skipUpstreamRetry && this.shouldRetry(response.status, urlIndex)) {
           log?.debug?.("RETRY", `${response.status} on ${url}, trying fallback ${urlIndex + 1}`);
           lastStatus = response.status;
           continue;
@@ -951,7 +1125,7 @@ export class BaseExecutor {
           log?.warn?.("TIMEOUT", `Fetch timeout after ${this.getTimeoutMs()}ms on ${url}`);
         }
         lastError = err;
-        if (urlIndex + 1 < fallbackCount) {
+        if (!skipUpstreamRetry && urlIndex + 1 < fallbackCount) {
           log?.debug?.("RETRY", `Error on ${url}, trying fallback ${urlIndex + 1}`);
           continue;
         }
