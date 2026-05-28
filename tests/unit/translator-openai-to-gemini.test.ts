@@ -620,6 +620,75 @@ test("OpenAI -> Antigravity wraps Gemini requests in a Cloud Code envelope", () 
   });
 });
 
+test("OpenAI -> Antigravity Gemini stringifies signature-less historical tool calls", () => {
+  const result = openaiToAntigravityRequest(
+    "gemini-3.5-flash-low",
+    {
+      messages: [
+        { role: "user", content: "Update todo" },
+        {
+          role: "assistant",
+          tool_calls: [
+            {
+              id: "call_synthetic_1",
+              type: "function",
+              function: { name: "default_api:todowrite_ide", arguments: '{"todos":[]}' },
+            },
+          ],
+        },
+        {
+          role: "tool",
+          tool_call_id: "call_synthetic_1",
+          content: "[]",
+        },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "default_api:todowrite_ide",
+            parameters: { type: "object", properties: {} },
+          },
+        },
+      ],
+    },
+    false,
+    { projectId: "proj-antigravity-gemini" } as any
+  );
+
+  const modelTurn = result.request.contents.find((content) => content.role === "model");
+  assert.ok(modelTurn, "expected a model turn");
+  assert.ok(
+    modelTurn.parts.some(
+      (part) =>
+        typeof part.text === "string" &&
+        part.text.includes("[Tool call: default_api:todowrite_ide]")
+    ),
+    "expected signature-less tool call to be preserved as text"
+  );
+  assert.equal(
+    modelTurn.parts.some((part) => part.functionCall),
+    false,
+    "signature-less historical call must not be emitted as native functionCall"
+  );
+
+  const toolTurn = result.request.contents.find(
+    (content) =>
+      content.role === "user" &&
+      content.parts.some(
+        (part) =>
+          typeof part.text === "string" &&
+          part.text.includes("[Tool response: default_api:todowrite_ide]")
+      )
+  );
+  assert.ok(toolTurn, "expected signature-less tool response to be preserved as text");
+  assert.equal(
+    toolTurn.parts.some((part) => part.functionResponse),
+    false,
+    "signature-less historical response must not be emitted as native functionResponse"
+  );
+});
+
 test("OpenAI -> Antigravity maps Claude-family models to Gemini-compatible schema", () => {
   const result = openaiToAntigravityRequest(
     "claude-3-7-sonnet",
@@ -821,4 +890,113 @@ test("OpenAI -> Antigravity Gemini path preserves thinkingConfig (only Claude is
   );
   assert.equal((result as any).request?.generationConfig.thinkingConfig.thinkingBudget > 0, true);
   assert.equal((result as any).request?.generationConfig.thinkingConfig.includeThoughts, true);
+});
+
+// Regression for #2480: when projectId is stored in providerSpecificData rather than at
+// the top level of the credential record, the Antigravity Cloud Code envelope must still
+// pick it up — otherwise the /v1beta path 422s with "Missing Google projectId".
+test("openaiToAntigravityRequest falls back to providerSpecificData.projectId (#2480)", () => {
+  const result = openaiToAntigravityRequest(
+    "gemini-3.1-flash-lite",
+    { messages: [{ role: "user", content: "Hello" }] },
+    false,
+    { providerSpecificData: { projectId: "proj-from-psd" } } as any
+  );
+  assert.equal(result.project, "proj-from-psd");
+});
+
+test("openaiToAntigravityRequest prefers top-level projectId over providerSpecificData (#2480)", () => {
+  const result = openaiToAntigravityRequest(
+    "gemini-3.1-flash-lite",
+    { messages: [{ role: "user", content: "Hello" }] },
+    false,
+    { projectId: "proj-top", providerSpecificData: { projectId: "proj-psd" } } as any
+  );
+  assert.equal(result.project, "proj-top");
+});
+
+// Regression for #2515: a PDF sent in the Responses-API `input_file` shape must reach
+// Gemini as inlineData instead of being silently dropped.
+test("convertOpenAIContentToParts handles input_file file_data (#2515)", () => {
+  const parts = convertOpenAIContentToParts([
+    { type: "input_file", file_data: "JVBERi0xLjcKJ", filename: "doc.pdf" },
+  ]);
+  const inline = parts.find((p) => (p as any).inlineData);
+  assert.ok(inline, "input_file with file_data must produce an inlineData part");
+  assert.equal((inline as any).inlineData.data, "JVBERi0xLjcKJ");
+});
+
+test("convertOpenAIContentToParts handles input_file file_url data URI (#2515)", () => {
+  const parts = convertOpenAIContentToParts([
+    { type: "input_file", file_url: "data:application/pdf;base64,QUJD", filename: "d.pdf" },
+  ]);
+  const inline = parts.find((p) => (p as any).inlineData);
+  assert.ok(inline, "input_file with file_url data URI must produce an inlineData part");
+  assert.equal((inline as any).inlineData.data, "QUJD");
+  assert.equal((inline as any).inlineData.mimeType, "application/pdf");
+});
+
+// Regression for #2504: with credentials._signatureNamespace set, a previously-cached
+// Gemini thoughtSignature must be re-attached to the functionCall on the follow-up turn.
+test("openaiToGeminiRequest re-attaches cached thoughtSignature for FORMATS.GEMINI (#2504)", async () => {
+  const { buildGeminiThoughtSignatureKey, storeGeminiThoughtSignature } =
+    await import("../../open-sse/services/geminiThoughtSignatureStore.ts");
+  const ns = "conn-2504";
+  const toolId = "call_2504_abc";
+  storeGeminiThoughtSignature(buildGeminiThoughtSignatureKey(ns, toolId), "SIG_2504_XYZ");
+
+  const result: any = openaiToGeminiRequest(
+    "gemini-2.5-pro-preview",
+    {
+      messages: [
+        { role: "user", content: "run a tool" },
+        {
+          role: "assistant",
+          tool_calls: [
+            { id: toolId, type: "function", function: { name: "Bash", arguments: '{"cmd":"ls"}' } },
+          ],
+        },
+        { role: "tool", tool_call_id: toolId, content: "ok" },
+      ],
+    },
+    false,
+    { _signatureNamespace: ns }
+  );
+
+  const json = JSON.stringify(result);
+  assert.ok(
+    json.includes("SIG_2504_XYZ"),
+    "cached thoughtSignature must be re-attached to the functionCall"
+  );
+});
+test("OpenAI -> Gemini request maps reasoning_effort to thinkingConfig", () => {
+  const result = openaiToGeminiRequest(
+    "gemini-2.0-flash-thinking",
+    {
+      messages: [{ role: "user", content: "Solve this complex puzzle" }],
+      reasoning_effort: "high",
+    },
+    false
+  );
+
+  assert.ok((result as any).generationConfig.thinkingConfig, "expected thinkingConfig");
+  assert.equal((result as any).generationConfig.thinkingConfig.includeThoughts, true);
+  assert.equal((result as any).generationConfig.thinkingConfig.thinkingBudget, 32768);
+});
+
+test("OpenAI -> Gemini request maps google_search tool", () => {
+  const result = openaiToGeminiRequest(
+    "gemini-2.0-flash",
+    {
+      messages: [{ role: "user", content: "What happened today?" }],
+      tools: [{ type: "function", function: { name: "google_search" } }],
+    },
+    false
+  );
+
+  assert.ok(Array.isArray((result as any).tools), "expected tools array");
+  assert.ok(
+    (result as any).tools.some((t: any) => t.googleSearch),
+    "expected googleSearch tool"
+  );
 });

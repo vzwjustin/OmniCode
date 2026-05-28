@@ -18,9 +18,23 @@ import fs from "fs";
 import path from "path";
 import { createHash } from "crypto";
 import { fileURLToPath } from "url";
-import type Database from "better-sqlite3";
+import type { SqliteAdapter } from "./adapters/types";
 import { DEFAULT_DATABASE_SETTINGS } from "@/types/databaseSettings";
 import { migrateLegacyEncryptedString, isEncryptionEnabled } from "./encryption";
+
+const isNodeTestRunnerChild = typeof process.env.NODE_TEST_CONTEXT === "string";
+
+const console = {
+  log: (...args: unknown[]) => {
+    if (!isNodeTestRunnerChild) globalThis.console.log(...args);
+  },
+  warn: (...args: unknown[]) => {
+    if (!isNodeTestRunnerChild) globalThis.console.warn(...args);
+  },
+  error: (...args: unknown[]) => {
+    globalThis.console.error(...args);
+  },
+};
 
 /**
  * Resolve the migrations directory path safely across platforms.
@@ -141,6 +155,24 @@ const RENAMED_MIGRATION_COMPATIBILITY = [
     toVersion: "050",
     toName: "session_account_affinity",
   },
+  {
+    fromVersion: "051",
+    fromName: "usage_history_service_tier",
+    toVersion: "054",
+    toName: "usage_history_service_tier",
+  },
+  {
+    fromVersion: "052",
+    fromName: "manifest_routing",
+    toVersion: "059",
+    toName: "manifest_routing",
+  },
+  {
+    fromVersion: "056",
+    fromName: "manifest_routing",
+    toVersion: "059",
+    toName: "manifest_routing",
+  },
 ] as const;
 
 const LEGACY_VERSION_SLOT_MIGRATIONS = [
@@ -150,6 +182,9 @@ const LEGACY_VERSION_SLOT_MIGRATIONS = [
   { version: "031", name: "api_keys_expires" },
   { version: "032", name: "detailed_logs_warnings" },
   { version: "033", name: "provider_connections_block_extra_usage" },
+  { version: "033", name: "add_batch_id_to_call_logs" },
+  { version: "046", name: "remove_status_from_files" },
+  { version: "051", name: "remove_status_from_files" },
 ] as const;
 
 const SUPERSEDED_DUPLICATE_MIGRATIONS = [
@@ -166,6 +201,11 @@ const PHYSICAL_SCHEMA_SENTINELS = [
   { version: "024", tableName: "sync_tokens", description: "sync_tokens table" },
   { version: "022", tableName: "memory_fts", description: "memory_fts virtual table" },
   { version: "019", tableName: "context_handoffs", description: "context_handoffs table" },
+  {
+    version: "064",
+    tableName: "session_model_history",
+    description: "session_model_history table",
+  },
   { version: "017", tableName: "version_manager", description: "version_manager table" },
   { version: "016", tableName: "skill_executions", description: "skill_executions table" },
   { version: "015", tableName: "memories", description: "memories table" },
@@ -183,7 +223,7 @@ const INITIAL_SCHEMA_SENTINELS = ["provider_connections", "combos", "call_logs"]
 /**
  * Ensure the schema_migrations tracking table exists.
  */
-function ensureMigrationsTable(db: Database.Database): void {
+function ensureMigrationsTable(db: SqliteAdapter): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS _omniroute_migrations (
       version TEXT PRIMARY KEY,
@@ -199,7 +239,7 @@ function ensureMigrationsTable(db: Database.Database): void {
 function getMigrationFiles(): Array<{ version: string; name: string; path: string }> {
   if (!fs.existsSync(MIGRATIONS_DIR)) return [];
 
-  return fs
+  const files = fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith(".sql"))
     .sort()
@@ -213,6 +253,40 @@ function getMigrationFiles(): Array<{ version: string; name: string; path: strin
       };
     })
     .filter(Boolean) as Array<{ version: string; name: string; path: string }>;
+
+  // Detect version collisions early: two files sharing the same numeric prefix
+  // would otherwise be silently skipped by the runner (only the first applied
+  // would record version=NNN in _omniroute_migrations; the rest would never run).
+  // SUPERSEDED_DUPLICATE_MIGRATIONS lists legitimate "renamed" pairs and is OK.
+  const byVersion = new Map<string, string[]>();
+  for (const f of files) {
+    if (!byVersion.has(f.version)) byVersion.set(f.version, []);
+    byVersion.get(f.version)!.push(f.name);
+  }
+  const realCollisions: Array<{ version: string; names: string[] }> = [];
+  for (const [version, names] of byVersion.entries()) {
+    if (names.length <= 1) continue;
+    const liveNames = names.filter(
+      (name) =>
+        !SUPERSEDED_DUPLICATE_MIGRATIONS.some((sup) => sup.version === version && sup.name === name)
+    );
+    if (liveNames.length > 1) {
+      realCollisions.push({ version, names: liveNames });
+    }
+  }
+  if (realCollisions.length > 0) {
+    const summary = realCollisions
+      .map((c) => `version=${c.version} → [${c.names.join(", ")}]`)
+      .join("; ");
+    throw new Error(
+      `Migration version collision detected: ${summary}. ` +
+        `Each migration file must have a unique numeric prefix. Rename one of the ` +
+        `colliding files (and add a retroactive guard in isSchemaAlreadyApplied for ` +
+        `DBs that already applied the old number). See _tasks/features-v3.8.4/9route/POST-MERGE-AUDIT.md.`
+    );
+  }
+
+  return files;
 }
 
 function filterSupersededDuplicateMigrations(
@@ -246,7 +320,7 @@ function filterSupersededDuplicateMigrations(
 /**
  * Get list of already-applied migration versions.
  */
-function getAppliedVersions(db: Database.Database): Set<string> {
+function getAppliedVersions(db: SqliteAdapter): Set<string> {
   const rows = db.prepare("SELECT version FROM _omniroute_migrations").all() as Array<{
     version: string;
   }>;
@@ -256,7 +330,7 @@ function getAppliedVersions(db: Database.Database): Set<string> {
 /**
  * Get applied migration records (version + name) for mismatch detection.
  */
-function getAppliedRecords(db: Database.Database): Array<{ version: string; name: string }> {
+function getAppliedRecords(db: SqliteAdapter): Array<{ version: string; name: string }> {
   return db
     .prepare("SELECT version, name FROM _omniroute_migrations ORDER BY version")
     .all() as Array<{
@@ -265,31 +339,26 @@ function getAppliedRecords(db: Database.Database): Array<{ version: string; name
   }>;
 }
 
-function hasTable(db: Database.Database, tableName: string): boolean {
+function hasTable(db: SqliteAdapter, tableName: string): boolean {
   const row = db
     .prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?")
     .get(tableName) as { name?: string } | undefined;
   return Boolean(row?.name);
 }
 
-function hasColumn(db: Database.Database, tableName: string, columnName: string): boolean {
+function hasColumn(db: SqliteAdapter, tableName: string, columnName: string): boolean {
   const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name?: string }>;
   return columns.some((column) => column.name === columnName);
 }
 
-function ensureColumn(
-  db: Database.Database,
-  tableName: string,
-  columnName: string,
-  ddl: string
-): void {
+function ensureColumn(db: SqliteAdapter, tableName: string, columnName: string, ddl: string): void {
   if (!hasColumn(db, tableName, columnName)) {
     db.exec(ddl);
   }
 }
 
 function isSchemaAlreadyApplied(
-  db: Database.Database,
+  db: SqliteAdapter,
   migration: { version: string; name: string }
 ): boolean {
   switch (migration.version) {
@@ -355,12 +424,28 @@ function isSchemaAlreadyApplied(
       return !hasColumn(db, "files", "status");
     case "054":
       return hasColumn(db, "usage_history", "service_tier");
+    case "062":
+      return hasColumn(db, "usage_history", "combo_strategy");
+    case "070":
+      // Retroactive guard for webhooks-kind-metadata migration renumbered from 068
+      // (collided with 068_free_proxies + 068_services). DBs that already applied
+      // 068_webhooks_kind_metadata should not re-run as 070.
+      return hasColumn(db, "webhooks", "kind") && hasColumn(db, "webhooks", "metadata_encrypted");
+    case "071":
+      // Retroactive guard for embedded-services migration renumbered from 068
+      // (originally collided with 068_free_proxies and 068_webhooks_kind_metadata).
+      // DBs that already applied 068_services should not re-run as 071.
+      return (
+        hasColumn(db, "version_manager", "logs_buffer_path") &&
+        hasColumn(db, "version_manager", "provider_expose") &&
+        hasColumn(db, "version_manager", "last_sync_at")
+      );
     default:
       return false;
   }
 }
 
-function applyApiKeyLifecycleMigration(db: Database.Database): void {
+function applyApiKeyLifecycleMigration(db: SqliteAdapter): void {
   ensureColumn(db, "api_keys", "revoked_at", "ALTER TABLE api_keys ADD COLUMN revoked_at TEXT");
   ensureColumn(db, "api_keys", "expires_at", "ALTER TABLE api_keys ADD COLUMN expires_at TEXT");
   ensureColumn(db, "api_keys", "last_used_at", "ALTER TABLE api_keys ADD COLUMN last_used_at TEXT");
@@ -483,7 +568,7 @@ function isSearchRequestTypeMigration(migration: { version: string; name: string
   return migration.version === "007";
 }
 
-function applySearchRequestTypeMigration(db: Database.Database): void {
+function applySearchRequestTypeMigration(db: SqliteAdapter): void {
   ensureColumn(
     db,
     "call_logs",
@@ -493,7 +578,7 @@ function applySearchRequestTypeMigration(db: Database.Database): void {
   db.exec("CREATE INDEX IF NOT EXISTS idx_call_logs_request_type ON call_logs(request_type);");
 }
 
-function applyCompressionReceiptsMigration(db: Database.Database): void {
+function applyCompressionReceiptsMigration(db: SqliteAdapter): void {
   ensureColumn(
     db,
     "compression_analytics",
@@ -569,7 +654,7 @@ function applyCompressionReceiptsMigration(db: Database.Database): void {
   `);
 }
 
-function applyCompressionCombosMigration(db: Database.Database, migrationPath: string): void {
+function applyCompressionCombosMigration(db: SqliteAdapter, migrationPath: string): void {
   const sql = fs.readFileSync(migrationPath, "utf-8");
   db.exec(sql);
   ensureColumn(
@@ -590,7 +675,7 @@ function applyCompressionCombosMigration(db: Database.Database, migrationPath: s
   `);
 }
 
-function inferPhysicalSchemaBaseline(db: Database.Database): {
+function inferPhysicalSchemaBaseline(db: SqliteAdapter): {
   version: string;
   description: string;
 } | null {
@@ -649,7 +734,7 @@ function detectNameMismatches(
 }
 
 function reconcileRenumberedMigrations(
-  db: Database.Database,
+  db: SqliteAdapter,
   files: Array<{ version: string; name: string; path: string }>
 ): boolean {
   let repaired = false;
@@ -728,7 +813,7 @@ function reconcileRenumberedMigrations(
 }
 
 function rehomeLegacyVersionSlotMigrations(
-  db: Database.Database,
+  db: SqliteAdapter,
   files: Array<{ version: string; name: string; path: string }>
 ): boolean {
   let repaired = false;
@@ -783,7 +868,7 @@ function rehomeLegacyVersionSlotMigrations(
  * Create a pre-migration backup of the SQLite database using VACUUM INTO.
  * Returns the backup path on success, null on failure.
  */
-function createPreMigrationBackup(db: Database.Database): string | null {
+function createPreMigrationBackup(db: SqliteAdapter): string | null {
   try {
     const sqliteFile = db.name;
     if (!sqliteFile || sqliteFile === ":memory:") return null;
@@ -816,7 +901,7 @@ function createPreMigrationBackup(db: Database.Database): string | null {
  * 2. Aborts if too many pending migrations on an existing DB (likely wipe)
  * 3. Creates automatic backup before running any migrations
  */
-export function runMigrations(db: Database.Database, options?: { isNewDb?: boolean }): number {
+export function runMigrations(db: SqliteAdapter, options?: { isNewDb?: boolean }): number {
   const isNewDb = options?.isNewDb === true;
   ensureMigrationsTable(db);
 
@@ -1039,118 +1124,7 @@ export function runMigrations(db: Database.Database, options?: { isNewDb?: boole
   return count;
 }
 
-/**
- * Post-migration sweep: re-encrypt every legacy-encrypted row in the tables
- * that hold ciphertext fields. The sweep is a no-op when:
- *   - encryption is disabled (passthrough mode), OR
- *   - the legacy dynamic-salt key cannot decrypt anything (fresh install).
- *
- * Returns the number of rows rewritten across all tables.
- *
- * Exported so tests and operational scripts can re-run the sweep on demand.
- */
-export function runLegacyEncryptionSweep(db: Database.Database): number {
-  if (!isEncryptionEnabled()) return 0;
-
-  let total = 0;
-  total += sweepProviderConnections(db);
-  total += sweepCommandCodeAuthSessions(db);
-
-  if (total > 0) {
-    console.log(
-      `[Migration] Legacy-encryption sweep migrated ${total} row(s) to the canonical static-salt key.`
-    );
-  }
-  return total;
-}
-
-function sweepProviderConnections(db: Database.Database): number {
-  if (!hasTable(db, "provider_connections")) return 0;
-
-  const rows = db
-    .prepare("SELECT id, api_key, access_token, refresh_token, id_token FROM provider_connections")
-    .all() as Array<{
-    id: string;
-    api_key: string | null;
-    access_token: string | null;
-    refresh_token: string | null;
-    id_token: string | null;
-  }>;
-
-  const update = db.prepare(
-    "UPDATE provider_connections SET api_key = @apiKey, access_token = @accessToken, " +
-      "refresh_token = @refreshToken, id_token = @idToken, updated_at = @updatedAt WHERE id = @id"
-  );
-
-  let migrated = 0;
-  for (const row of rows) {
-    const next = {
-      apiKey: row.api_key,
-      accessToken: row.access_token,
-      refreshToken: row.refresh_token,
-      idToken: row.id_token,
-    };
-    let changed = false;
-
-    for (const field of ["apiKey", "accessToken", "refreshToken", "idToken"] as const) {
-      const current = next[field];
-      if (typeof current !== "string") continue;
-      const { updated, value } = migrateLegacyEncryptedString(current);
-      if (updated) {
-        next[field] = (value ?? null) as string | null;
-        changed = true;
-      }
-    }
-
-    if (!changed) continue;
-
-    update.run({
-      id: row.id,
-      apiKey: next.apiKey ?? null,
-      accessToken: next.accessToken ?? null,
-      refreshToken: next.refreshToken ?? null,
-      idToken: next.idToken ?? null,
-      updatedAt: new Date().toISOString(),
-    });
-    migrated++;
-  }
-
-  return migrated;
-}
-
-function sweepCommandCodeAuthSessions(db: Database.Database): number {
-  if (!hasTable(db, "command_code_auth_sessions")) return 0;
-
-  const rows = db
-    .prepare(
-      "SELECT id, encrypted_api_key FROM command_code_auth_sessions WHERE encrypted_api_key IS NOT NULL"
-    )
-    .all() as Array<{ id: string; encrypted_api_key: string | null }>;
-
-  const update = db.prepare(
-    "UPDATE command_code_auth_sessions SET encrypted_api_key = @encryptedApiKey, " +
-      "updated_at = @updatedAt WHERE id = @id"
-  );
-
-  let migrated = 0;
-  for (const row of rows) {
-    const current = row.encrypted_api_key;
-    if (typeof current !== "string") continue;
-    const { updated, value } = migrateLegacyEncryptedString(current);
-    if (!updated) continue;
-
-    update.run({
-      id: row.id,
-      encryptedApiKey: value ?? null,
-      updatedAt: new Date().toISOString(),
-    });
-    migrated++;
-  }
-
-  return migrated;
-}
-
-function insertDefaultDatabaseSettings(db: Database.Database) {
+function insertDefaultDatabaseSettings(db: SqliteAdapter) {
   const tx = db.transaction(() => {
     // Insert all default settings
     for (const [section, values] of Object.entries(DEFAULT_DATABASE_SETTINGS)) {
@@ -1166,7 +1140,6 @@ function insertDefaultDatabaseSettings(db: Database.Database) {
 
   // Run in an immediate transaction to avoid nested transactions
   try {
-    // @ts-expect-error - Better-SQLite3 transaction types
     db.immediate(() => {
       tx();
     });
@@ -1179,7 +1152,7 @@ function insertDefaultDatabaseSettings(db: Database.Database) {
 /**
  * Get migration status for diagnostics.
  */
-export function getMigrationStatus(db: Database.Database): {
+export function getMigrationStatus(db: SqliteAdapter): {
   applied: Array<{ version: string; name: string; applied_at: string }>;
   pending: Array<{ version: string; name: string }>;
 } {

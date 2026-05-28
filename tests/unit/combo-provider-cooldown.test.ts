@@ -16,10 +16,29 @@ const {
 
 function toPlainHeaders(headers) {
   if (!headers) return {};
-  if (headers instanceof Headers) return Object.fromEntries(headers.entries());
-  return Object.fromEntries(
-    Object.entries(headers).map(([key, value]) => [key, value == null ? "" : String(value)])
-  );
+  const plain = {};
+  if (typeof headers.forEach === "function") {
+    try {
+      headers.forEach((value, key) => {
+        plain[key.toLowerCase()] = value;
+      });
+      return plain;
+    } catch (e) {}
+  }
+  if (typeof headers.entries === "function") {
+    try {
+      for (const [key, value] of headers.entries()) {
+        plain[key.toLowerCase()] = value;
+      }
+      return plain;
+    } catch (e) {}
+  }
+  try {
+    for (const [key, value] of Object.entries(headers)) {
+      plain[key.toLowerCase()] = value == null ? "" : String(value);
+    }
+  } catch (e) {}
+  return plain;
 }
 
 test.beforeEach(async () => {
@@ -49,7 +68,8 @@ test("combo failover skips the cooled provider target on the next request", asyn
     name: "provider-cooldown-combo",
     strategy: "priority",
     config: { maxRetries: 0, retryDelayMs: 0 },
-    models: ["openai/gpt-4o-mini", "claude/claude-3-5-sonnet-20241022"],
+    // openai/gpt-4o-mini is now ambiguous (multi-provider); use o3-mini which resolves unambiguously to openai
+    models: ["openai/o3-mini", "claude/claude-3-5-sonnet-20241022"],
   });
 
   let openaiCalls = 0;

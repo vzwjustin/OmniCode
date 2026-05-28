@@ -257,6 +257,41 @@ test("handleNoCredentials returns structured model_cooldown when every credentia
   assert.match(json.error.message, /cooling down/i);
 });
 
+test("handleNoCredentials returns 401 with re-auth hint when every connection is in a terminal state", async () => {
+  // Classic scenario: AWS SSO refresh tokens hit their 90-day TTL, every Kiro
+  // connection flips to is_active=0 + testStatus=banned/expired. Surface as
+  // 401 with a reconnect hint instead of the misleading 400 "No credentials".
+  const response = handleNoCredentials(
+    { allExpired: true, expiredCount: 1, expiredStatus: "banned" },
+    null,
+    "kiro",
+    "claude-sonnet-4.6",
+    null,
+    null
+  );
+  const json = (await response.json()) as any;
+
+  assert.equal(response.status, 401);
+  assert.match(json.error.message, /\[kiro\]/);
+  assert.match(json.error.message, /banned by upstream/);
+  assert.match(json.error.message, /please reconnect/i);
+});
+
+test("handleNoCredentials maps allExpired status='expired' to the 'authentication expired' reason", async () => {
+  const response = handleNoCredentials(
+    { allExpired: true, expiredCount: 3, expiredStatus: "expired" },
+    null,
+    "cline",
+    "claude-sonnet-4.6",
+    null,
+    null
+  );
+  const json = (await response.json()) as any;
+
+  assert.equal(response.status, 401);
+  assert.match(json.error.message, /3 connection\(s\) authentication expired/);
+});
+
 test("safeResolveProxy returns the direct route when no proxy config is present", async () => {
   const connection = await seedConnection("openai", { apiKey: "sk-openai-direct" });
 
@@ -351,4 +386,18 @@ test("withSessionHeader adds headers to mutable and immutable responses", async 
   assert.equal(immutable.headers.get("X-OmniRoute-Session-Id"), "sess_redirect");
   assert.equal(immutable.status, 302);
   assert.equal(await immutable.text(), "");
+});
+
+test("resolveModelOrError returns model_not_found error for unrecognised bare model names", async () => {
+  const result = await resolveModelOrError(
+    "completely-unknown-model-xyz",
+    { messages: [{ role: "user", content: "hello" }] },
+    "/v1/chat/completions"
+  );
+
+  assert.ok(result.error);
+  assert.equal(result.error.status, 400);
+  const json = (await result.error.json()) as any;
+  assert.match(json.error.message, /Unable to determine provider/i);
+  assert.match(json.error.message, /completely-unknown-model-xyz/i);
 });

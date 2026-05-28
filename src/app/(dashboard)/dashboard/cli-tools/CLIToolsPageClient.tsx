@@ -19,6 +19,7 @@ import {
   AntigravityToolCard,
   CopilotToolCard,
   CustomCliCard,
+  HermesAgentToolCard,
 } from "./components";
 import { useTranslations } from "next-intl";
 import { DEFAULT_DISPLAY_BASE_URL } from "@/shared/hooks";
@@ -32,6 +33,7 @@ const AUTO_CONFIGURED_TOOL_IDS = new Set([
   "cline",
   "kilo",
   "copilot",
+  "hermes-agent",
 ]);
 const GUIDED_TOOL_IDS = new Set([
   "cursor",
@@ -180,8 +182,9 @@ export default function CLIToolsPageClient({ machineId: _machineId }) {
       activeProviders.map((c) => PROVIDER_ID_TO_ALIAS[c.provider] || c.provider)
     );
     dynamicModels.forEach((dm) => {
-      const modelId = dm.id || dm;
-      if (seenModels.has(modelId)) return;
+      const rawId = dm?.id ?? dm;
+      const modelId = typeof rawId === "string" ? rawId : "";
+      if (!modelId || seenModels.has(modelId)) return;
       // Parse alias/model format
       const slashIdx = modelId.indexOf("/");
       if (slashIdx === -1) return;
@@ -341,6 +344,16 @@ export default function CLIToolsPageClient({ machineId: _machineId }) {
       case "copilot":
         return (
           <CopilotToolCard
+            key={toolId}
+            {...commonProps}
+            activeProviders={getActiveProviders()}
+            hasActiveProviders={hasActiveProviders}
+            cloudEnabled={cloudEnabled}
+          />
+        );
+      case "hermes-agent":
+        return (
+          <HermesAgentToolCard
             key={toolId}
             {...commonProps}
             activeProviders={getActiveProviders()}

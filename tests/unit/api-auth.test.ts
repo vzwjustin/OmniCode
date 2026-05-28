@@ -14,6 +14,9 @@ const localDb = await import("../../src/lib/localDb.ts");
 const apiKeysDb = await import("../../src/lib/db/apiKeys.ts");
 const apiAuth = await import("../../src/shared/utils/apiAuth.ts");
 const { requireManagementAuth } = await import("../../src/lib/api/requireManagementAuth.ts");
+const { getLegacyCliTokenSync, getMachineTokenSync } =
+  await import("../../src/lib/machineToken.ts");
+const { CLI_TOKEN_HEADER } = await import("../../src/server/authz/headers.ts");
 
 const ORIGINAL_JWT_SECRET = process.env.JWT_SECRET;
 const ORIGINAL_INITIAL_PASSWORD = process.env.INITIAL_PASSWORD;
@@ -155,6 +158,65 @@ test("isAuthenticated rejects bearer API keys on management routes", async () =>
   assert.equal(result, false);
 });
 
+test("verifyAuth accepts bearer API keys with manage scope on management routes", async () => {
+  const key = await apiKeysDb.createApiKey("mcp-management", "machine1234567890", ["manage"]);
+  const result = await apiAuth.verifyAuth({
+    cookies: {
+      get() {
+        return undefined;
+      },
+    },
+    headers: new Headers({ authorization: `Bearer ${key.key}` }),
+    url: "https://example.com/api/providers",
+  });
+
+  assert.equal(result, null);
+});
+
+test("verifyAuth accepts bearer API keys with admin scope on management routes", async () => {
+  const key = await apiKeysDb.createApiKey("mcp-admin", "machine1234567890", ["admin"]);
+  const result = await apiAuth.verifyAuth({
+    cookies: {
+      get() {
+        return undefined;
+      },
+    },
+    headers: new Headers({ authorization: `Bearer ${key.key}` }),
+    url: "https://example.com/api/settings",
+  });
+
+  assert.equal(result, null);
+});
+
+test("verifyAuth still rejects unscoped bearer API keys on management routes", async () => {
+  const key = await apiKeysDb.createApiKey("integration-no-scope", "machine1234567890");
+  const result = await apiAuth.verifyAuth({
+    cookies: {
+      get() {
+        return undefined;
+      },
+    },
+    headers: new Headers({ authorization: `Bearer ${key.key}` }),
+    url: "https://example.com/api/providers",
+  });
+
+  assert.equal(result, "Invalid management token");
+});
+
+test("isAuthenticated accepts bearer API keys with manage scope on management routes", async () => {
+  process.env.INITIAL_PASSWORD = "bootstrap-password";
+  await localDb.updateSettings({ requireLogin: true, password: "" });
+
+  const key = await apiKeysDb.createApiKey("mcp-management", "machine1234567890", ["manage"]);
+  const request = new Request("https://example.com/api/providers", {
+    headers: { authorization: `Bearer ${key.key}` },
+  });
+
+  const result = await apiAuth.isAuthenticated(request);
+
+  assert.equal(result, true);
+});
+
 test("monitoring health reset route requires dashboard authentication", async () => {
   process.env.INITIAL_PASSWORD = "bootstrap-password";
   await localDb.updateSettings({ requireLogin: true, password: "" });
@@ -271,6 +333,13 @@ function managementRequest(bearerKey?: string) {
   });
 }
 
+function managementCliRequest(token: string) {
+  const request = new Request("http://localhost:20128/api/combos", {
+    headers: { [CLI_TOKEN_HEADER]: token },
+  });
+  return Object.assign(request, { ip: "127.0.0.1" }) as Request;
+}
+
 test("requireManagementAuth returns 401 with no credentials", async () => {
   await setupAuth();
   const res = await requireManagementAuth(managementRequest());
@@ -301,6 +370,22 @@ test("requireManagementAuth returns null for valid key with manage scope", async
   await setupAuth();
   const key = await apiKeysDb.createApiKey("admin-key", "machine-test", ["manage"]);
   const res = await requireManagementAuth(managementRequest(key.key));
+  assert.equal(res, null);
+});
+
+test("requireManagementAuth accepts the 64-character local machine token", async () => {
+  await setupAuth();
+  const token = getMachineTokenSync();
+  assert.equal(token.length, 64);
+  const res = await requireManagementAuth(managementCliRequest(token));
+  assert.equal(res, null);
+});
+
+test("requireManagementAuth accepts the legacy 32-character local CLI token", async () => {
+  await setupAuth();
+  const token = getLegacyCliTokenSync();
+  assert.equal(token.length, 32);
+  const res = await requireManagementAuth(managementCliRequest(token));
   assert.equal(res, null);
 });
 

@@ -1,7 +1,29 @@
 "use client";
 
 import { useEffect } from "react";
-import { CopyButton, RelativeTime } from "@/shared/components";
+import { useTranslations } from "next-intl";
+
+function relativeTime(ts: number): string {
+  const diffMs = Date.now() - ts * 1000;
+  const isFuture = diffMs < 0;
+  const absDiffMs = Math.abs(diffMs);
+  const diffSec = Math.round(absDiffMs / 1000);
+
+  let res = "";
+  if (diffSec < 60) res = `${diffSec}s`;
+  else {
+    const diffMin = Math.round(diffSec / 60);
+    if (diffMin < 60) res = `${diffMin}m`;
+    else {
+      const diffHr = Math.round(diffMin / 60);
+      if (diffHr < 24) res = `${diffHr}h`;
+      else res = `${Math.round(diffHr / 24)}d`;
+    }
+  }
+
+  if (isFuture) return `in ${res}`;
+  return `${res} ago`;
+}
 
 interface BatchRecord {
   id: string;
@@ -114,6 +136,7 @@ function formatTs(ts: number | null | undefined): string {
 }
 
 export default function BatchDetailModal({ batch, files, onClose }: BatchDetailModalProps) {
+  const t = useTranslations("common");
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -156,13 +179,21 @@ export default function BatchDetailModal({ batch, files, onClose }: BatchDetailM
               </h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-xs text-[var(--color-text-muted)] font-mono">{batch.id}</p>
-                <CopyButton value={batch.id} size="xs" label="Copy batch ID" />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(batch.id);
+                  }}
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors"
+                  title={t("batchDetailCopyId")}
+                >
+                  <span className="material-symbols-outlined text-[12px]">content_copy</span>
+                </button>
               </div>
             </div>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("batchDetailClose")}
             className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-alt)] transition-colors"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -179,12 +210,12 @@ export default function BatchDetailModal({ batch, files, onClose }: BatchDetailM
               </span>
               <StatusBadge batch={batch} />
             </div>
-            <Field label="Endpoint" value={batch.endpoint} />
-            {batch.model && <Field label="Model" value={batch.model} />}
-            <Field label="Window" value={batch.completionWindow} />
+            <Field label={t("batchDetailEndpoint")} value={batch.endpoint} />
+            {batch.model && <Field label={t("batchDetailModel")} value={batch.model} />}
+            <Field label={t("batchDetailWindow")} value={batch.completionWindow} />
             <Field
-              label="Created"
-              value={<RelativeTime value={batch.createdAt * 1000} />}
+              label={t("batchDetailCreated")}
+              value={<span title={formatTs(batch.createdAt)}>{relativeTime(batch.createdAt)}</span>}
             />
           </div>
 

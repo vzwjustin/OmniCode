@@ -28,10 +28,6 @@ import {
   sanitizeStreamingChunk,
   extractThinkingFromContent,
 } from "../handlers/responseSanitizer.ts";
-import {
-  rememberResponseConversationState,
-  rememberResponseFunctionCalls,
-} from "../services/responsesToolCallState.ts";
 import { buildErrorBody } from "./error.ts";
 
 /**
@@ -58,7 +54,7 @@ export { COLORS, formatSSE };
 
 type JsonRecord = Record<string, unknown>;
 
-const PENDING_REQUEST_CLEARED_MARKER = "__omniroutePendingRequestCleared";
+export const PENDING_REQUEST_CLEARED_MARKER = "__omniroutePendingRequestCleared";
 
 function markPendingRequestCleared(error: Error): Error {
   (error as Error & Record<string, unknown>)[PENDING_REQUEST_CLEARED_MARKER] = true;
@@ -149,6 +145,7 @@ type StreamOptions = {
 type TranslateState = ReturnType<typeof initState> & {
   provider?: string | null;
   toolNameMap?: unknown;
+  signatureNamespace?: string | null;
   usage?: unknown;
   finishReason?: unknown;
   copilotCompatibleReasoning?: boolean;
@@ -544,6 +541,7 @@ export function createSSEStream(options: StreamOptions = {}) {
     onComplete = null,
     onFailure = null,
   } = options;
+  const signatureNamespace = connectionId;
 
   const clientExpectsResponsesStream =
     (mode === STREAM_MODE.PASSTHROUGH
@@ -583,6 +581,7 @@ export function createSSEStream(options: StreamOptions = {}) {
           ...(initState(sourceFormat) as TranslateState),
           provider,
           toolNameMap,
+          signatureNamespace,
           copilotCompatibleReasoning,
           accumulatedContent: "",
         }
@@ -793,6 +792,49 @@ export function createSSEStream(options: StreamOptions = {}) {
     return responseId !== null && outputIndex !== null ? `${responseId}:${outputIndex}` : null;
   };
 
+  const getResponsesReasoningSummaryText = (item: Record<string, unknown>): string => {
+    return Array.isArray(item.summary)
+      ? item.summary
+          .map((part) => {
+            if (!part || typeof part !== "object" || Array.isArray(part)) {
+              return "";
+            }
+            return typeof (part as Record<string, unknown>).text === "string"
+              ? ((part as Record<string, unknown>).text as string)
+              : "";
+          })
+          .join("")
+      : "";
+  };
+
+  const ensureVisibleResponsesReasoningSummary = (payload: Record<string, unknown>): boolean => {
+    const item =
+      payload.item && typeof payload.item === "object" && !Array.isArray(payload.item)
+        ? (payload.item as Record<string, unknown>)
+        : null;
+    if (!item || item.type !== "reasoning") {
+      return false;
+    }
+
+    if (getResponsesReasoningSummaryText(item)) {
+      return false;
+    }
+
+    const hasEncryptedReasoning =
+      typeof item.encrypted_content === "string" && item.encrypted_content.length > 0;
+    if (!hasEncryptedReasoning) {
+      return false;
+    }
+
+    item.summary = [
+      {
+        type: "summary_text",
+        text: "Codex is reasoning, but the upstream Responses API exposed this reasoning block only as encrypted state. OmniRoute cannot recover the private reasoning text.",
+      },
+    ];
+    return true;
+  };
+
   const emitSyntheticResponsesReasoningSummary = (
     controller: TransformStreamDefaultController,
     payload: Record<string, unknown>
@@ -801,22 +843,14 @@ export function createSSEStream(options: StreamOptions = {}) {
       payload.item && typeof payload.item === "object" && !Array.isArray(payload.item)
         ? (payload.item as Record<string, unknown>)
         : null;
-    if (!item || item.type !== "reasoning" || !Array.isArray(item.summary)) {
+    if (!item || item.type !== "reasoning") {
       return;
     }
 
-    const summaryText = item.summary
-      .map((part) => {
-        if (!part || typeof part !== "object" || Array.isArray(part)) {
-          return "";
-        }
-        return typeof (part as Record<string, unknown>).text === "string"
-          ? ((part as Record<string, unknown>).text as string)
-          : "";
-      })
-      .join("");
+    ensureVisibleResponsesReasoningSummary(payload);
+    const visibleSummary = getResponsesReasoningSummaryText(item);
 
-    if (!summaryText) {
+    if (!visibleSummary) {
       return;
     }
 
@@ -840,7 +874,7 @@ export function createSSEStream(options: StreamOptions = {}) {
           item_id: itemId,
           output_index: outputIndex,
           summary_index: 0,
-          delta: summaryText,
+          delta: visibleSummary,
         },
       },
       {
@@ -850,7 +884,7 @@ export function createSSEStream(options: StreamOptions = {}) {
           item_id: itemId,
           output_index: outputIndex,
           summary_index: 0,
-          part: { type: "summary_text", text: summaryText },
+          part: { type: "summary_text", text: visibleSummary },
         },
       },
     ];
@@ -1086,8 +1120,13 @@ export function createSSEStream(options: StreamOptions = {}) {
                   // response.completed snapshot can be backfilled when upstream
                   // returns an empty `output` (happens with store: false).
                   if (parsed.type === "response.output_item.done" && parsed.item) {
+                    const reasoningSummaryInjected = ensureVisibleResponsesReasoningSummary(parsed);
                     emitSyntheticResponsesReasoningSummary(controller, parsed);
                     pushUniqueResponsesOutputItems(passthroughResponsesOutputItems, [parsed.item]);
+                    if (reasoningSummaryInjected) {
+                      output = `data: ${JSON.stringify(parsed)}\n`;
+                      injectedUsage = true;
+                    }
                     if (parsed.item?.type === "function_call") {
                       const pendingKey =
                         typeof parsed.item.id === "string"
@@ -1582,25 +1621,6 @@ export function createSSEStream(options: StreamOptions = {}) {
               });
             }
             clearPendingPassthroughEvent();
-
-            if (passthroughResponsesId) {
-              const requestInput =
-                body && typeof body === "object" && Array.isArray((body as JsonRecord).input)
-                  ? ((body as JsonRecord).input as unknown[])
-                  : [];
-              rememberResponseConversationState(
-                passthroughResponsesId,
-                requestInput,
-                passthroughResponsesOutputItems
-              );
-            }
-
-            if (passthroughResponsesId && passthroughResponsesOutputItems.length > 0) {
-              rememberResponseFunctionCalls(
-                passthroughResponsesId,
-                passthroughResponsesOutputItems
-              );
-            }
 
             // Estimate usage if provider didn't return valid usage
             if (!hasValidUsage(usage) && totalContentLength > 0) {

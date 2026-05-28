@@ -1,6 +1,6 @@
 ---
 title: "Environment Variables Reference"
-version: 3.8.0
+version: 3.8.2
 lastUpdated: 2026-05-13
 ---
 
@@ -78,19 +78,26 @@ echo "OMNIROUTE_WS_BRIDGE_SECRET=$(openssl rand -base64 32)"
 
 OmniCode uses **SQLite** (via `better-sqlite3`) for all persistence. These variables control data location, encryption, and lifecycle.
 
-| Variable                               | Default              | Source File                                           | Description                                                                                                                      |
-| -------------------------------------- | -------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `DATA_DIR`                             | `~/.omniroute/`      | `src/lib/db/core.ts`                                  | Root directory for SQLite DB, backups, and data files. Override for Docker volumes or custom paths.                              |
-| `STORAGE_ENCRYPTION_KEY`               | _(empty = disabled)_ | `src/lib/db/encryption.ts`                            | AES key for full SQLite database encryption at rest. Generate with `openssl rand -hex 32`.                                       |
-| `STORAGE_ENCRYPTION_KEY_VERSION`       | `v1`                 | `scripts/build/bootstrap-env.mjs`, `electron/main.js` | Version label for the encryption key. Increment when performing key rotation to support decryption of old backups.               |
-| `DISABLE_SQLITE_AUTO_BACKUP`           | `false`              | `src/lib/db/backup.ts`                                | When `true`, skips the automatic database backup that runs before migrations on every startup.                                   |
-| `OMNIROUTE_CRYPT_KEY`                  | _(unset)_            | `src/lib/db/encryption.ts`                            | **Legacy alias** for `STORAGE_ENCRYPTION_KEY`. Accepted as a fallback when the primary variable is absent.                       |
-| `OMNIROUTE_API_KEY_BASE64`             | _(unset)_            | `src/lib/db/encryption.ts`                            | **Legacy alias** (Base64-encoded form) accepted as a fallback. Decoded automatically before use.                                 |
-| `OMNIROUTE_DB_HEALTHCHECK_INTERVAL_MS` | _(unset)_            | `src/lib/db/core.ts`                                  | Override the periodic SQLite healthcheck interval (ms). When unset, defaults are derived from `NODE_ENV`.                        |
-| `OMNIROUTE_FORCE_DB_HEALTHCHECK`       | `0`                  | `src/lib/db/core.ts`                                  | Set to `1` to force the DB healthcheck loop on, even when it would normally be skipped (e.g., short-lived tasks).                |
-| `OMNIROUTE_MIGRATIONS_DIR`             | _(auto-detect)_      | `src/lib/db/migrationRunner.ts`                       | Override the directory that the migration runner scans. Useful when shipping bundled migrations in custom builds.                |
-| `OMNIROUTE_SPEND_FLUSH_INTERVAL_MS`    | _(default in code)_  | `src/lib/spend/batchWriter.ts`                        | Flush interval (ms) for the batched spend/cost writer. Lower values reduce write coalescing; higher values reduce DB contention. |
-| `OMNIROUTE_SPEND_MAX_BUFFER_SIZE`      | _(default in code)_  | `src/lib/spend/batchWriter.ts`                        | Max buffered spend entries before a forced flush. Raise on high-QPS deployments; lower when bounded memory matters more.         |
+| Variable                               | Default              | Source File                                           | Description                                                                                                                       |
+| -------------------------------------- | -------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `DATA_DIR`                             | `~/.omniroute/`      | `src/lib/db/core.ts`                                  | Root directory for SQLite DB, backups, and data files. Override for Docker volumes or custom paths.                               |
+| `STORAGE_ENCRYPTION_KEY`               | _(empty = disabled)_ | `src/lib/db/encryption.ts`                            | AES key for full SQLite database encryption at rest. Generate with `openssl rand -hex 32`.                                        |
+| `STORAGE_ENCRYPTION_KEY_VERSION`       | `v1`                 | `scripts/build/bootstrap-env.mjs`, `electron/main.js` | Version label for the encryption key. Increment when performing key rotation to support decryption of old backups.                |
+| `DISABLE_SQLITE_AUTO_BACKUP`           | `false`              | `src/lib/db/backup.ts`                                | When `true`, skips the automatic database backup that runs before migrations on every startup.                                    |
+| `OMNIROUTE_CRYPT_KEY`                  | _(unset)_            | `src/lib/db/encryption.ts`                            | **Legacy alias** for `STORAGE_ENCRYPTION_KEY`. Accepted as a fallback when the primary variable is absent.                        |
+| `OMNIROUTE_API_KEY_BASE64`             | _(unset)_            | `src/lib/db/encryption.ts`                            | **Legacy alias** (Base64-encoded form) accepted as a fallback. Decoded automatically before use.                                  |
+| `OMNIROUTE_DB_HEALTHCHECK_INTERVAL_MS` | _(unset)_            | `src/lib/db/core.ts`                                  | Override the periodic SQLite healthcheck interval (ms). When unset, defaults are derived from `NODE_ENV`.                         |
+| `OMNIROUTE_SKIP_DB_HEALTHCHECK`        | `0`                  | `src/lib/db/core.ts`, `src/lib/db/healthCheck.ts`     | Set to `1` to skip the DB healthcheck entirely on startup. Useful for short-lived tasks and integration tests.                    |
+| `OMNIROUTE_FORCE_DB_HEALTHCHECK`       | `0`                  | `src/lib/db/core.ts`                                  | Set to `1` to force the DB healthcheck loop on, even when it would normally be skipped (e.g., short-lived tasks).                 |
+| `OMNIROUTE_SKIP_POSTINSTALL`           | `0`                  | `scripts/postinstall.mjs`                             | Set to `1` to skip the native-runtime warm-up during `npm install`. Useful in CI/headless installs where sqlite is already built. |
+| `OMNIROUTE_MIGRATIONS_DIR`             | _(auto-detect)_      | `src/lib/db/migrationRunner.ts`                       | Override the directory that the migration runner scans. Useful when shipping bundled migrations in custom builds.                 |
+| `OMNIROUTE_SPEND_FLUSH_INTERVAL_MS`    | _(default in code)_  | `src/lib/spend/batchWriter.ts`                        | Flush interval (ms) for the batched spend/cost writer. Lower values reduce write coalescing; higher values reduce DB contention.  |
+| `OMNIROUTE_SPEND_MAX_BUFFER_SIZE`      | _(default in code)_  | `src/lib/spend/batchWriter.ts`                        | Max buffered spend entries before a forced flush. Raise on high-QPS deployments; lower when bounded memory matters more.          |
+| `OMNIROUTE_PROXY_FETCH_DEBUG`          | _(unset)_            | `open-sse/utils/proxyFetch.ts`                        | Set to `"true"` to emit `[ProxyFetch]` debug logs on the Vercel relay path. Off by default to avoid leaking routing hints.        |
+| `BATCH_RETRY_DURATION_MS`              | `86400000` (24h)     | `open-sse/services/batchProcessor.ts`                 | Maximum retry window for individual batch items (ms). Items exceeding this duration are marked failed.                            |
+| `BATCH_BACKOFF_BASE_MS`                | `5000`               | `open-sse/services/batchProcessor.ts`                 | Base delay (ms) for exponential backoff on batch item retries.                                                                    |
+| `BATCH_BACKOFF_MAX_MS`                 | `3600000` (1h)       | `open-sse/services/batchProcessor.ts`                 | Cap (ms) for exponential backoff between batch item retries.                                                                      |
+| `BATCH_MAX_CONCURRENT`                 | `1`                  | `open-sse/services/batchProcessor.ts`                 | Maximum number of batches processed concurrently. Raise to increase throughput; keep low to avoid rate-limit storms.              |
 
 ### Scenarios
 
@@ -105,19 +112,29 @@ OmniCode uses **SQLite** (via `better-sqlite3`) for all persistence. These varia
 
 ## 3. Network & Ports
 
-| Variable                  | Default                         | Source File                       | Description                                                                                                                                                 |
-| ------------------------- | ------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                    | `20128`                         | `src/lib/runtime/ports.ts`        | Primary port for both Dashboard UI and API endpoints (single-port mode).                                                                                    |
-| `API_PORT`                | _(unset)_                       | `src/lib/runtime/ports.ts`        | When set, serves the `/v1/*` proxy API on this separate port.                                                                                               |
-| `API_HOST`                | `0.0.0.0`                       | `src/lib/runtime/ports.ts`        | Bind address for the API port.                                                                                                                              |
-| `DASHBOARD_PORT`          | _(unset)_                       | `src/lib/runtime/ports.ts`        | When set, serves the Dashboard UI on this separate port.                                                                                                    |
-| `PROD_DASHBOARD_PORT`     | `20130`                         | `docker-compose.prod.yml`         | Host-side published port for the Dashboard in Docker production mode.                                                                                       |
-| `PROD_API_PORT`           | `20131`                         | `docker-compose.prod.yml`         | Host-side published port for the API in Docker production mode.                                                                                             |
-| `OMNIROUTE_PORT`          | _(unset)_                       | `src/lib/runtime/ports.ts`        | Takes precedence over `PORT` when running inside Electron or other wrappers.                                                                                |
-| `NODE_ENV`                | `production`                    | Next.js core                      | Controls logging verbosity, caching, error detail exposure, and Next.js optimizations.                                                                      |
-| `OMNIROUTE_USE_TURBOPACK` | `1` (default in `.env.example`) | `package.json` / Next.js 16       | Toggles the Next.js 16 Turbopack bundler in `npm run dev` and `npm run build`. Set to `0` on Windows or when running into native binding incompatibilities. |
-| `HOST`                    | `0.0.0.0`                       | `scripts/run-next.mjs`            | Bind address for the Next.js dev/start server. Overrides the default `0.0.0.0` when set.                                                                    |
-| `HOSTNAME`                | `127.0.0.1`                     | `scripts/run-next-playwright.mjs` | Bind address used by the Playwright runner when launching Next.js. Defaults to `127.0.0.1` for hermetic tests.                                              |
+| Variable                                    | Default                         | Source File                                                              | Description                                                                                                                                                    |
+| ------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                      | `20128`                         | `src/lib/runtime/ports.ts`                                               | Primary port for both Dashboard UI and API endpoints (single-port mode).                                                                                       |
+| `API_PORT`                                  | _(unset)_                       | `src/lib/runtime/ports.ts`                                               | When set, serves the `/v1/*` proxy API on this separate port.                                                                                                  |
+| `API_HOST`                                  | `0.0.0.0`                       | `src/lib/runtime/ports.ts`                                               | Bind address for the API port.                                                                                                                                 |
+| `DASHBOARD_PORT`                            | _(unset)_                       | `src/lib/runtime/ports.ts`                                               | When set, serves the Dashboard UI on this separate port.                                                                                                       |
+| `PROD_DASHBOARD_PORT`                       | `20130`                         | `docker-compose.prod.yml`                                                | Host-side published port for the Dashboard in Docker production mode.                                                                                          |
+| `PROD_API_PORT`                             | `20131`                         | `docker-compose.prod.yml`                                                | Host-side published port for the API in Docker production mode.                                                                                                |
+| `OMNIROUTE_PORT`                            | _(unset)_                       | `src/lib/runtime/ports.ts`                                               | Takes precedence over `PORT` when running inside Electron or other wrappers.                                                                                   |
+| `LIVE_WS_PORT`                              | `20129`                         | `src/server/ws/liveServer.ts`                                            | Port for the real-time WebSocket live monitoring server.                                                                                                       |
+| `LIVE_WS_HOST`                              | `127.0.0.1`                     | `src/server/ws/liveServer.ts`                                            | Bind address for the live WebSocket server. Set to `0.0.0.0` to expose on LAN (also configure `LIVE_WS_ALLOWED_ORIGINS`).                                      |
+| `LIVE_WS_ALLOWED_ORIGINS`                   | _(unset)_                       | `src/server/ws/liveServer.ts`                                            | Comma-separated extra origins allowed to open a live WebSocket. Loopback dashboard origins are already permitted by default.                                   |
+| `OMNIROUTE_ENABLE_LIVE_WS`                  | `false`                         | `src/server/ws/liveServer.ts`                                            | Set to `1` or `true` to enable the real-time WebSocket server (disabled by default).                                                                           |
+| `OMNIROUTE_DISABLE_LIVE_WS`                 | `false`                         | `scripts/start-ws-server.mjs`                                            | CI/harness toggle that disables the standalone live WebSocket helper script.                                                                                   |
+| `RELAY_IP_PER_MINUTE`                       | `30`                            | `src/app/api/v1/relay/chat/completions/route.ts`                         | Per-(token, IP) relay rate limit, requests/minute. In-memory, per instance. `0` or negative disables the IP-dimension gate (per-token DB limit still applies). |
+| `NODE_ENV`                                  | `production`                    | Next.js core                                                             | Controls logging verbosity, caching, error detail exposure, and Next.js optimizations.                                                                         |
+| `OMNIROUTE_USE_TURBOPACK`                   | `1` (default in `.env.example`) | `package.json` / Next.js 16                                              | Toggles the Next.js 16 Turbopack bundler in `npm run dev` and `npm run build`. Set to `0` on Windows or when running into native binding incompatibilities.    |
+| `OMNIROUTE_SKIP_DB_HEALTHCHECK`             | _(unset)_                       | `src/lib/db/core.ts` / `src/lib/db/healthCheck.ts`                       | Set to `1` to skip the SQLite integrity health check on startup. Useful for faster boot on large databases.                                                    |
+| `CREDENTIAL_HEALTH_CHECK_INTERVAL`          | `300000`                        | `open-sse/config/constants.ts` / `src/lib/credentialHealth/scheduler.ts` | Interval (ms) for the background credential health check scheduler. Minimum: 10000 (10s).                                                                      |
+| `CREDENTIAL_HEALTH_CACHE_TTL`               | `300000`                        | `open-sse/config/constants.ts` / `src/lib/credentialHealth/cache.ts`     | TTL (ms) for cached credential health status.                                                                                                                  |
+| `OMNIROUTE_DISABLE_CREDENTIAL_HEALTH_CHECK` | `false`                         | `src/lib/credentialHealth/scheduler.ts`                                  | Set to `1` or `true` to disable background periodic testing of provider connections.                                                                           |
+| `HOST`                                      | `0.0.0.0`                       | `scripts/dev/run-next.mjs`                                               | Bind address for the Next.js dev/start server. Overrides the default `0.0.0.0` when set.                                                                       |
+| `HOSTNAME`                                  | `127.0.0.1`                     | `scripts/dev/run-next-playwright.mjs`                                    | Bind address used by the Playwright runner when launching Next.js. Defaults to `127.0.0.1` for hermetic tests.                                                 |
 
 ### Port Modes
 
@@ -147,18 +164,19 @@ OmniCode uses **SQLite** (via `better-sqlite3`) for all persistence. These varia
 
 ## 4. Security & Authentication
 
-| Variable                                | Default               | Source File                              | Description                                                                                                                                                                                                                                                  |
-| --------------------------------------- | --------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MACHINE_ID_SALT`                       | `endpoint-proxy-salt` | `src/lib/auth`                           | Salt combined with hardware identifiers for machine fingerprinting. Change per-deployment for isolation.                                                                                                                                                     |
-| `AUTH_COOKIE_SECURE`                    | `false`               | `src/lib/auth`                           | Sets the `Secure` flag on session cookies. **Must be `true`** when running behind HTTPS.                                                                                                                                                                     |
-| `REQUIRE_API_KEY`                       | `false`               | API middleware                           | When `true`, all `/v1/*` proxy requests must include a valid API key.                                                                                                                                                                                        |
-| `ALLOW_API_KEY_REVEAL`                  | `false`               | Dashboard providers page                 | Allows revealing full API key values in the Dashboard UI. Security risk on shared instances.                                                                                                                                                                 |
-| `OMNIROUTE_LEGACY_PLAINTEXT_KEYS`       | `0`                   | `src/lib/db/apiKeys.ts`                  | Tranche A — Task A6.b. When `1`, the API-key validator falls back to the legacy `WHERE key = ? OR key_hash = ?` lookup so operators whose `056_api_keys_hash_only` migration has not yet completed can keep accepting old plaintext keys for one release.    |
-| `NO_LOG_API_KEY_IDS`                    | _(empty)_             | `src/lib/compliance/index.ts`            | Comma-separated API key IDs that bypass request logging (GDPR compliance).                                                                                                                                                                                   |
-| `MAX_BODY_SIZE_BYTES`                   | `10485760` (10 MB)    | `src/shared/middleware/bodySizeGuard.ts` | Maximum allowed request body size. Rejects payloads exceeding this limit.                                                                                                                                                                                    |
-| `CORS_ORIGIN`                           | `*`                   | Next.js middleware                       | CORS `Access-Control-Allow-Origin` value. Restrict for production.                                                                                                                                                                                           |
-| `OUTBOUND_SSRF_GUARD_ENABLED`           | `true`                | `src/shared/network/outboundUrlGuard.ts` | Block provider calls targeting private/loopback/link-local IP ranges. Disable only in isolated test envs.                                                                                                                                                    |
-| `OMNIROUTE_ALLOW_PRIVATE_PROVIDER_URLS` | `false`               | `src/shared/network/outboundUrlGuard.ts` | Allow provider URLs pointing to private/local networks (localhost, 192.168.x.x, 10.x.x.x, etc.). **REQUIRED for self-hosted providers** (LM Studio, Ollama, vLLM, Llamafile, Triton, SearXNG). When `false`, the dashboard rejects validation of local URLs. |
+| Variable                                | Default                 | Source File                              | Description                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------------------- | ----------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `MACHINE_ID_SALT`                       | `endpoint-proxy-salt`   | `src/lib/auth`                           | Salt combined with hardware identifiers for machine fingerprinting. Change per-deployment for isolation.                                                                                                                                                                                                                                                           |
+| `OMNIROUTE_CLI_SALT`                    | `omniroute-cli-auth-v1` | `src/lib/machineToken.ts`                | HMAC salt for deriving the local CLI auth token. Changing this value rotates all CLI tokens on the machine. See `docs/security/CLI_TOKEN.md`.                                                                                                                                                                                                                      |
+| `AUTH_COOKIE_SECURE`                    | `false`                 | `src/lib/auth`                           | Sets the `Secure` flag on session cookies. **Must be `true`** when running behind HTTPS.                                                                                                                                                                                                                                                                           |
+| `REQUIRE_API_KEY`                       | `false`                 | API middleware                           | When `true`, all `/v1/*` proxy requests must include a valid API key.                                                                                                                                                                                                                                                                                              |
+| `ALLOW_API_KEY_REVEAL`                  | `false`                 | Dashboard providers page                 | Allows revealing full API key values in the Dashboard UI. Security risk on shared instances.                                                                                                                                                                                                                                                                       |
+| `NO_LOG_API_KEY_IDS`                    | _(empty)_               | `src/lib/compliance/index.ts`            | Comma-separated API key IDs that bypass request logging (GDPR compliance).                                                                                                                                                                                                                                                                                         |
+| `DEFAULT_RATE_LIMIT_PER_DAY`            | `1000`                  | `src/shared/utils/apiKeyPolicy.ts`       | Fallback per-day request budget applied to API keys whose `rate_limits` column is null. Default (unset/empty/malformed) keeps the legacy 1000/day, 5000/week, 20000/month windows. Set explicitly to `0` to opt out (unlimited). Any positive integer N enables N/day, 5N/week, 20N/month. Zod-validated; invalid values log a warning and use the legacy default. |
+| `MAX_BODY_SIZE_BYTES`                   | `10485760` (10 MB)      | `src/shared/middleware/bodySizeGuard.ts` | Maximum allowed request body size. Rejects payloads exceeding this limit.                                                                                                                                                                                                                                                                                          |
+| `CORS_ORIGIN`                           | `*`                     | Next.js middleware                       | CORS `Access-Control-Allow-Origin` value. Restrict for production.                                                                                                                                                                                                                                                                                                 |
+| `OUTBOUND_SSRF_GUARD_ENABLED`           | `true`                  | `src/shared/network/outboundUrlGuard.ts` | Block provider calls targeting private/loopback/link-local IP ranges. Disable only in isolated test envs.                                                                                                                                                                                                                                                          |
+| `OMNIROUTE_ALLOW_PRIVATE_PROVIDER_URLS` | `false`                 | `src/shared/network/outboundUrlGuard.ts` | Allow provider URLs pointing to private/local networks (localhost, 192.168.x.x, 10.x.x.x, etc.). **REQUIRED for self-hosted providers** (LM Studio, Ollama, vLLM, Llamafile, Triton, SearXNG). When `false`, the dashboard rejects validation of local URLs.                                                                                                       |
 
 ### Hardening Checklist
 
@@ -242,15 +260,16 @@ OmniCode provides a two-layer defense: request-side injection scanning and respo
 
 Route upstream LLM provider calls through an HTTP or SOCKS5 proxy for egress control, geo-routing, or IP masking.
 
-| Variable                          | Default   | Source File          | Description                                                                         |
-| --------------------------------- | --------- | -------------------- | ----------------------------------------------------------------------------------- |
-| `ENABLE_SOCKS5_PROXY`             | `true`    | `open-sse/executors` | Enable SOCKS5 proxy agent for upstream calls.                                       |
-| `NEXT_PUBLIC_ENABLE_SOCKS5_PROXY` | `true`    | Client-side          | Client-side awareness of SOCKS5 availability.                                       |
-| `HTTP_PROXY`                      | _(unset)_ | Node.js standard     | HTTP proxy for upstream calls.                                                      |
-| `HTTPS_PROXY`                     | _(unset)_ | Node.js standard     | HTTPS proxy for upstream calls.                                                     |
-| `ALL_PROXY`                       | _(unset)_ | Node.js standard     | Universal proxy (supports `socks5://`).                                             |
-| `NO_PROXY`                        | _(unset)_ | Node.js standard     | Comma-separated hostnames/IPs to bypass the proxy.                                  |
-| `ENABLE_TLS_FINGERPRINT`          | `false`   | `open-sse/executors` | Spoof TLS fingerprint using wreq-js (mimics Chrome 124). Counters JA3/JA4 blocking. |
+| Variable                                | Default   | Source File                                  | Description                                                                               |
+| --------------------------------------- | --------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `ENABLE_SOCKS5_PROXY`                   | `true`    | `open-sse/executors`                         | Enable SOCKS5 proxy agent for upstream calls.                                             |
+| `NEXT_PUBLIC_ENABLE_SOCKS5_PROXY`       | `true`    | Client-side                                  | Client-side awareness of SOCKS5 availability.                                             |
+| `HTTP_PROXY`                            | _(unset)_ | Node.js standard                             | HTTP proxy for upstream calls.                                                            |
+| `HTTPS_PROXY`                           | _(unset)_ | Node.js standard                             | HTTPS proxy for upstream calls.                                                           |
+| `ALL_PROXY`                             | _(unset)_ | Node.js standard                             | Universal proxy (supports `socks5://`).                                                   |
+| `NO_PROXY`                              | _(unset)_ | Node.js standard                             | Comma-separated hostnames/IPs to bypass the proxy.                                        |
+| `ENABLE_TLS_FINGERPRINT`                | `false`   | `open-sse/executors`                         | Spoof TLS fingerprint using wreq-js (mimics Chrome 124). Counters JA3/JA4 blocking.       |
+| `OMNIROUTE_TURNSTILE_IGNORE_TLS_ERRORS` | `false`   | `open-sse/services/claudeTurnstileSolver.ts` | Allow the Claude Turnstile Playwright browser context to ignore HTTPS certificate errors. |
 
 ### Scenarios
 
@@ -292,6 +311,20 @@ CLI_CONFIG_HOME=/root
 CLI_ALLOW_CONFIG_WRITES=true
 CLI_CLAUDE_BIN=/host-cli/bin/claude
 ```
+
+### CLI Binary (`omniroute`) helpers
+
+These variables tune the `omniroute` CLI binary's own behavior (not the sidecar
+detection above).
+
+| Variable                    | Default    | Source File                             | Description                                                                                                                     |
+| --------------------------- | ---------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `OMNIROUTE_LANG`            | _(system)_ | `bin/cli/i18n.mjs`                      | Force CLI output language. BCP-47 locale (e.g. `en`, `pt-BR`). Overrides system locale env vars (LC_ALL, LC_MESSAGES).          |
+| `OMNIROUTE_SHOW_LOG`        | _(unset)_  | `bin/cli/runtime/processSupervisor.mjs` | Set to `1` to forward server stdout/stderr to the terminal in supervised mode. Equivalent to `--log` flag on `omniroute serve`. |
+| `OMNIROUTE_CLI_TOKEN`       | _(unset)_  | `bin/cli/api.mjs`                       | Machine-auth token injected as `x-omniroute-cli-token` header. Auto-generated in task 8.12.                                     |
+| `OMNIROUTE_HTTP_TIMEOUT_MS` | `30000`    | `bin/cli/api.mjs`                       | Per-attempt HTTP timeout (ms) for CLI → server requests.                                                                        |
+| `OMNIROUTE_VERBOSE`         | `0`        | `bin/cli/api.mjs`                       | Set to `1` to print retry/backoff diagnostics to stderr during CLI commands.                                                    |
+| `OMNIROUTE_PLUGIN_PATH`     | _(unset)_  | `bin/cli/plugins.mjs`                   | Custom directory for CLI plugin discovery (`omniroute-cmd-*` packages). Defaults to `~/.omniroute/plugins/` when unset.         |
 
 ---
 
@@ -367,6 +400,9 @@ Built-in credentials for **localhost development**. For remote deployments, regi
 | `QODER_PERSONAL_ACCESS_TOKEN`     | Qoder                   | Direct API key fallback (bypasses OAuth).                                                                                                                                                                                                       |
 | `QODER_CLI_WORKSPACE`             | Qoder                   | Workspace ID for Qoder CLI.                                                                                                                                                                                                                     |
 | `OMNIROUTE_QODER_WORKSPACE`       | Qoder                   | Alias for `QODER_CLI_WORKSPACE`.                                                                                                                                                                                                                |
+| `BLACKBOX_WEB_VALIDATED_TOKEN`    | Blackbox Web            | Frontend `tk` token to send as `validated` on `/api/chat`. Required when Blackbox enforces token matching; otherwise OmniRoute falls back to a random UUID. See issue #2252.                                                                    |
+| `VISION_BRIDGE_BASE_URL`          | Vision Bridge guardrail | OpenAI-compatible base URL for non-Anthropic vision-bridge calls. Defaults to the legacy OpenAI URL env or api.openai.com. Point at OmniRoute's `/v1` self-loop or any OpenAI-compat endpoint (Gemini OpenAI-compat, OpenRouter). Issue #2232.  |
+| `VISION_BRIDGE_API_KEY`           | Vision Bridge guardrail | API key for the URL above. Overrides per-provider OpenAI / Google env vars for non-Anthropic vision-bridge calls. Anthropic models keep their dedicated Anthropic key path. Issue #2232.                                                        |
 
 > [!WARNING]
 > **Google OAuth** (Antigravity, Gemini CLI) credentials **only work on localhost**. For remote servers:
@@ -390,12 +426,13 @@ process.env[`${PROVIDER_ID}_USER_AGENT`]
 
 | Variable                 | Default Value                                 | When to Update                                                |
 | ------------------------ | --------------------------------------------- | ------------------------------------------------------------- |
-| `CLAUDE_USER_AGENT`      | `claude-cli/2.1.137 (external, cli)`          | When Anthropic releases a new CLI version                     |
-| `CODEX_USER_AGENT`       | `codex-cli/0.130.0 (Windows 10.0.26200; x64)` | When OpenAI updates the Codex CLI                             |
-| `CODEX_CLIENT_VERSION`   | `0.130.0`                                     | Override Codex client version independently of full UA string |
+| `CLAUDE_USER_AGENT`      | `claude-cli/2.1.145 (external, cli)`          | When Anthropic releases a new CLI version                     |
+| `CODEX_USER_AGENT`       | `codex-cli/0.132.0 (Windows 10.0.26200; x64)` | When OpenAI updates the Codex CLI                             |
+| `CODEX_CLIENT_VERSION`   | `0.131.0`                                     | Override Codex client version independently of full UA string |
 | `GITHUB_USER_AGENT`      | `GitHubCopilotChat/0.45.1`                    | When GitHub Copilot Chat updates                              |
-| `ANTIGRAVITY_USER_AGENT` | `antigravity/1.23.2 darwin/arm64`             | When Antigravity IDE updates                                  |
+| `ANTIGRAVITY_USER_AGENT` | `antigravity/2.0.1 darwin/arm64`              | When Antigravity IDE updates                                  |
 | `KIRO_USER_AGENT`        | `AWS-SDK-JS/3.0.0 kiro-ide/1.0.0`             | When Kiro IDE updates                                         |
+| `KIRO_OAUTH_CLIENT_ID`   | `kiro-cli`                                    | Override the Kiro social device-code `clientId` (public id)   |
 | `QODER_USER_AGENT`       | `Qoder-Cli`                                   | When Qoder CLI updates                                        |
 | `QWEN_USER_AGENT`        | `QwenCode/0.15.9 (linux; x64)`                | When Qwen Code updates                                        |
 | `CURSOR_USER_AGENT`      | `Cursor/3.3`                                  | When Cursor updates                                           |
@@ -506,6 +543,15 @@ REQUEST_TIMEOUT_MS (global override)
 | `OMNIROUTE_DEFAULT_FETCH_TIMEOUT_MS`     | `120000`             | Fallback used by `src/shared/utils/fetchTimeout.ts` when `FETCH_TIMEOUT_MS` is unset.       |
 | `OMNIROUTE_CHATGPT_TLS_TIMEOUT_MS`       | `60000`              | Wire-level timeout for the bogdanfinn/tls-client koffi binding (`chatgptTlsClient.ts`).     |
 | `OMNIROUTE_CHATGPT_TLS_GRACE_MS`         | `10000`              | JS-side grace added on top of the wire timeout when the native binding is wedged.           |
+| `OMNIROUTE_CLAUDE_TLS_TIMEOUT_MS`        | `60000`              | Wire-level timeout for the bogdanfinn/tls-client koffi binding (`claudeTlsClient.ts`).      |
+| `OMNIROUTE_CLAUDE_TLS_GRACE_MS`          | `10000`              | JS-side grace added on top of the wire timeout when the native binding is wedged.           |
+| `OMNIROUTE_PPLX_TLS_TIMEOUT_MS`          | `30000`              | Wire-level timeout for the bogdanfinn/tls-client koffi binding (`perplexityTlsClient.ts`).  |
+| `OMNIROUTE_PPLX_TLS_GRACE_MS`            | `10000`              | JS-side grace added on top of the wire timeout when the native binding is wedged.           |
+
+Combo target attempts inherit the resolved upstream request timeout (`FETCH_TIMEOUT_MS`, or
+`REQUEST_TIMEOUT_MS` when it supplies the fetch default). Set `targetTimeoutMs` in a combo,
+combo defaults, or provider override only to make combo fallback faster; values above the
+current upstream timeout are capped to the upstream timeout.
 
 ### Circuit Breaker Thresholds
 
@@ -626,6 +672,10 @@ Automatic model pricing data synchronization from external sources.
 | `SEARCH_CACHE_TTL_MS`                     | `300000` (5 min)   | `open-sse/services/searchCache.ts`                                    | TTL for search API (Perplexity, Brave, etc.) response caching.                        |
 | `ALLOW_MULTI_CONNECTIONS_PER_COMPAT_NODE` | `false`            | `src/app/api/providers/route.ts`                                      | Allow multiple simultaneous connections per OpenAI-compatible provider.               |
 | `ENABLE_CC_COMPATIBLE_PROVIDER`           | `false`            | `src/shared/utils/featureFlags.ts`                                    | Reveal the experimental CC-compatible provider UI for Claude Code-only relays.        |
+| `NINEROUTER_HOST`                         | `127.0.0.1`        | `open-sse/executors/ninerouter.ts`                                    | Override the host where the embedded 9router instance listens.                        |
+| `NINEROUTER_PORT`                         | `20130`            | `open-sse/executors/ninerouter.ts`                                    | Override the port where the embedded 9router instance listens.                        |
+| `EMBED_WS_PROXY_HOST`                     | `127.0.0.1`        | `src/lib/services/embedWsProxy.ts`                                    | Bind host for the embedded-service WebSocket proxy (loopback only by default).        |
+| `EMBED_WS_PROXY_PORT`                     | `20131`            | `src/lib/services/embedWsProxy.ts`                                    | Port for the embedded-service WebSocket proxy server.                                 |
 | `CLIPROXYAPI_HOST`                        | `127.0.0.1`        | `open-sse/executors/cliproxyapi.ts`                                   | CLIProxyAPI bridge host (legacy integration).                                         |
 | `CLIPROXYAPI_PORT`                        | `5544`             | `open-sse/executors/cliproxyapi.ts`                                   | CLIProxyAPI bridge port.                                                              |
 | `CLIPROXYAPI_CONFIG_DIR`                  | `~/.cli-proxy-api` | `src/lib/versionManager/processManager.ts`                            | CLIProxyAPI config directory.                                                         |
@@ -664,7 +714,7 @@ Anthropic-compatible provider instead.
 | `CURSOR_DUMP_FILE`               | _(unset)_           | `open-sse/executors/cursor.ts`             | Optional file path that receives raw decoded Cursor chunks when `CURSOR_DEBUG=1`. |
 | `CURSOR_STREAM_TIMEOUT_MS`       | `300000`            | `open-sse/executors/cursor.ts`             | Stream idle timeout (ms) for the Cursor executor.                                 |
 | `CURSOR_STATE_DB_PATH`           | _(probed)_          | `open-sse/utils/cursorVersionDetector.ts`  | Override the Cursor state DB lookup used for version detection.                   |
-| `CURSOR_TOKEN`                   | _(unset)_           | `scripts/cursor-tap.cjs`                   | Direct Cursor bearer token used by developer tooling.                             |
+| `CURSOR_TOKEN`                   | _(unset)_           | `scripts/ad-hoc/cursor-tap.cjs`            | Direct Cursor bearer token used by developer tooling.                             |
 | `OMNIROUTE_LOG_REQUEST_SHAPE`    | enabled (`!== "0"`) | `src/app/api/v1/chat/completions/route.ts` | Log content-type/length markers for large chat payloads. Set `"0"` to silence.    |
 | `DEBUG_RESPONSES_SSE_TO_JSON`    | _(unset)_           | `open-sse/handlers/responseTranslator.ts`  | Set `true` to log Responses API SSE→JSON translation details.                     |
 | `NEXT_PUBLIC_OMNIROUTE_E2E_MODE` | _(unset)_           | E2E test harness                           | Set `true` to enable E2E test mode (relaxed auth, test hooks).                    |
@@ -767,52 +817,65 @@ Limits and safety knobs applied when the Skills framework (`src/lib/skills/`) ex
 
 Provider quota endpoints, network tunnels (Tailscale, Ngrok, MITM debug proxy), the 1Proxy egress pool, database backups and small per-feature overrides referenced by the executor layer or scripts.
 
-| Variable                         | Default                               | Source File                                         | Description                                                                 |
-| -------------------------------- | ------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
-| `ALIBABA_CODING_PLAN_HOST`       | _(production host)_                   | `open-sse/services/bailianQuotaFetcher.ts`          | Override the host used to fetch Alibaba Bailian coding-plan quotas.         |
-| `ALIBABA_CODING_PLAN_QUOTA_URL`  | derived from host                     | `open-sse/services/bailianQuotaFetcher.ts`          | Full quota URL override for Alibaba Bailian.                                |
-| `CONTEXT_RESERVE_TOKENS`         | `1024`                                | `open-sse/services/contextManager.ts`               | Tokens reserved for completion output when computing prompt budgets.        |
-| `MODEL_ALIAS_COMPAT_ENABLED`     | enabled                               | `open-sse/services/model.ts`                        | Toggle the legacy model-alias compatibility layer used by older clients.    |
-| `COMMAND_CODE_CALLBACK_PORT`     | _(unset)_                             | `src/app/api/providers/command-code/auth/shared.ts` | Local port used for OAuth-style callbacks from the Command Code CLI helper. |
-| `MITM_LOCAL_PORT`                | `443`                                 | `src/mitm/server.cjs`                               | Local bind port for the MITM debug proxy.                                   |
-| `MITM_DISABLE_TLS_VERIFY`        | `0`                                   | `src/mitm/server.cjs`                               | Set `1` to disable upstream TLS verification (development only).            |
-| `ONEPROXY_ENABLED`               | `true`                                | `src/lib/oneproxySync.ts`                           | Enable the 1Proxy egress pool sync.                                         |
-| `ONEPROXY_API_URL`               | `https://1proxy-api.aitradepulse.com` | `src/lib/oneproxySync.ts`                           | 1Proxy service API URL override.                                            |
-| `ONEPROXY_MAX_PROXIES`           | `500`                                 | `src/lib/oneproxySync.ts`                           | Maximum proxies imported per sync.                                          |
-| `ONEPROXY_MIN_QUALITY_THRESHOLD` | `50`                                  | `src/lib/oneproxySync.ts`                           | Minimum quality score for imported proxies.                                 |
-| `TAILSCALE_BIN`                  | _(auto-detect)_                       | `src/lib/tailscaleTunnel.ts`                        | Explicit path to the `tailscale` binary.                                    |
-| `TAILSCALED_BIN`                 | _(auto-detect)_                       | `src/lib/tailscaleTunnel.ts`                        | Explicit path to the `tailscaled` daemon binary.                            |
-| `NGROK_AUTHTOKEN`                | _(unset)_                             | `src/lib/ngrokTunnel.ts`                            | Authenticates outbound ngrok tunnels.                                       |
-| `DB_BACKUP_MAX_FILES`            | `20`                                  | `src/lib/db/backup.ts`                              | Maximum SQLite backup files retained on disk.                               |
-| `DB_BACKUP_RETENTION_DAYS`       | `0`                                   | `src/lib/db/backup.ts`                              | Maximum age (days) of retained backups. `0` disables age-based pruning.     |
-| `OMNIROUTE_TLS_PROXY_URL`        | _(unset)_                             | `open-sse/services/chatgptTlsClient.ts`             | Override the TLS sidecar URL for tests. Production should leave unset.      |
+| Variable                                   | Default                                                                     | Source File                                         | Description                                                                 |
+| ------------------------------------------ | --------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
+| `REDIS_URL`                                | `redis://localhost:6379`                                                    | `src/shared/utils/rateLimiter.ts`                   | Redis connection string for the rate limiter backend.                       |
+| `ALIBABA_CODING_PLAN_HOST`                 | _(production host)_                                                         | `open-sse/services/bailianQuotaFetcher.ts`          | Override the host used to fetch Alibaba Bailian coding-plan quotas.         |
+| `ALIBABA_CODING_PLAN_QUOTA_URL`            | derived from host                                                           | `open-sse/services/bailianQuotaFetcher.ts`          | Full quota URL override for Alibaba Bailian.                                |
+| `CONTEXT_RESERVE_TOKENS`                   | `1024`                                                                      | `open-sse/services/contextManager.ts`               | Tokens reserved for completion output when computing prompt budgets.        |
+| `MODEL_ALIAS_COMPAT_ENABLED`               | enabled                                                                     | `open-sse/services/model.ts`                        | Toggle the legacy model-alias compatibility layer used by older clients.    |
+| `COMMAND_CODE_CALLBACK_PORT`               | _(unset)_                                                                   | `src/app/api/providers/command-code/auth/shared.ts` | Local port used for OAuth-style callbacks from the Command Code CLI helper. |
+| `MITM_LOCAL_PORT`                          | `443`                                                                       | `src/mitm/server.cjs`                               | Local bind port for the MITM debug proxy.                                   |
+| `MITM_DISABLE_TLS_VERIFY`                  | `0`                                                                         | `src/mitm/server.cjs`                               | Set `1` to disable upstream TLS verification (development only).            |
+| `ONEPROXY_ENABLED`                         | `true`                                                                      | `src/lib/oneproxySync.ts`                           | Enable the 1Proxy egress pool sync.                                         |
+| `ONEPROXY_API_URL`                         | `https://1proxy-api.aitradepulse.com`                                       | `src/lib/oneproxySync.ts`                           | 1Proxy service API URL override.                                            |
+| `ONEPROXY_MAX_PROXIES`                     | `500`                                                                       | `src/lib/oneproxySync.ts`                           | Maximum proxies imported per sync.                                          |
+| `ONEPROXY_MIN_QUALITY_THRESHOLD`           | `50`                                                                        | `src/lib/oneproxySync.ts`                           | Minimum quality score for imported proxies.                                 |
+| `FREE_PROXY_1PROXY_ENABLED`                | `true`                                                                      | `src/lib/freeProxyProviders/oneproxy.ts`            | Enable the 1proxy free proxy source. Set to `false` to disable.             |
+| `FREE_PROXY_1PROXY_API_URL`                | _(see oneproxy.ts)_                                                         | `src/lib/freeProxyProviders/oneproxy.ts`            | 1proxy API URL override.                                                    |
+| `FREE_PROXY_1PROXY_MAX`                    | `500`                                                                       | `src/lib/freeProxyProviders/oneproxy.ts`            | Maximum proxies fetched per sync from 1proxy.                               |
+| `FREE_PROXY_1PROXY_MIN_QUALITY`            | `50`                                                                        | `src/lib/freeProxyProviders/oneproxy.ts`            | Minimum quality score threshold for 1proxy imports.                         |
+| `FREE_PROXY_PROXIFLY_ENABLED`              | `true`                                                                      | `src/lib/freeProxyProviders/proxifly.ts`            | Enable the Proxifly free proxy source. Set to `false` to disable.           |
+| `FREE_PROXY_PROXIFLY_QUANTITY`             | `100`                                                                       | `src/lib/freeProxyProviders/proxifly.ts`            | Number of proxies to fetch per Proxifly sync.                               |
+| `FREE_PROXY_PROXIFLY_ANONYMITY`            | `elite`                                                                     | `src/lib/freeProxyProviders/proxifly.ts`            | Anonymity level filter for Proxifly (`elite`, `anonymous`, `transparent`).  |
+| `FREE_PROXY_IPLOCATE_ENABLED`              | `false`                                                                     | `src/lib/freeProxyProviders/iplocate.ts`            | Enable the IPLocate free proxy source. Opt-in only.                         |
+| `FREE_PROXY_IPLOCATE_BASE_URL`             | `https://raw.githubusercontent.com/iplocate/free-proxy-list/main/protocols` | `src/lib/freeProxyProviders/iplocate.ts`            | IPLocate proxy list base URL override.                                      |
+| `NEXT_PUBLIC_VERCEL_RELAY_ENABLED`         | `true`                                                                      | `src/app/(dashboard)/…/ProxyPoolTab.tsx`            | Show/hide the Deploy Vercel Relay button in the Proxy Pool tab.             |
+| `VERCEL_API_BASE`                          | `https://api.vercel.com`                                                    | `src/app/api/settings/proxy/vercel-deploy/route.ts` | Vercel API base URL override (for testing).                                 |
+| `NEXT_PUBLIC_VERCEL_RELAY_DEFAULT_PROJECT` | `omniroute-relay`                                                           | `src/app/(dashboard)/…/VercelRelayModal.tsx`        | Default project name pre-filled in the Vercel Relay deploy modal.           |
+| `TAILSCALE_BIN`                            | _(auto-detect)_                                                             | `src/lib/tailscaleTunnel.ts`                        | Explicit path to the `tailscale` binary.                                    |
+| `TAILSCALED_BIN`                           | _(auto-detect)_                                                             | `src/lib/tailscaleTunnel.ts`                        | Explicit path to the `tailscaled` daemon binary.                            |
+| `NGROK_AUTHTOKEN`                          | _(unset)_                                                                   | `src/lib/ngrokTunnel.ts`                            | Authenticates outbound ngrok tunnels.                                       |
+| `DB_BACKUP_MAX_FILES`                      | `20`                                                                        | `src/lib/db/backup.ts`                              | Maximum SQLite backup files retained on disk.                               |
+| `DB_BACKUP_RETENTION_DAYS`                 | `0`                                                                         | `src/lib/db/backup.ts`                              | Maximum age (days) of retained backups. `0` disables age-based pruning.     |
+| `OMNIROUTE_TLS_PROXY_URL`                  | _(unset)_                                                                   | `open-sse/services/chatgptTlsClient.ts`             | Override the TLS sidecar URL for tests. Production should leave unset.      |
 
 ---
 
 ## 26. Test & E2E Harness
 
-Used by `scripts/run-next-playwright.mjs`, `scripts/smoke-electron-packaged.mjs`,
-`scripts/run-ecosystem-tests.mjs`, and `scripts/uninstall.mjs`. Leave every
+Used by `scripts/dev/run-next-playwright.mjs`, `scripts/dev/smoke-electron-packaged.mjs`,
+`scripts/dev/run-ecosystem-tests.mjs`, and `scripts/build/uninstall.mjs`. Leave every
 value below unset in production deployments.
 
-| Variable                              | Default                          | Source File                           | Description                                                                              |
-| ------------------------------------- | -------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `OMNIROUTE_E2E_BOOTSTRAP_MODE`        | `auth`                           | `scripts/run-next-playwright.mjs`     | E2E bootstrap mode (`auth`, `fresh`, `reuse`) for the Playwright runner.                 |
-| `OMNIROUTE_E2E_PASSWORD`              | falls back to `INITIAL_PASSWORD` | `scripts/run-next-playwright.mjs`     | Admin password injected into the Playwright environment.                                 |
-| `OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK` | `true`                           | `scripts/run-next-playwright.mjs`     | Disable the local healthcheck poll during Playwright runs.                               |
-| `OMNIROUTE_DISABLE_TOKEN_HEALTHCHECK` | `true`                           | `scripts/run-next-playwright.mjs`     | Disable the OAuth token healthcheck loop during tests.                                   |
-| `OMNIROUTE_HIDE_HEALTHCHECK_LOGS`     | `true`                           | `scripts/run-next-playwright.mjs`     | Silence healthcheck noise in Playwright stdout.                                          |
-| `OMNIROUTE_PLAYWRIGHT_SKIP_BUILD`     | `0`                              | `scripts/run-next-playwright.mjs`     | Skip the Next.js production build before Playwright starts (CI optimization).            |
-| `OMNIROUTE_SKIP_UNINSTALL_HOOK`       | `0`                              | `scripts/uninstall.mjs`               | Skip the OmniCode uninstall hook (used by CI to keep `node_modules` intact).             |
-| `ECOSYSTEM_SERVER_WAIT_MS`            | `180000`                         | `scripts/run-ecosystem-tests.mjs`     | Wait time (ms) for the server to become healthy before running ecosystem/protocol tests. |
-| `ELECTRON_SMOKE_URL`                  | `http://127.0.0.1:20128/login`   | `scripts/smoke-electron-packaged.mjs` | URL the Electron smoke harness expects the packaged app to serve.                        |
-| `ELECTRON_SMOKE_TIMEOUT_MS`           | `45000`                          | `scripts/smoke-electron-packaged.mjs` | Total timeout (ms) before the smoke harness gives up.                                    |
-| `ELECTRON_SMOKE_SETTLE_MS`            | `2000`                           | `scripts/smoke-electron-packaged.mjs` | Settle window (ms) after the page loads.                                                 |
-| `ELECTRON_SMOKE_APP_EXECUTABLE`       | _(auto)_                         | `scripts/smoke-electron-packaged.mjs` | Explicit path to the packaged Electron executable.                                       |
-| `ELECTRON_SMOKE_DATA_DIR`             | _(tmpdir)_                       | `scripts/smoke-electron-packaged.mjs` | Data directory for the Electron smoke run.                                               |
-| `ELECTRON_SMOKE_KEEP_DATA`            | `0`                              | `scripts/smoke-electron-packaged.mjs` | Set `1` to preserve the smoke data directory after the run.                              |
-| `ELECTRON_SMOKE_STREAM_LOGS`          | `0`                              | `scripts/smoke-electron-packaged.mjs` | Set `1` to stream Electron logs to stdout during the run.                                |
-| `CLI_DEVIN_BIN`                       | _(PATH lookup)_                  | `open-sse/executors/devin-cli.ts`     | Override the Devin CLI binary path.                                                      |
+| Variable                              | Default                          | Source File                               | Description                                                                              |
+| ------------------------------------- | -------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `OMNIROUTE_E2E_BOOTSTRAP_MODE`        | `auth`                           | `scripts/dev/run-next-playwright.mjs`     | E2E bootstrap mode (`auth`, `fresh`, `reuse`) for the Playwright runner.                 |
+| `OMNIROUTE_E2E_PASSWORD`              | falls back to `INITIAL_PASSWORD` | `scripts/dev/run-next-playwright.mjs`     | Admin password injected into the Playwright environment.                                 |
+| `OMNIROUTE_DISABLE_LOCAL_HEALTHCHECK` | `true`                           | `scripts/dev/run-next-playwright.mjs`     | Disable the local healthcheck poll during Playwright runs.                               |
+| `OMNIROUTE_DISABLE_TOKEN_HEALTHCHECK` | `true`                           | `scripts/dev/run-next-playwright.mjs`     | Disable the OAuth token healthcheck loop during tests.                                   |
+| `OMNIROUTE_HIDE_HEALTHCHECK_LOGS`     | `true`                           | `scripts/dev/run-next-playwright.mjs`     | Silence healthcheck noise in Playwright stdout.                                          |
+| `OMNIROUTE_PLAYWRIGHT_SKIP_BUILD`     | `0`                              | `scripts/dev/run-next-playwright.mjs`     | Skip the Next.js production build before Playwright starts (CI optimization).            |
+| `OMNIROUTE_SKIP_UNINSTALL_HOOK`       | `0`                              | `scripts/build/uninstall.mjs`             | Skip the OmniRoute uninstall hook (used by CI to keep `node_modules` intact).            |
+| `ECOSYSTEM_SERVER_WAIT_MS`            | `180000`                         | `scripts/dev/run-ecosystem-tests.mjs`     | Wait time (ms) for the server to become healthy before running ecosystem/protocol tests. |
+| `ELECTRON_SMOKE_URL`                  | `http://127.0.0.1:20128/login`   | `scripts/dev/smoke-electron-packaged.mjs` | URL the Electron smoke harness expects the packaged app to serve.                        |
+| `ELECTRON_SMOKE_TIMEOUT_MS`           | `45000`                          | `scripts/dev/smoke-electron-packaged.mjs` | Total timeout (ms) before the smoke harness gives up.                                    |
+| `ELECTRON_SMOKE_SETTLE_MS`            | `2000`                           | `scripts/dev/smoke-electron-packaged.mjs` | Settle window (ms) after the page loads.                                                 |
+| `ELECTRON_SMOKE_APP_EXECUTABLE`       | _(auto)_                         | `scripts/dev/smoke-electron-packaged.mjs` | Explicit path to the packaged Electron executable.                                       |
+| `ELECTRON_SMOKE_DATA_DIR`             | _(tmpdir)_                       | `scripts/dev/smoke-electron-packaged.mjs` | Data directory for the Electron smoke run.                                               |
+| `ELECTRON_SMOKE_KEEP_DATA`            | `0`                              | `scripts/dev/smoke-electron-packaged.mjs` | Set `1` to preserve the smoke data directory after the run.                              |
+| `ELECTRON_SMOKE_STREAM_LOGS`          | `0`                              | `scripts/dev/smoke-electron-packaged.mjs` | Set `1` to stream Electron logs to stdout during the run.                                |
+| `CLI_DEVIN_BIN`                       | _(PATH lookup)_                  | `open-sse/executors/devin-cli.ts`         | Override the Devin CLI binary path.                                                      |
 
 ### Docs translation pipeline
 

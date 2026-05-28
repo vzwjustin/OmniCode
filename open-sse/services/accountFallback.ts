@@ -42,6 +42,9 @@ type ProviderProfile = {
   providerFailureThreshold: number;
   providerFailureWindowMs: number;
   providerCooldownMs: number;
+  degradationThreshold?: number;
+  maxBackoffMultiplier?: number;
+  backoffEscalationCount?: number;
 };
 type JsonRecord = Record<string, unknown>;
 type RateLimitReasonValue = (typeof RateLimitReason)[keyof typeof RateLimitReason];
@@ -104,6 +107,7 @@ export const CREDITS_EXHAUSTED_SIGNALS = [
   "insufficient_quota",
   "billing_hard_limit_reached",
   "exceeded your current quota",
+  "exceeded your current usage quota",
   "credit_balance_too_low",
   "your credit balance is too low",
   "credits exhausted",
@@ -134,6 +138,60 @@ const CONTEXT_OVERFLOW_PATTERNS = [
   /\bmax.*token/i,
   /\btoken limit/i,
   /\brequest too large\b/i,
+];
+
+// Structured error codes that reliably indicate model access denied
+// (more reliable than regex on human-readable messages).
+// OpenAI:  { error: { code: "model_not_found", ... } }
+// Anthropic: { error: { type: "not_found_error", ... } }
+const MODEL_ACCESS_DENIED_CODES = new Set([
+  "model_not_found", // OpenAI, OpenAI-compatible (Kiro, Together, Fireworks, etc.)
+  "deployment_not_found", // Azure OpenAI
+]);
+
+const MODEL_ACCESS_DENIED_TYPES = new Set([
+  "not_found_error", // Anthropic: model doesn't exist — reliably model-scoped
+]);
+
+// Anthropic's permission_error is NOT exclusively model-access related: it also
+// covers API-key scope, organization restrictions and feature gating. Treating it
+// as model-access-denied unconditionally would make a genuinely auth-restricted key
+// silently exhaust every combo target and hide the real error from the caller.
+// So it only counts when the message text confirms it refers to the model.
+const MODEL_ACCESS_AMBIGUOUS_TYPES = new Set([
+  "permission_error", // Anthropic: could be model access OR key/org/feature scope
+]);
+
+// Model access patterns — the account does not have access to the requested model
+// but a different account (e.g. PRO vs free tier) may support it.
+const MODEL_ACCESS_DENIED_PATTERNS = [
+  /\binvalid model\b/i,
+  /\bmodel.*not.*(?:available|found|supported|accessible)\b/i,
+  /\bmodel.*(?:does not exist|doesn't exist)\b/i,
+  /\baccess.*denied.*model\b/i,
+  /\bmodel.*access.*denied\b/i,
+  /\bplease select a different model\b/i,
+  // "...access to the requested model" / "model ... access" — bounded lookahead
+  // (no nested quantifiers) so it stays ReDoS-safe while requiring BOTH an
+  // access/permission word and "model" so a pure auth error never matches.
+  /\b(?:access|permission)[\s\S]{0,60}?\bmodel\b/i,
+  /\bmodel[\s\S]{0,60}?\b(?:access|permission)\b/i,
+];
+
+// Pure credential/authentication failures — the key or token itself is bad, which
+// is NOT a model-availability problem. Some providers phrase these as a 400 that
+// also mentions the model (e.g. "invalid api key for model X"), which would
+// otherwise trip MODEL_ACCESS_DENIED_PATTERNS above and trigger combo fallback
+// across every target, masking the real "fix your credential" error. When the
+// text clearly indicates a bad credential, the regex-based model-access detection
+// is suppressed (structured codes/types like model_not_found are unaffected).
+const AUTH_CREDENTIAL_ERROR_PATTERNS = [
+  /\b(?:invalid|incorrect|expired|missing|revoked)\s+api[\s_-]?key\b/i,
+  /\bapi[\s_-]?key\s+(?:is\s+)?(?:invalid|incorrect|expired|missing|revoked|not\s+valid)\b/i,
+  /\bauthentication\s+(?:failed|error|required)\b/i,
+  /\b(?:invalid|expired|missing|revoked)\s+(?:token|credentials?|bearer)\b/i,
+  /\bunauthorized\b/i,
+  /\bnot\s+authenticated\b/i,
 ];
 
 // Malformed request patterns — the model rejected the message format but a different
@@ -214,6 +272,9 @@ function buildProviderProfile(
     // Provider-level circuit breaker fields (not configurable via settings, use PROVIDER_PROFILES defaults)
     providerFailureThreshold: PROVIDER_PROFILES[category].providerFailureThreshold,
     providerFailureWindowMs: PROVIDER_PROFILES[category].providerFailureWindowMs,
+    degradationThreshold: PROVIDER_PROFILES[category].degradationThreshold,
+    maxBackoffMultiplier: PROVIDER_PROFILES[category].maxBackoffMultiplier,
+    backoffEscalationCount: PROVIDER_PROFILES[category].backoffEscalationCount,
     providerCooldownMs: PROVIDER_PROFILES[category].providerCooldownMs,
   } satisfies ProviderProfile;
 }
@@ -489,6 +550,14 @@ export function shouldMarkAccountExhaustedFrom429(
 }
 
 /**
+ * Clear all in-memory model lockouts and failure state (for tests / full reset).
+ */
+export function clearAllModelLockouts(): void {
+  modelLockouts.clear();
+  modelFailureState.clear();
+}
+
+/**
  * Check if a specific model on a specific account is locked
  * @returns {boolean}
  */
@@ -525,13 +594,15 @@ export function getModelLockoutInfo(
   };
 }
 
-type ModelLockoutInfo = {
+export type ModelLockoutInfo = {
   provider: string;
   connectionId: string;
   model: string;
   reason: string;
   remainingMs: number;
   failureCount: number;
+  lockedAt: string;
+  until: number;
 };
 
 /**
@@ -544,7 +615,8 @@ export function getAllModelLockouts(): ModelLockoutInfo[] {
     cleanupModelLockKey(key, now);
   }
   for (const [key, entry] of modelLockouts) {
-    const [provider, connectionId, model] = key.split(":");
+    const [provider, connectionId, ...modelParts] = key.split(":");
+    const model = modelParts.join(":");
     active.push({
       provider,
       connectionId,
@@ -552,6 +624,8 @@ export function getAllModelLockouts(): ModelLockoutInfo[] {
       reason: entry.reason,
       remainingMs: entry.until - now,
       failureCount: entry.failureCount,
+      lockedAt: new Date(entry.lockedAt).toISOString(),
+      until: entry.until,
     });
   }
   return active;
@@ -595,6 +669,9 @@ function configureProviderBreaker(
           classifyError: classify429FromError,
         }
       : {}),
+    degradationThreshold: resolvedProfile.degradationThreshold,
+    maxBackoffMultiplier: resolvedProfile.maxBackoffMultiplier,
+    backoffEscalationCount: resolvedProfile.backoffEscalationCount,
   });
 }
 
@@ -698,6 +775,25 @@ export function isProviderFailureCode(status: number): boolean {
   return PROVIDER_FAILURE_ERROR_CODES.has(status);
 }
 
+/**
+ * Returns true when a checkFallbackError result signals that the entire provider
+ * quota is exhausted for this request, so the combo router can skip remaining
+ * targets from the same provider (#1731).
+ *
+ * Covers:
+ *  - reason === "quota_exhausted"  (subscription, daily, credits)
+ *  - creditsExhausted flag
+ *  - dailyQuotaExhausted flag
+ */
+export function isProviderExhaustedReason(result: {
+  reason?: string;
+  creditsExhausted?: boolean;
+  dailyQuotaExhausted?: boolean;
+}): boolean {
+  if (result.creditsExhausted || result.dailyQuotaExhausted) return true;
+  return result.reason === RateLimitReason.QUOTA_EXHAUSTED;
+}
+
 // ─── Retry-After Parsing ────────────────────────────────────────────────────
 
 /**
@@ -786,6 +882,21 @@ function parseDelayString(value: unknown): number | null {
 export function parseRetryFromErrorText(errorText: unknown): number | null {
   if (!errorText || typeof errorText !== "string") return null;
 
+  // Issue #2321: Anthropic OAuth occasionally embeds an absolute ISO 8601
+  // timestamp instead of a relative duration (e.g. "Try again at
+  // 2026-05-17T10:00:00Z" or "Please wait until 2026-05-17T10:00:00.000Z").
+  // Convert to a future-duration in milliseconds if it parses.
+  const isoMatch = errorText.match(
+    /\b(?:try again at|wait until|reset(?:s)? at|available at|retry after)\s+(\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/i
+  );
+  if (isoMatch) {
+    const parsedTs = Date.parse(isoMatch[1]);
+    if (Number.isFinite(parsedTs)) {
+      const waitMs = parsedTs - Date.now();
+      if (waitMs > 0) return waitMs;
+    }
+  }
+
   const match = errorText.match(/reset after (\d+h)?(\d+m)?(\d+s)?/i);
   if (!match) {
     // Also try the variant without "reset after": "will reset after XhYmZs"
@@ -808,6 +919,16 @@ function computeDurationMs(match: RegExpMatchArray): number | null {
   return totalMs > 0 ? totalMs : null;
 }
 
+function isSubscriptionQuotaText(lower: string): boolean {
+  return (
+    lower.includes("usage limit reached") ||
+    lower.includes("usage limit has been") ||
+    lower.includes("claude pro usage limit") ||
+    lower.includes("you've reached your usage limit") ||
+    lower.includes("you have reached your usage limit")
+  );
+}
+
 // ─── Error Classification ───────────────────────────────────────────────────
 
 /**
@@ -824,7 +945,13 @@ export function classifyErrorText(errorText: unknown): RateLimitReasonValue {
     lower.includes("your quota will reset") ||
     lower.includes("quota has been exceeded") ||
     lower.includes("hour quota") ||
-    lower.includes("billing")
+    lower.includes("billing") ||
+    // Issue #2321: Anthropic OAuth (Claude Code Pro/Team) 429 bodies surface
+    // the subscription quota with phrases that contain neither "quota" nor
+    // "billing". Without these patterns the error was classified as a
+    // transient RATE_LIMIT_EXCEEDED (~5s base cooldown), which cascades all
+    // Pro accounts into a tight retry loop until the 5h window resets.
+    isSubscriptionQuotaText(lower)
   ) {
     return RateLimitReason.QUOTA_EXHAUSTED;
   }
@@ -955,7 +1082,8 @@ export function checkFallbackError(
   _model: string | null = null,
   provider: string | null = null,
   headers: Headers | Record<string, string> | null = null,
-  profileOverride: ProviderProfile | null = null
+  profileOverride: ProviderProfile | null = null,
+  structuredError?: { code?: string | null; type?: string | null } | null
 ): {
   shouldFallback: boolean;
   cooldownMs: number;
@@ -966,7 +1094,32 @@ export function checkFallbackError(
   permanent?: boolean;
   creditsExhausted?: boolean;
   dailyQuotaExhausted?: boolean;
+  /** G-02: true when the error originates from an embedded service supervisor (not the upstream AI
+   * provider itself). Callers should apply connection cooldown only — do NOT record a provider
+   * circuit-breaker failure when this flag is set. */
+  skipProviderBreaker?: boolean;
 } {
+  // G-02: detect embedded service supervisor failures (X-Omni-Fallback-Hint: connection_cooldown).
+  // These are NOT upstream AI provider failures — they are local supervisor state changes.
+  // Apply a short 5s connection cooldown without tripping the provider circuit breaker.
+  if (status === 503 && headers) {
+    const hintValue =
+      typeof (headers as Headers).get === "function"
+        ? (headers as Headers).get("x-omni-fallback-hint")
+        : (headers as Record<string, string>)["x-omni-fallback-hint"] ||
+          (headers as Record<string, string>)["X-Omni-Fallback-Hint"];
+    if (typeof hintValue === "string" && hintValue.toLowerCase() === "connection_cooldown") {
+      return {
+        shouldFallback: true,
+        cooldownMs: 5_000,
+        baseCooldownMs: 5_000,
+        newBackoffLevel: 0,
+        reason: "service_not_running",
+        skipProviderBreaker: true,
+      };
+    }
+  }
+
   const errorStr = (errorText || "").toString();
   const profile = profileOverride ?? (provider ? getProviderProfile(provider) : null);
   const maxBackoffSteps = profile?.maxBackoffSteps ?? BACKOFF_CONFIG.maxLevel;
@@ -1105,6 +1258,58 @@ export function checkFallbackError(
       };
     }
 
+    // Issue #2321: Anthropic OAuth (Claude Pro/Team) returns 429 with
+    // "Usage Limit Reached" for the 5-hour subscription quota. The
+    // pattern-based classifier now flags these as QUOTA_EXHAUSTED, but
+    // without a dedicated branch the request would still fall through to
+    // the generic 429 retry path (~5s base cooldown). Honor any
+    // upstream retry hint (Retry-After header or ISO timestamp in the
+    // body) when present, otherwise apply a 1h cooldown so all Pro
+    // accounts on the same subscription tier stop cycling through tight
+    // retries until the window genuinely resets. Generic quota-reset text
+    // still follows the provider profile's upstream-hint policy; this
+    // branch is only for known Claude subscription quota messages. (We
+    // deliberately do not use COOLDOWN_MS.paymentRequired here — that
+    // constant is 2 minutes, which is shorter than the recovery time of a
+    // subscription quota.)
+    if (
+      shouldUseQuotaSignal &&
+      !isCreditsExhausted(errorStr) &&
+      !isDailyQuotaExhausted(errorStr) &&
+      isSubscriptionQuotaText(errorStr.toLowerCase())
+    ) {
+      // For a subscription quota error an upstream reset hint is the most
+      // accurate wait. Header hints follow the profile policy via
+      // getUpstreamRetryHintMs(); precise body timestamps remain safe for
+      // this dedicated branch because it only handles known subscription
+      // quota messages. When no hint is available, keep the dedicated 1h
+      // cooldown instead of falling through to the generic short 429 backoff.
+      const hintMs = getUpstreamRetryHintMs() ?? parseRetryFromErrorText(errorStr) ?? null;
+      const SUBSCRIPTION_QUOTA_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+      return {
+        shouldFallback: true,
+        cooldownMs: hintMs ?? SUBSCRIPTION_QUOTA_COOLDOWN_MS,
+        reason: RateLimitReason.QUOTA_EXHAUSTED,
+        usedUpstreamRetryHint: Boolean(hintMs),
+      };
+    }
+
+    const quotaResetHintMs = parseRetryFromErrorText(errorStr);
+    if (
+      shouldUseQuotaSignal &&
+      quotaResetHintMs &&
+      classifyErrorText(errorStr) === RateLimitReason.QUOTA_EXHAUSTED
+    ) {
+      return {
+        shouldFallback: true,
+        cooldownMs: quotaResetHintMs,
+        baseCooldownMs: quotaResetHintMs,
+        newBackoffLevel: 0,
+        reason: RateLimitReason.QUOTA_EXHAUSTED,
+        usedUpstreamRetryHint: true,
+      };
+    }
+
     if (
       status === HTTP_STATUS.FORBIDDEN &&
       provider &&
@@ -1138,12 +1343,37 @@ export function checkFallbackError(
     return buildRetryableFallback(RateLimitReason.SERVER_ERROR);
   }
 
-  // 400 — context overflow / malformed request may succeed on another model in the combo
+  // 400 — context overflow / malformed request / model access denied
   if (status === HTTP_STATUS.BAD_REQUEST) {
+    // Check structured error codes first (more reliable, no false positives)
+    // OpenAI:  error.code === "model_not_found"
+    // Anthropic: error.type === "not_found_error" / "permission_error"
+    const structuredCode =
+      typeof structuredError?.code === "string" ? structuredError.code.toLowerCase() : "";
+    const structuredType =
+      typeof structuredError?.type === "string" ? structuredError.type.toLowerCase() : "";
+    // A clear bad-credential error must never be reclassified as model-access
+    // (which would silently exhaust every combo target). Structured detection
+    // below still catches genuine model_not_found / not_found_error codes.
+    const looksLikeAuthCredentialError = AUTH_CREDENTIAL_ERROR_PATTERNS.some((p) =>
+      p.test(errorStr)
+    );
+    const matchesModelAccessPattern =
+      !looksLikeAuthCredentialError && MODEL_ACCESS_DENIED_PATTERNS.some((p) => p.test(errorStr));
+
+    const isModelAccessDeniedStructured =
+      !!structuredError &&
+      (MODEL_ACCESS_DENIED_CODES.has(structuredCode) ||
+        MODEL_ACCESS_DENIED_TYPES.has(structuredType) ||
+        // Ambiguous types (e.g. Anthropic permission_error) only count as a model
+        // access denial when the message text confirms it is about the model.
+        (MODEL_ACCESS_AMBIGUOUS_TYPES.has(structuredType) && matchesModelAccessPattern));
+
     const isOverflow = CONTEXT_OVERFLOW_PATTERNS.some((p) => p.test(errorStr));
     const isMalformed = MALFORMED_REQUEST_PATTERNS.some((p) => p.test(errorStr));
+    const isModelAccessDenied = isModelAccessDeniedStructured || matchesModelAccessPattern;
 
-    if (isOverflow || isMalformed) {
+    if (isOverflow || isMalformed || isModelAccessDenied) {
       return {
         shouldFallback: true,
         cooldownMs: 0,
@@ -1203,7 +1433,9 @@ export function getEarliestRateLimitedUntil(
 /**
  * Format rateLimitedUntil to human-readable "reset after Xm Ys"
  */
-export function formatRetryAfter(rateLimitedUntil: string | Date | null | undefined): string {
+export function formatRetryAfter(
+  rateLimitedUntil: string | number | Date | null | undefined
+): string {
   if (!rateLimitedUntil) return "";
   const diffMs = new Date(rateLimitedUntil).getTime() - Date.now();
   if (diffMs <= 0) return "reset after 0s";

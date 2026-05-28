@@ -1,38 +1,49 @@
 // Provider definitions
 
-// Free Providers
-export const FREE_PROVIDERS = {
-  qoder: { id: "qoder", alias: "if", name: "Qoder AI", icon: "water_drop", color: "#6366F1" },
-  qwen: {
-    id: "qwen",
-    alias: "qw",
-    name: "Qwen Code",
-    icon: "psychology",
-    color: "#10B981",
-    deprecated: true,
-    deprecationReason:
-      "Qwen OAuth free tier was discontinued on 2026-04-15. Use 'alicode', 'alicode-intl', or 'openrouter' provider with API key instead.",
-  },
-  "gemini-cli": {
-    id: "gemini-cli",
-    alias: "gemini-cli",
-    name: "Gemini CLI",
+/**
+ * Service kind — declarative tag for what a provider can do beyond basic LLM chat.
+ * Affects UI filtering and playground routing; does not influence request routing.
+ */
+export type ServiceKind =
+  | "llm"
+  | "embedding"
+  | "image"
+  | "imageToText"
+  | "tts"
+  | "stt"
+  | "webSearch"
+  | "webFetch"
+  | "video"
+  | "music";
+
+export type RiskNoticeVariant = "oauth" | "webCookie" | "deprecated" | "embedded-service";
+
+export interface ProviderRiskNoticeFields {
+  subscriptionRisk?: boolean;
+  riskNoticeVariant?: RiskNoticeVariant;
+  isEmbeddedService?: boolean;
+}
+
+export const FREE_PROVIDERS = {};
+
+// No-auth Providers
+export const NOAUTH_PROVIDERS = {
+  opencode: {
+    id: "opencode",
+    alias: "oc",
+    name: "OpenCode Free",
     icon: "terminal",
-    color: "#4285F4",
-    authHint:
-      "Uses Gemini CLI OAuth / Cloud Code credentials. Pro models require an eligible Google account or paid plan.",
-  },
-  kiro: { id: "kiro", alias: "kr", name: "Kiro AI", icon: "psychology_alt", color: "#FF6B35" },
-  "amazon-q": {
-    id: "amazon-q",
-    alias: "aq",
-    name: "Amazon Q",
-    icon: "cloud",
-    color: "#FF9900",
-    textIcon: "AQ",
-    website: "https://aws.amazon.com/q/developer/",
-    authHint:
-      "Uses the same AWS Builder ID or imported refresh-token flow as Kiro, but keeps Amazon Q connections separate.",
+    color: "#E87040",
+    textIcon: "OC",
+    website: "https://opencode.ai",
+    noAuth: true,
+    hasFree: true,
+    authHint: "No API key required — uses OpenCode's public free endpoint.",
+    freeNote:
+      "No API key required — public OpenCode endpoint with Kimi, GLM, Qwen, MiMo, MiniMax models.",
+    notice: {
+      text: "OpenCode Free uses the public OpenCode endpoint (https://opencode.ai/zen/v1). No signup or API key needed. Rate limits apply.",
+    },
   },
 };
 
@@ -44,15 +55,89 @@ export function supportsApiKeyOnFreeProvider(providerId: unknown): boolean {
 
 // OAuth Providers
 export const OAUTH_PROVIDERS = {
-  claude: { id: "claude", alias: "cc", name: "Claude Code", icon: "smart_toy", color: "#D97757" },
+  qoder: {
+    id: "qoder",
+    alias: "if",
+    name: "Qoder AI",
+    icon: "water_drop",
+    color: "#6366F1",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
+    hasFree: true,
+  },
+  qwen: {
+    id: "qwen",
+    alias: "qw",
+    name: "Qwen Code",
+    icon: "psychology",
+    color: "#10B981",
+    subscriptionRisk: true,
+    riskNoticeVariant: "deprecated",
+    deprecated: true,
+    deprecationReason:
+      "Qwen OAuth free tier was discontinued on 2026-04-15. Use 'bailian-coding-plan', 'alibaba', 'alibaba-cn', or 'openrouter' provider with API key instead.",
+  },
+  "gemini-cli": {
+    id: "gemini-cli",
+    alias: "gemini-cli",
+    name: "Gemini CLI",
+    icon: "terminal",
+    color: "#4285F4",
+    subscriptionRisk: true,
+    riskNoticeVariant: "deprecated",
+    hasFree: true,
+    authHint:
+      "Uses Gemini CLI OAuth / Cloud Code credentials. Pro models require an eligible Google account or paid plan.",
+  },
+  kiro: {
+    id: "kiro",
+    alias: "kr",
+    name: "Kiro AI",
+    icon: "psychology_alt",
+    color: "#FF6B35",
+    subscriptionRisk: true,
+    riskNoticeVariant: "deprecated",
+    hasFree: true,
+  },
+  "amazon-q": {
+    id: "amazon-q",
+    alias: "aq",
+    name: "Amazon Q",
+    icon: "cloud",
+    color: "#FF9900",
+    textIcon: "AQ",
+    website: "https://aws.amazon.com/q/developer/",
+    hasFree: true,
+    authHint:
+      "Uses the same AWS Builder ID or imported refresh-token flow as Kiro, but keeps Amazon Q connections separate.",
+  },
+  claude: {
+    id: "claude",
+    alias: "cc",
+    name: "Claude Code",
+    icon: "smart_toy",
+    color: "#D97757",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
+  },
   antigravity: {
     id: "antigravity",
     alias: undefined,
     name: "Antigravity",
     icon: "rocket_launch",
     color: "#F59E0B",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
   },
-  codex: { id: "codex", alias: "cx", name: "OpenAI Codex", icon: "code", color: "#3B82F6" },
+  codex: {
+    id: "codex",
+    alias: "cx",
+    name: "OpenAI Codex",
+    icon: "code",
+    color: "#3B82F6",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
+  },
   github: { id: "github", alias: "gh", name: "GitHub Copilot", icon: "code", color: "#333333" },
   "gitlab-duo": {
     id: "gitlab-duo",
@@ -65,7 +150,37 @@ export const OAUTH_PROVIDERS = {
     authHint:
       "OAuth application with ai_features + read_user scopes. Configure GITLAB_DUO_OAUTH_CLIENT_ID and optionally GITLAB_DUO_OAUTH_CLIENT_SECRET on this OmniCoder instance.",
   },
-  cursor: { id: "cursor", alias: "cu", name: "Cursor IDE", icon: "edit_note", color: "#00D4AA" },
+  cursor: {
+    id: "cursor",
+    alias: "cu",
+    name: "Cursor IDE",
+    icon: "edit_note",
+    color: "#00D4AA",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
+  },
+  zed: {
+    id: "zed",
+    alias: "zd",
+    name: "Zed IDE",
+    icon: "code",
+    color: "#084CCF",
+    textIcon: "ZD",
+    website: "https://zed.dev",
+    authHint:
+      "Zed stores LLM provider credentials (OpenAI, Anthropic, Google, Mistral, xAI) in the OS keychain. Use the Import button below to discover and import them automatically.",
+  },
+  trae: {
+    id: "trae",
+    alias: "tr",
+    name: "Trae",
+    icon: "edit_square",
+    color: "#FF7849",
+    textIcon: "TR",
+    website: "https://trae.ai",
+    authHint:
+      "Trae is an AI-native IDE by ByteDance. Sign in inside Trae and paste your API token or use OAuth device flow here.",
+  },
   "kimi-coding": {
     id: "kimi-coding",
     alias: "kmc",
@@ -73,6 +188,8 @@ export const OAUTH_PROVIDERS = {
     icon: "psychology",
     color: "#1E40AF",
     textIcon: "KC",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
   },
   kilocode: {
     id: "kilocode",
@@ -81,6 +198,8 @@ export const OAUTH_PROVIDERS = {
     icon: "code",
     color: "#FF6B35",
     textIcon: "KC",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
   },
   cline: {
     id: "cline",
@@ -89,6 +208,8 @@ export const OAUTH_PROVIDERS = {
     icon: "smart_toy",
     color: "#5B9BD5",
     textIcon: "CL",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
   },
   windsurf: {
     id: "windsurf",
@@ -97,6 +218,8 @@ export const OAUTH_PROVIDERS = {
     icon: "air",
     color: "#00C5A0",
     textIcon: "WS",
+    subscriptionRisk: true,
+    riskNoticeVariant: "oauth",
     authHint:
       "Sign in at windsurf.com to get your token. Visit windsurf.com/show-auth-token after logging in and paste it here, or use the device-code login flow.",
     website: "https://windsurf.com",
@@ -125,6 +248,8 @@ export const WEB_COOKIE_PROVIDERS = {
     textIcon: "CG",
     website: "https://chatgpt.com",
     authHint: "Paste your __Secure-next-auth.session-token cookie value from chatgpt.com",
+    subscriptionRisk: true,
+    riskNoticeVariant: "webCookie",
   },
   "grok-web": {
     id: "grok-web",
@@ -135,6 +260,21 @@ export const WEB_COOKIE_PROVIDERS = {
     textIcon: "GW",
     website: "https://grok.com",
     authHint: "Paste your sso= cookie value from grok.com",
+    subscriptionRisk: true,
+    riskNoticeVariant: "webCookie",
+  },
+  "gemini-web": {
+    id: "gemini-web",
+    alias: "gweb",
+    name: "Gemini Web (Free)",
+    icon: "auto_awesome",
+    color: "#4285F4",
+    textIcon: "GWeb",
+    website: "https://gemini.google.com",
+    authHint:
+      "Paste your __Secure-1PSID cookie value from gemini.google.com. Optionally add __Secure-1PSIDTS separated by semicolon.",
+    subscriptionRisk: true,
+    riskNoticeVariant: "webCookie",
   },
   "perplexity-web": {
     id: "perplexity-web",
@@ -145,6 +285,8 @@ export const WEB_COOKIE_PROVIDERS = {
     textIcon: "PW",
     website: "https://www.perplexity.ai",
     authHint: "Paste your __Secure-next-auth.session-token cookie value from perplexity.ai",
+    subscriptionRisk: true,
+    riskNoticeVariant: "webCookie",
   },
   "blackbox-web": {
     id: "blackbox-web",
@@ -156,6 +298,8 @@ export const WEB_COOKIE_PROVIDERS = {
     website: "https://app.blackbox.ai",
     authHint:
       "Paste your __Secure-authjs.session-token value or full cookie header from app.blackbox.ai",
+    subscriptionRisk: true,
+    riskNoticeVariant: "webCookie",
   },
   "muse-spark-web": {
     id: "muse-spark-web",
@@ -166,6 +310,93 @@ export const WEB_COOKIE_PROVIDERS = {
     textIcon: "MS",
     website: "https://www.meta.ai",
     authHint: "Paste your abra_sess value or full cookie header from meta.ai",
+  },
+  "claude-web": {
+    id: "claude-web",
+    alias: "cw",
+    name: "Claude Web",
+    icon: "auto_awesome",
+    color: "#D97757",
+    textIcon: "CW",
+    website: "https://claude.ai",
+    authHint: "Paste your session cookie from claude.ai",
+    subscriptionRisk: true,
+    riskNoticeVariant: "webCookie",
+  },
+  "deepseek-web": {
+    id: "deepseek-web",
+    alias: "ds-web",
+    name: "DeepSeek Web",
+    icon: "auto_awesome",
+    color: "#4D6BFE",
+    textIcon: "DS",
+    website: "https://chat.deepseek.com",
+    authHint:
+      "Paste your userToken from chat.deepseek.com — DevTools → Application → Local Storage → userToken",
+    subscriptionRisk: true,
+    riskNoticeVariant: "webCookie",
+  },
+  "copilot-web": {
+    id: "copilot-web",
+    alias: "copilot",
+    name: "Microsoft Copilot Web",
+    icon: "auto_awesome",
+    color: "#0078D4",
+    textIcon: "CP",
+    website: "https://copilot.microsoft.com",
+    authHint:
+      "Paste your access_token from copilot.microsoft.com (or export a .har file from DevTools while logged in)",
+    subscriptionRisk: true,
+    riskNoticeVariant: "webCookie",
+  },
+  "veoaifree-web": {
+    id: "veoaifree-web",
+    alias: "veo-free",
+    name: "Veo AI Free",
+    icon: "videocam",
+    color: "#8B5CF6",
+    textIcon: "VF",
+    website: "https://veoaifree.com",
+    hasFree: true,
+    freeNote: "Free video generation — VEO 3.1, Seedance. 6 requests/hour.",
+    authHint: "No auth required. Rate limited to 6 requests/hour per IP.",
+  },
+  "t3-web": {
+    id: "t3-web",
+    alias: "t3chat",
+    name: "t3.chat (Pro/Free)",
+    icon: "auto_awesome",
+    color: "#7C3AED",
+    textIcon: "T3",
+    website: "https://t3.chat",
+    hasFree: true,
+    freeNote: "Free tier gives limited model access. Pro ($8/month) unlocks 50+ models.",
+    authHint:
+      "Open t3.chat in your browser, log in, then open DevTools → Application → Local Storage → https://t3.chat. " +
+      "Copy the value of 'convex-session-id'. Also open DevTools → Network, copy the Cookie header from any request. " +
+      "Paste both values here. See provider setup docs for a step-by-step guide.",
+  },
+  "inner-ai": {
+    id: "inner-ai",
+    alias: "in-ai",
+    name: "Inner.ai (Subscription)",
+    icon: "auto_awesome",
+    color: "#1A56DB",
+    textIcon: "IA",
+    website: "https://app.innerai.com",
+    authHint:
+      "Paste your token cookie and email separated by a space: open DevTools → Application → Cookies → .innerai.com, copy the token value, then append a space and your Inner.ai login email. Example: eyJhbG... user@example.com",
+  },
+  "adapta-web": {
+    id: "adapta-web",
+    alias: "adp-web",
+    name: "Adapta.org (Adapta One Web)",
+    icon: "auto_awesome",
+    color: "#6E3AD3",
+    textIcon: "AW",
+    website: "https://agent.adapta.one",
+    authHint:
+      "Paste your __client cookie value from .clerk.agent.adapta.one (DevTools → Application → Cookies)",
   },
 };
 
@@ -207,6 +438,45 @@ export const APIKEY_PROVIDERS = {
     website: "https://openrouter.ai",
     hasFree: true,
     freeNote: "Free models at $0/token with :free suffix - 20 RPM / 200 RPD",
+  },
+  "api-airforce": {
+    id: "api-airforce",
+    alias: "af",
+    name: "Api.airforce",
+    icon: "flight",
+    color: "#1E3A5F",
+    textIcon: "AF",
+    website: "https://api.airforce",
+    hasFree: true,
+    freeNote:
+      "55 free tier models including Grok-3, Claude 3.7, Qwen3, Kimi-K2, Gemini 2.5 Flash, DeepSeek-V3",
+    apiHint:
+      "Get your API key from https://panel.api.airforce — OpenAI-compatible endpoint at https://api.airforce/v1",
+    capabilities: { embeddings: false },
+  },
+  astraflow: {
+    id: "astraflow",
+    alias: "astraflow",
+    name: "Astraflow (UCloud Global)",
+    icon: "cloud",
+    color: "#0052D9",
+    textIcon: "AF",
+    passthroughModels: true,
+    website: "https://astraflow.ucloud-global.com",
+    apiHint:
+      "Astraflow by UCloud — OpenAI-compatible platform supporting 200+ models (global endpoint). Get your API key at https://astraflow.ucloud-global.com",
+  },
+  "astraflow-cn": {
+    id: "astraflow-cn",
+    alias: "astraflow-cn",
+    name: "Astraflow (UCloud China)",
+    icon: "cloud",
+    color: "#0052D9",
+    textIcon: "AFC",
+    passthroughModels: true,
+    website: "https://astraflow.ucloud.cn",
+    apiHint:
+      "Astraflow by UCloud — OpenAI-compatible platform supporting 200+ models (China endpoint). Get your API key at https://astraflow.ucloud.cn",
   },
   qianfan: {
     id: "qianfan",
@@ -301,24 +571,6 @@ export const APIKEY_PROVIDERS = {
     textIcon: "CR",
     website: "https://crof.ai",
   },
-  alicode: {
-    id: "alicode",
-    alias: "alicode",
-    name: "Alibaba",
-    icon: "cloud",
-    color: "#FF6A00",
-    textIcon: "ALi",
-    website: "https://bailian.console.aliyun.com",
-  },
-  "alicode-intl": {
-    id: "alicode-intl",
-    alias: "alicode-intl",
-    name: "Alibaba Intl",
-    icon: "cloud",
-    color: "#FF6A00",
-    textIcon: "ALi",
-    website: "https://modelstudio.console.alibabacloud.com",
-  },
   openai: {
     id: "openai",
     alias: "openai",
@@ -363,9 +615,9 @@ export const APIKEY_PROVIDERS = {
     textIcon: "BR",
     website: "https://aws.amazon.com/bedrock",
     authHint:
-      "Use your Amazon Bedrock API key in Authorization: Bearer <key>. OmniCoder defaults to the OpenAI-compatible bedrock-mantle endpoint in us-east-1; set a regional base URL if your account uses another region or the bedrock-runtime /openai/v1 path.",
+      "Use your Amazon Bedrock API key and configure the AWS region where your models are enabled (for example eu-west-2). OmniRoute calls Bedrock's native Converse API directly.",
     apiHint:
-      "This integration targets Amazon Bedrock's current OpenAI-compatible surface. bedrock-mantle is the default for /models and chat; advanced users can also point baseUrl to bedrock-runtime/.../openai/v1 for runtime-specific model IDs.",
+      "Native Bedrock integration: model discovery uses Bedrock foundation models and inference profiles, while chat uses the regional Bedrock Runtime Converse/ConverseStream APIs.",
     passthroughModels: true,
   },
   watsonx: {
@@ -719,6 +971,7 @@ export const APIKEY_PROVIDERS = {
     color: "#58A6FF",
     textIcon: "OC",
     website: "https://ollama.com/settings/api-keys",
+    hasFree: true,
   },
   huggingface: {
     id: "huggingface",
@@ -759,6 +1012,7 @@ export const APIKEY_PROVIDERS = {
     color: "#4285F4",
     textIcon: "VA",
     website: "https://cloud.google.com/vertex-ai",
+    hasFree: true,
     authHint: "Provide Service Account JSON or OAuth access_token",
   },
   "vertex-partner": {
@@ -800,11 +1054,21 @@ export const APIKEY_PROVIDERS = {
   alibaba: {
     id: "alibaba",
     alias: "ali",
-    name: "Alibaba Cloud (DashScope)",
+    name: "Alibaba",
     icon: "cloud_queue",
     color: "#FF6600",
     textIcon: "AL",
     website: "https://dashscope-intl.aliyuncs.com",
+    hasFree: false,
+  },
+  "alibaba-cn": {
+    id: "alibaba-cn",
+    alias: "ali-cn",
+    name: "Alibaba (China)",
+    icon: "cloud_queue",
+    color: "#FF6600",
+    textIcon: "AL",
+    website: "https://dashscope.aliyuncs.com",
     hasFree: false,
   },
   longcat: {
@@ -857,6 +1121,95 @@ export const APIKEY_PROVIDERS = {
     freeNote: "Free forever — no signup, no credit card. OpenAI-compatible endpoints.",
     passthroughModels: true,
     authHint: "No auth required. API accepts any non-empty string as key for identification.",
+  },
+  replicate: {
+    id: "replicate",
+    alias: "rep",
+    name: "Replicate",
+    icon: "auto_awesome",
+    color: "#3B82F6",
+    textIcon: "RE",
+    website: "https://replicate.com",
+    hasFree: true,
+    freeNote:
+      "Free community models — Llama 3.1, Mixtral, DeepSeek R1. Passthrough for SDXL, Whisper, MusicGen.",
+    passthroughModels: true,
+    authHint: "Get API token at replicate.com/account/api-tokens",
+  },
+  hackclub: {
+    id: "hackclub",
+    alias: "hc",
+    name: "Hackclub AI",
+    icon: "auto_awesome",
+    color: "#FF6B00",
+    textIcon: "HC",
+    website: "https://ai.hackclub.com",
+    hasFree: true,
+    freeNote: "Free AI for Hack Club members — 30+ models, no credit card.",
+    passthroughModels: true,
+    authHint: "Sign in with your Hack Club account at ai.hackclub.com.",
+  },
+  "github-models": {
+    id: "github-models",
+    alias: "ghm",
+    name: "GitHub Models",
+    icon: "code",
+    color: "#238636",
+    textIcon: "GH",
+    website: "https://github.com/marketplace/models",
+    hasFree: true,
+    freeNote: "Free GPT-5, o-series, DeepSeek-R1, Llama 4, Grok 3 — GitHub account only.",
+    authHint: "Create a GitHub PAT with 'models: read' scope at github.com/settings/tokens",
+  },
+  haiper: {
+    id: "haiper",
+    alias: "hp",
+    name: "Haiper",
+    icon: "videocam",
+    color: "#6366F1",
+    textIcon: "HP",
+    website: "https://haiper.ai",
+    authHint: "Get API key at haiper.ai/haiper-api",
+  },
+  leonardo: {
+    id: "leonardo",
+    alias: "leo",
+    name: "Leonardo AI",
+    icon: "palette",
+    color: "#8B5CF6",
+    textIcon: "LE",
+    website: "https://leonardo.ai",
+    authHint: "Get API key at leonardo.ai/developer",
+  },
+  ideogram: {
+    id: "ideogram",
+    alias: "ideo",
+    name: "Ideogram",
+    icon: "image",
+    color: "#EC4899",
+    textIcon: "ID",
+    website: "https://ideogram.ai",
+    authHint: "Get API key at ideogram.ai/docs/api",
+  },
+  suno: {
+    id: "suno",
+    alias: "suno",
+    name: "Suno",
+    icon: "music_note",
+    color: "#F59E0B",
+    textIcon: "SU",
+    website: "https://suno.ai",
+    authHint: "Paste session cookie from suno.ai (Clerk auth)",
+  },
+  udio: {
+    id: "udio",
+    alias: "udio",
+    name: "Udio",
+    icon: "music_note",
+    color: "#10B981",
+    textIcon: "UD",
+    website: "https://udio.com",
+    authHint: "Paste session cookie from udio.com (Supabase auth)",
   },
   "cloudflare-ai": {
     id: "cloudflare-ai",
@@ -1010,6 +1363,8 @@ export const APIKEY_PROVIDERS = {
     color: "#EA580C",
     textIcon: "FL",
     website: "https://featherless.ai",
+    hasFree: true,
+    freeNote: "Free tier available — no credit card required",
   },
   llm7: {
     id: "llm7",
@@ -1055,6 +1410,8 @@ export const APIKEY_PROVIDERS = {
     color: "#EC4899",
     textIcon: "FR",
     website: "https://friendli.ai",
+    hasFree: true,
+    freeNote: "Free tier for serverless inference — no credit card required",
   },
   llamagate: {
     id: "llamagate",
@@ -1211,6 +1568,30 @@ export const APIKEY_PROVIDERS = {
     color: "#EA580C",
     textIcon: "MM",
     website: "https://mimo.mi.com",
+  },
+  gitlawb: {
+    id: "gitlawb",
+    alias: "glb",
+    name: "Gitlawb Opengateway (MiMo)",
+    icon: "hub",
+    color: "#10B981",
+    textIcon: "GLB",
+    website: "https://opengateway.gitlawb.com",
+    hasFree: true,
+    freeNote: "Free tier available — no credit card required",
+    apiHint: "Get your API key from Gitlawb Opengateway dashboard.",
+  },
+  "gitlawb-gmi": {
+    id: "gitlawb-gmi",
+    alias: "glb-gmi",
+    name: "Gitlawb Opengateway (GMI Cloud)",
+    icon: "hub",
+    color: "#10B981",
+    textIcon: "GMI",
+    website: "https://opengateway.gitlawb.com",
+    hasFree: true,
+    freeNote: "Free tier available — no credit card required",
+    apiHint: "Get your API key from Gitlawb Opengateway dashboard.",
   },
   "inference-net": {
     id: "inference-net",
@@ -1428,6 +1809,8 @@ export const APIKEY_PROVIDERS = {
     color: "#06B6D4",
     textIcon: "CH",
     website: "https://chutes.ai",
+    hasFree: true,
+    freeNote: "Free tier available — no credit card required",
     authHint: "Bearer API key for the Chutes OpenAI-compatible gateway.",
     passthroughModels: true,
   },
@@ -1500,6 +1883,365 @@ export const APIKEY_PROVIDERS = {
     textIcon: "TP",
     website: "https://topazlabs.com",
   },
+  baidu: {
+    id: "baidu",
+    alias: "baidu",
+    name: "Baidu (ERNIE)",
+    icon: "auto_awesome",
+    color: "#2932E1",
+    textIcon: "BD",
+    website: "https://yiyan.baidu.com",
+    hasFree: true,
+    freeNote: "Free ERNIE Speed/Lite models. China's #2 LLM.",
+    passthroughModels: true,
+    authHint: "Get API key at console.bce.baidu.com",
+  },
+  tencent: {
+    id: "tencent",
+    alias: "tencent",
+    name: "Tencent Hunyuan",
+    icon: "auto_awesome",
+    color: "#07C160",
+    textIcon: "TC",
+    website: "https://hunyuan.tencent.com",
+    hasFree: true,
+    freeNote: "Free Hunyuan Lite models. WeChat ecosystem.",
+    passthroughModels: true,
+    authHint: "Get API key at console.cloud.tencent.com",
+  },
+  iflytek: {
+    id: "iflytek",
+    alias: "iflytek",
+    name: "iFlytek Spark",
+    icon: "auto_awesome",
+    color: "#0066FF",
+    textIcon: "IF",
+    website: "https://xinghuo.xfyun.cn",
+    hasFree: true,
+    freeNote: "Free Spark Lite models. China's voice AI leader.",
+    passthroughModels: true,
+    authHint: "Get API key at console.xfyun.cn",
+  },
+  baichuan: {
+    id: "baichuan",
+    alias: "baichuan",
+    name: "Baichuan",
+    icon: "auto_awesome",
+    color: "#6366F1",
+    textIcon: "BC",
+    website: "https://baichuan.com",
+    hasFree: true,
+    freeNote: "Free Baichuan models. Popular Chinese LLM startup.",
+    passthroughModels: true,
+    authHint: "Get API key at platform.baichuan-ai.com",
+  },
+  yi: {
+    id: "yi",
+    alias: "yi",
+    name: "Yi (01.AI)",
+    icon: "auto_awesome",
+    color: "#10B981",
+    textIcon: "YI",
+    website: "https://01.ai",
+    hasFree: true,
+    freeNote: "Free Yi-Light models. Kai-Fu Lee's company.",
+    passthroughModels: true,
+    authHint: "Get API key at platform.lingyiwanwu.com",
+  },
+  stepfun: {
+    id: "stepfun",
+    alias: "stepfun",
+    name: "StepFun",
+    icon: "auto_awesome",
+    color: "#8B5CF6",
+    textIcon: "SF",
+    website: "https://stepfun.com",
+    hasFree: true,
+    freeNote: "Free Step-2 models. Chinese AI company.",
+    passthroughModels: true,
+    authHint: "Get API key at platform.stepfun.com",
+  },
+  coze: {
+    id: "coze",
+    alias: "coze",
+    name: "Coze",
+    icon: "smart_toy",
+    color: "#3B82F6",
+    textIcon: "CZ",
+    website: "https://coze.com",
+    hasFree: true,
+    freeNote: "Free ByteDance agent platform. Bot building + LLM access.",
+    passthroughModels: true,
+    authHint: "Get API key at coze.com/open/api",
+  },
+  "360ai": {
+    id: "360ai",
+    alias: "360ai",
+    name: "360 AI",
+    icon: "auto_awesome",
+    color: "#00B96B",
+    textIcon: "360",
+    website: "https://ai.360.cn",
+    hasFree: true,
+    freeNote: "Free 360 AI Brain models. Major Chinese security company.",
+    passthroughModels: true,
+    authHint: "Get API key at ai.360.cn",
+  },
+  doubao: {
+    id: "doubao",
+    alias: "doubao",
+    name: "Doubao",
+    icon: "auto_awesome",
+    color: "#FE2C55",
+    textIcon: "DB",
+    website: "https://doubao.com",
+    hasFree: true,
+    freeNote: "Free Doubao models. ByteDance's chatbot.",
+    passthroughModels: true,
+    authHint: "Get API key at console.volcengine.com",
+  },
+  sensenova: {
+    id: "sensenova",
+    alias: "sensenova",
+    name: "SenseNova",
+    icon: "auto_awesome",
+    color: "#0066FF",
+    textIcon: "SN",
+    website: "https://platform.sensenova.cn",
+    hasFree: true,
+    freeNote: "Free SenseTime models. Computer vision leader.",
+    passthroughModels: true,
+    authHint: "Get API key at platform.sensenova.cn",
+  },
+  sparkdesk: {
+    id: "sparkdesk",
+    alias: "sparkdesk",
+    name: "SparkDesk",
+    icon: "auto_awesome",
+    color: "#0066FF",
+    textIcon: "SD",
+    website: "https://xinghuo.xfyun.cn",
+    hasFree: true,
+    freeNote: "Free iFlytek Spark models (alias for iflytek).",
+    passthroughModels: true,
+    authHint: "Get API key at console.xfyun.cn",
+  },
+  phind: {
+    id: "phind",
+    alias: "phind",
+    name: "Phind",
+    icon: "search",
+    color: "#EC4899",
+    textIcon: "PH",
+    website: "https://phind.com",
+    hasFree: true,
+    freeNote: "Free code search + AI. Developer-focused.",
+    passthroughModels: true,
+    authHint: "Get API key at phind.com",
+  },
+  huggingchat: {
+    id: "huggingchat",
+    alias: "huggingchat",
+    name: "HuggingChat",
+    icon: "chat",
+    color: "#FFD21E",
+    textIcon: "HC",
+    website: "https://huggingface.co/chat",
+    hasFree: true,
+    freeNote: "Free chat with open models (Llama, Mistral, etc.).",
+    passthroughModels: true,
+    authHint: "No API key required for basic access.",
+  },
+  dify: {
+    id: "dify",
+    alias: "dify",
+    name: "Dify",
+    icon: "smart_toy",
+    color: "#6366F1",
+    textIcon: "DF",
+    website: "https://dify.ai",
+    hasFree: true,
+    freeNote: "Free open-source AI app builder + RAG platform.",
+    passthroughModels: true,
+    authHint: "Get API key from your Dify instance.",
+  },
+  poolside: {
+    id: "poolside",
+    alias: "poolside",
+    name: "Poolside",
+    icon: "code",
+    color: "#3B82F6",
+    textIcon: "PS",
+    website: "https://poolside.ai",
+    hasFree: true,
+    freeNote: "Free Laguna XS.2 and Laguna M.1 coding agent models. No credit card required.",
+    passthroughModels: true,
+    authHint: "Get API key at poolside.ai",
+  },
+  "arcee-ai": {
+    id: "arcee-ai",
+    alias: "arcee",
+    name: "Arcee AI",
+    icon: "auto_awesome",
+    color: "#8B5CF6",
+    textIcon: "AR",
+    website: "https://arcee.ai",
+    hasFree: true,
+    freeNote: "Free Trinity Large Thinking model (262K context). No credit card required.",
+    passthroughModels: true,
+    authHint: "Get API key at arcee.ai",
+  },
+  inclusionai: {
+    id: "inclusionai",
+    alias: "inclusion",
+    name: "InclusionAI",
+    icon: "psychology",
+    color: "#10B981",
+    textIcon: "IA",
+    website: "https://inclusionai.com",
+    hasFree: true,
+    freeNote: "Free Ling-2.6-flash model (1T-param MoE, 262K context). No credit card required.",
+    passthroughModels: true,
+    authHint: "Get API key at inclusionai.com",
+  },
+  liquid: {
+    id: "liquid",
+    alias: "liquid",
+    name: "Liquid AI",
+    icon: "water_drop",
+    color: "#06B6D4",
+    textIcon: "LQ",
+    website: "https://liquid.ai",
+    hasFree: true,
+    freeNote:
+      "Free LFM2.5-1.2B-Thinking and LFM2.5-1.2B-Instruct models. MIT spinoff, hybrid architecture.",
+    passthroughModels: true,
+    authHint: "Get API key at liquid.ai",
+  },
+  nomic: {
+    id: "nomic",
+    alias: "nomic",
+    name: "Nomic",
+    icon: "hub",
+    color: "#7C3AED",
+    textIcon: "NM",
+    website: "https://nomic.ai",
+    hasFree: true,
+    freeNote: "Free Nomic Embed API. Open-source embeddings, no credit card required.",
+    passthroughModels: true,
+    authHint: "Get API key at atlas.nomic.ai",
+  },
+  krutrim: {
+    id: "krutrim",
+    alias: "krutrim",
+    name: "Krutrim",
+    icon: "auto_awesome",
+    color: "#F59E0B",
+    textIcon: "KR",
+    website: "https://krutrim.ai",
+    hasFree: true,
+    freeNote: "India's first AI (by Ola). Free tier available. No credit card required.",
+    passthroughModels: true,
+    authHint: "Get API key at krutrim.ai",
+  },
+  monsterapi: {
+    id: "monsterapi",
+    alias: "monster",
+    name: "MonsterAPI",
+    icon: "cloud",
+    color: "#EF4444",
+    textIcon: "MA",
+    website: "https://monsterapi.ai",
+    hasFree: true,
+    freeNote: "Free credits for decentralized GPU inference. No credit card required.",
+    passthroughModels: true,
+    authHint: "Get API key at monsterapi.ai",
+  },
+  // ── Web Fetch Providers ─────────────────────────────────────────────────────
+  firecrawl: {
+    id: "firecrawl",
+    alias: "fc",
+    name: "Firecrawl",
+    icon: "language",
+    color: "#FB923C",
+    textIcon: "FC",
+    website: "https://firecrawl.dev",
+    hasFree: true,
+    notice: {
+      text: "Free tier: 500 fetches/month, no credit card needed.",
+      apiKeyUrl: "https://firecrawl.dev/app/api-keys",
+    },
+    serviceKinds: ["webFetch"],
+  },
+  "jina-reader": {
+    id: "jina-reader",
+    alias: "jr",
+    name: "Jina Reader",
+    icon: "menu_book",
+    color: "#0EA5E9",
+    textIcon: "JR",
+    website: "https://jina.ai/reader",
+    hasFree: true,
+    notice: {
+      text: "Free tier: 1M fetches/month.",
+      apiKeyUrl: "https://jina.ai/api-dashboard",
+    },
+    serviceKinds: ["webFetch"],
+  },
+  byteplus: {
+    id: "byteplus",
+    alias: "bpm",
+    name: "BytePlus ModelArk",
+    icon: "cloud",
+    color: "#2563EB",
+    textIcon: "BP",
+    website: "https://console.byteplus.com/ark",
+    hasFree: true,
+    notice: {
+      text: "Free credits for new accounts. Seed 2.0, Kimi K2 Thinking, GLM 4.7, GPT-OSS-120B available.",
+      apiKeyUrl: "https://console.byteplus.com/ark/region:ark+ap-southeast-1/apiKey",
+    },
+    serviceKinds: ["llm"],
+  },
+  bluesminds: {
+    id: "bluesminds",
+    alias: "bm",
+    name: "BluesMinds",
+    icon: "psychology",
+    color: "#3B82F6",
+    textIcon: "BM",
+    website: "https://www.bluesminds.com",
+    hasFree: true,
+    freeNote:
+      "Free daily pi credits — supports 200+ models including GPT-4o, GPT-4.1, Claude Sonnet 4.5, Gemini 2.0 Flash, DeepSeek V4, Qwen, Kimi K2",
+    apiHint:
+      "Get your API key at https://www.bluesminds.com — OpenAI-compatible endpoint at https://api.bluesminds.com/v1 with free daily credits. VIP models (Claude Opus 4.5, Gemini 2.5 Pro) consume pi credits.",
+  },
+  "freemodel-dev": {
+    id: "freemodel-dev",
+    alias: "fmd",
+    name: "FreeModel.dev",
+    icon: "auto_awesome",
+    color: "#8B5CF6",
+    textIcon: "FM",
+    website: "https://freemodel.dev",
+    hasFree: true,
+    freeNote:
+      "$300 free credits on signup — no credit card required. Access GPT-5.4 and GPT-5.5 (OpenAI's latest flagship models) through an OpenAI-compatible API.",
+    apiHint:
+      "Get $300 free API credits at https://freemodel.dev — no payment info required. OpenAI-compatible endpoint. GPT-5.4 and GPT-5.5 models available.",
+  },
+  freeaiapikey: {
+    id: "freeaiapikey",
+    alias: "faik",
+    name: "FreeAIAPIKey",
+    icon: "vpn_key",
+    color: "#F59E0B",
+    textIcon: "FK",
+    website: "https://freeaiapikey.com",
+    apiHint:
+      "Discounted API proxy for 40+ models including GPT-5, Claude Opus 4.6, Claude Sonnet 4.6, Qwen 3.5. Get your API key at https://freeaiapikey.com/dashboard. Base URL: https://freeaiapikey.com/v1.",
+  },
 };
 
 // Sub-categories within APIKEY_PROVIDERS (used by dashboard and catalog views).
@@ -1530,6 +2272,7 @@ export const AGGREGATOR_PROVIDER_IDS = new Set([
   "empower",
   "poe",
   "chutes",
+  "hackclub",
 ]);
 
 export const ENTERPRISE_CLOUD_PROVIDER_IDS = new Set([
@@ -1549,7 +2292,21 @@ export const ENTERPRISE_CLOUD_PROVIDER_IDS = new Set([
   "modal",
 ]);
 
-export const VIDEO_PROVIDER_IDS = new Set(["runwayml"]);
+export const VIDEO_PROVIDER_IDS = new Set([
+  "runwayml",
+  "veoaifree-web",
+  "pollinations",
+  "minimax",
+  "together",
+  "replicate",
+  "haiper",
+  "leonardo",
+]);
+
+// IDE Providers: editors with built-in AI subscription (separate section in UI).
+// These providers live in OAUTH_PROVIDERS but render under "IDE Providers"
+// instead of "OAuth Providers" to avoid visual duplication.
+export const IDE_PROVIDER_IDS = new Set(["cursor", "zed", "trae"]);
 
 export const EMBEDDING_RERANK_PROVIDER_IDS = new Set(["voyage-ai", "jina-ai"]);
 
@@ -1604,6 +2361,19 @@ export const LOCAL_PROVIDERS = {
     website: "https://github.com/Mozilla-Ocho/llamafile",
     authHint:
       "API key optional. Configure the local Llamafile OpenAI-compatible base URL (default: http://127.0.0.1:8080/v1).",
+    localDefault: "http://127.0.0.1:8080/v1",
+    passthroughModels: true,
+  },
+  "llama-cpp": {
+    id: "llama-cpp",
+    alias: "llamacpp",
+    name: "llama.cpp",
+    icon: "memory",
+    color: "#795548",
+    textIcon: "LC",
+    website: "https://github.com/ggml-org/llama.cpp",
+    authHint:
+      "API key optional (use any value, e.g. sk-no-key-required). Configure the llama-server OpenAI-compatible base URL (default: http://127.0.0.1:8080/v1). Note: if Llamafile is also installed, both default to port 8080 — run only one at a time or override the port.",
     localDefault: "http://127.0.0.1:8080/v1",
     passthroughModels: true,
   },
@@ -1667,6 +2437,7 @@ export const LOCAL_PROVIDERS = {
     color: "#FF7043",
     textIcon: "SD",
     website: "https://github.com/AUTOMATIC1111/stable-diffusion-webui",
+    hasFree: true,
     authHint:
       "No API key required. Configure the local WebUI base URL (default: http://localhost:7860).",
     localDefault: "http://localhost:7860",
@@ -1679,6 +2450,7 @@ export const LOCAL_PROVIDERS = {
     color: "#4CAF50",
     textIcon: "CF",
     website: "https://github.com/comfyanonymous/ComfyUI",
+    hasFree: true,
     authHint:
       "No API key required. Configure the local ComfyUI base URL (default: http://localhost:8188).",
     localDefault: "http://localhost:8188",
@@ -1705,7 +2477,9 @@ export const SEARCH_PROVIDERS = {
     color: "#4285F4",
     textIcon: "SP",
     website: "https://serper.dev",
+    hasFree: true,
     authHint: "API key from serper.dev dashboard",
+    serviceKinds: ["webSearch"],
   },
   "brave-search": {
     id: "brave-search",
@@ -1715,6 +2489,7 @@ export const SEARCH_PROVIDERS = {
     color: "#FB542B",
     textIcon: "BR",
     website: "https://brave.com/search/api",
+    hasFree: true,
     authHint: "Subscription token from Brave Search API dashboard",
   },
   "exa-search": {
@@ -1725,7 +2500,9 @@ export const SEARCH_PROVIDERS = {
     color: "#1E40AF",
     textIcon: "EX",
     website: "https://exa.ai",
+    hasFree: true,
     authHint: "API key from dashboard.exa.ai",
+    serviceKinds: ["webSearch", "webFetch"],
   },
   "tavily-search": {
     id: "tavily-search",
@@ -1735,7 +2512,9 @@ export const SEARCH_PROVIDERS = {
     color: "#5B4FDB",
     textIcon: "TV",
     website: "https://tavily.com",
+    hasFree: true,
     authHint: "API key from app.tavily.com (format: tvly-...)",
+    serviceKinds: ["webSearch", "webFetch"],
   },
   "google-pse-search": {
     id: "google-pse-search",
@@ -1785,6 +2564,7 @@ export const SEARCH_PROVIDERS = {
     color: "#1A237E",
     textIcon: "SX",
     website: "https://docs.searxng.org",
+    hasFree: true,
     authHint:
       "API key is optional. Set your SearXNG base URL. Some instances may require a bearer token for access.",
   },
@@ -1797,16 +2577,6 @@ export const SEARCH_PROVIDERS = {
     textIcon: "OS",
     website: "https://ollama.com/settings/api-keys",
     authHint: "Same API key as Ollama Cloud (from ollama.com/settings/api-keys)",
-  },
-  "zai-search": {
-    id: "zai-search",
-    alias: "zai-search",
-    name: "Z.AI Coding Plan Search",
-    icon: "search",
-    color: "#2563EB",
-    textIcon: "ZS",
-    website: "https://docs.z.ai/devpack/mcp/search-mcp-server",
-    authHint: "Same API key as Z.AI Coding Plan (from open.bigmodel.cn or z.ai)",
   },
 };
 
@@ -1907,6 +2677,21 @@ export const UPSTREAM_PROXY_PROVIDERS = {
     binaryName: "cli-proxy-api",
     githubRepo: "router-for-me/CLIProxyAPI",
   },
+  "9router": {
+    id: "9router",
+    alias: "nr",
+    name: "9router",
+    icon: "router",
+    color: "#0EA5E9",
+    textIcon: "9R",
+    website: "https://www.npmjs.com/package/9router",
+    defaultPort: 20130,
+    healthEndpoint: "/api/health",
+    npmPackage: "9router",
+    embedded: true,
+    isEmbeddedService: true,
+    riskNoticeVariant: "embedded-service" as const,
+  },
 };
 
 export const CLOUD_AGENT_PROVIDERS = {
@@ -1958,6 +2743,7 @@ export const SELF_HOSTED_CHAT_PROVIDER_IDS = new Set([
   "vllm",
   "lemonade",
   "llamafile",
+  "llama-cpp",
   "triton",
   "docker-model-runner",
   "xinference",
@@ -1973,11 +2759,47 @@ export function providerAllowsOptionalApiKey(providerId: unknown): boolean {
     providerId === "searxng-search" ||
     providerId === "petals" ||
     providerId === "pollinations" ||
+    providerId === "copilot-web" ||
+    providerId === "veoaifree-web" ||
+    providerId === "hackclub" ||
+    providerId === "huggingchat" ||
+    providerId === "gitlawb" ||
+    providerId === "gitlawb-gmi" ||
     isLocalProvider(providerId) ||
     isSelfHostedChatProvider(providerId) ||
     isOpenAICompatibleProvider(providerId) ||
     isAnthropicCompatibleProvider(providerId)
   );
+}
+
+/**
+ * Providers explicitly excluded from bulk API key add — auth is heterogeneous,
+ * OAuth-based, multi-field, or requires manual setup per connection.
+ */
+const BULK_API_KEY_EXCLUDED = new Set([
+  "vertex",
+  "vertex-partner",
+  "ollama-local",
+  "grok-web",
+  "perplexity-web",
+  "blackbox-web",
+  "muse-spark-web",
+  "deepseek-web",
+  "inner-ai",
+  "qoder",
+  "google-pse-search",
+  "command-code",
+  "azure",
+  "cloudflare-ai",
+]);
+
+export function supportsBulkApiKey(providerId: unknown): boolean {
+  if (typeof providerId !== "string" || !providerId) return false;
+  if (BULK_API_KEY_EXCLUDED.has(providerId)) return false;
+  if (isLocalProvider(providerId)) return false;
+  if (isSelfHostedChatProvider(providerId)) return false;
+  if (isClaudeCodeCompatibleProvider(providerId)) return false;
+  return true;
 }
 
 // ── System Providers (virtual, not user-connectable) ──────────────────────────
@@ -1996,7 +2818,7 @@ export const SYSTEM_PROVIDERS = {
 
 // All providers (combined)
 export const AI_PROVIDERS = {
-  ...FREE_PROVIDERS,
+  ...NOAUTH_PROVIDERS,
   ...OAUTH_PROVIDERS,
   ...APIKEY_PROVIDERS,
   ...WEB_COOKIE_PROVIDERS,
@@ -2078,7 +2900,7 @@ export const USAGE_SUPPORTED_PROVIDERS = [
 // ── Zod validation at module load (Phase 7.2) ──
 import { validateProviders } from "../validation/providerSchema";
 
-validateProviders(FREE_PROVIDERS, "FREE_PROVIDERS");
+validateProviders(NOAUTH_PROVIDERS, "NOAUTH_PROVIDERS");
 validateProviders(OAUTH_PROVIDERS, "OAUTH_PROVIDERS");
 validateProviders(APIKEY_PROVIDERS, "APIKEY_PROVIDERS");
 validateProviders(WEB_COOKIE_PROVIDERS, "WEB_COOKIE_PROVIDERS");

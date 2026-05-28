@@ -1,6 +1,6 @@
 ---
-title: "OmniCode — Uninstall Guide"
-version: 3.8.0
+title: "OmniRoute — Uninstall Guide"
+version: 3.8.2
 lastUpdated: 2026-05-13
 ---
 

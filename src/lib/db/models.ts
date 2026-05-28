@@ -635,6 +635,33 @@ export async function getSyncedAvailableModels(
 }
 
 /**
+ * Get synced available models for a provider grouped by connection id.
+ */
+export async function getSyncedAvailableModelsByConnection(
+  providerId: string
+): Promise<Record<string, SyncedAvailableModel[]>> {
+  const db = getDbInstance();
+  const prefix = `${providerId}:`;
+  const rows = db
+    .prepare(
+      "SELECT key, value FROM key_value WHERE namespace = 'syncedAvailableModels' AND key LIKE ?"
+    )
+    .all(`${prefix}%`);
+  const result: Record<string, SyncedAvailableModel[]> = {};
+  for (const row of rows) {
+    const { key, value } = getKeyValue(row);
+    if (!key || value === null || !key.startsWith(prefix)) continue;
+    try {
+      const connectionId = key.slice(prefix.length);
+      result[connectionId] = normalizeSyncedAvailableModels(JSON.parse(value));
+    } catch {
+      // Ignore malformed legacy entries.
+    }
+  }
+  return result;
+}
+
+/**
  * Get all synced available models across all providers.
  */
 export async function getAllSyncedAvailableModels(): Promise<
@@ -705,6 +732,22 @@ export async function deleteSyncedAvailableModelsForConnection(
   );
   backupDbFile("pre-write");
   return getSyncedAvailableModels(providerId);
+}
+
+/**
+ * Delete all synced models for every connection belonging to a provider.
+ * Returns the number of connection-scoped synced model lists removed.
+ */
+export async function deleteSyncedAvailableModelsForProvider(providerId: string): Promise<number> {
+  const db = getDbInstance();
+  const keyPrefix = `${providerId}:`;
+  const result = db
+    .prepare(
+      "DELETE FROM key_value WHERE namespace = 'syncedAvailableModels' AND substr(key, 1, ?) = ?"
+    )
+    .run(keyPrefix.length, keyPrefix);
+  backupDbFile("pre-write");
+  return Number(result.changes || 0);
 }
 
 export async function updateCustomModel(

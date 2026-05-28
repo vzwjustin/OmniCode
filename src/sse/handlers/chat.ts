@@ -21,7 +21,10 @@ import { handleLocalCliChat, isLocalCliModelId } from "@omniroute/open-sse/handl
 import { handleComboChat } from "@omniroute/open-sse/services/combo.ts";
 import { resolveComboConfig } from "@omniroute/open-sse/services/comboConfig.ts";
 import { injectHandoffIntoBody } from "@omniroute/open-sse/services/contextHandoff.ts";
-import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
+import {
+  HTTP_STATUS,
+  ANTIGRAVITY_PRE_RESPONSE_TIMEOUT_CODE,
+} from "@omniroute/open-sse/config/constants.ts";
 import { getTargetFormat } from "@omniroute/open-sse/services/provider.ts";
 import {
   getModelTargetFormat,
@@ -30,8 +33,14 @@ import {
 import type { AutoVariant } from "@omniroute/open-sse/services/autoCombo/autoPrefix.ts";
 import * as log from "../utils/logger";
 import { checkAndRefreshToken } from "../services/tokenRefresh";
+import { createHookContext, runHooks, initPreRequestRegistry } from "@/lib/middleware/registry";
 import { deleteHandoff, getHandoff } from "@/lib/db/contextHandoffs";
-import { getCachedSettings, getCombos } from "@/lib/localDb";
+import {
+  deleteSessionAccountAffinity,
+  getCachedSettings,
+  getCombos,
+  getSessionAccountAffinity,
+} from "@/lib/localDb";
 import {
   ensureOpenAIStoreSessionFallback,
   isOpenAIResponsesStoreEnabled,
@@ -46,6 +55,7 @@ import {
   safeLogEvents,
   withSessionHeader,
 } from "./chatHelpers";
+import { connectionHasExtraKeys } from "@omniroute/open-sse/services/apiKeyRotator.ts";
 
 // Pipeline integration — wired modules
 import { classify429FromError, type FailureKind } from "@/shared/utils/classify429";
@@ -81,6 +91,7 @@ import {
 import { registerBailianCodingPlanQuotaFetcher } from "@omniroute/open-sse/services/bailianQuotaFetcher.ts";
 import { registerCrofUsageFetcher } from "@omniroute/open-sse/services/crofUsageFetcher.ts";
 import { registerDeepseekQuotaFetcher } from "@omniroute/open-sse/services/deepseekQuotaFetcher.ts";
+import { registerGenericQuotaFetchers } from "@omniroute/open-sse/services/genericQuotaFetcher.ts";
 import {
   getCooldownAwareRetryDecision,
   resolveCooldownAwareRetrySettings,
@@ -102,6 +113,12 @@ registerCrofUsageFetcher();
 // Register DeepSeek balance quota fetcher.
 // Hooks into quotaPreflight + quotaMonitor so combos can switch accounts before balance is exhausted.
 registerDeepseekQuotaFetcher();
+
+// Register the generic quota fetcher for every other provider that has a
+// usage implementation in usage.ts but no bespoke preflight fetcher. This is
+// what lets the per-window cutoff modal in Dashboard › Limits actually
+// enforce thresholds for Claude / GLM / Cursor / etc., not just Codex.
+registerGenericQuotaFetchers();
 let combosCachePromise: Promise<unknown[]> | null = null;
 let combosCacheTs = 0;
 const COMBOS_CACHE_TTL_MS = 10_000;
@@ -218,7 +235,7 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
 
   // Log request endpoint and model
   const url = new URL(request.url);
-  const modelStr = body.model;
+  let modelStr = body.model;
 
   // Count messages (support both messages[] and input[] formats)
   const msgCount = body.messages?.length || body.input?.length || 0;
@@ -323,31 +340,33 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
     }
   }
 
-  // ── Local CLI intercept ─────────────────────────────────────────────────────
-  // ``local:<slug>`` model ids dispatch to a configured local CLI binary
-  // (Claude Code, Codex CLI, Gemini CLI) rather than going through the
-  // provider/executor pipeline. The prompt is fed via stdin; argv is
-  // configured by the admin via Dashboard → Fusion → Local CLIs.
-  if (isLocalCliModelId(modelStr)) {
-    return await handleLocalCliChat({ body, originalRequest: request });
+  // T09 — Pre-request Middleware Hooks
+  // Execute user-defined hooks BEFORE task-aware routing and combo selection
+  initPreRequestRegistry();
+  const hookContext = createHookContext({
+    body: body as Record<string, unknown>,
+    headers: Object.fromEntries(request?.headers?.entries() || []) as Record<
+      string,
+      string | string[] | undefined
+    >,
+    model: modelStr,
+    combo: undefined,
+    apiKeyInfo: apiKeyInfo as Record<string, unknown> | undefined,
+    log,
+  });
+
+  const { context: hookCtx, response: hookResponse } = await runHooks(hookContext);
+
+  // Apply hook mutations
+  body = hookCtx.body as any;
+  if (hookCtx.model && hookCtx.model !== modelStr) {
+    modelStr = hookCtx.model;
   }
-  // ── Local Fusion intercept ──────────────────────────────────────────────────
-  // If model starts with ``local-fusion`` (or one of its mode variants /
-  // inline-config forms), hand off to the fusion orchestrator. It fans out
-  // to N analysis models via internal sub-calls to ``handleChat`` (this
-  // function), then synthesizes a single answer through a judge model.
-  // The calling tool sees a normal OpenAI completion. Fusion calls
-  // ``handleChat`` recursively, so a ``local:`` model id used inside fusion
-  // (as analysis/judge/critic) will hit the local CLI intercept above on
-  // the recursive call.
-  if (isFusionModelId(modelStr)) {
-    return await handleFusionChat({
-      body,
-      originalRequest: request,
-      handleChat: (req) => handleChat(req),
-    });
+
+  // Short-circuit if a hook returned a direct response
+  if (hookResponse) {
+    return errorResponse(hookResponse.status, hookResponse.body as any);
   }
-  // ────────────────────────────────────────────────────────────────────────────
 
   // T05 — Task-Aware Smart Routing
   // Detect the semantic task type and optionally route to the optimal model
@@ -376,8 +395,12 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
   let autoVariant: AutoVariant | undefined;
   let isAutoRouting = resolvedModelStr === "auto" || resolvedModelStr.startsWith("auto/");
   if (isAutoRouting) {
-    // C2: Enforce autoRoutingEnabled setting
-    const settings = await getSettings();
+    // C2: Enforce autoRoutingEnabled setting.
+    // Issue #2346: `getSettings` was never imported in this module; only
+    // `getCachedSettings` is. Calling the bare name caused a ReferenceError
+    // on every auto-routed request. The cached variant has the same shape
+    // and benefits the auto-routing hot path.
+    const settings = await getCachedSettings().catch(() => ({}) as Record<string, unknown>);
     if (settings?.autoRoutingEnabled === false) {
       return errorResponse(
         HTTP_STATUS.BAD_REQUEST,
@@ -458,6 +481,7 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
     const checkModelAvailable = async (
       modelString: string,
       target?: {
+        allowRateLimitedConnection?: boolean;
         connectionId?: string | null;
         allowedConnectionIds?: string[] | null;
         executionKey?: string | null;
@@ -489,6 +513,7 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
         resolvedModel,
         {
           sessionKey: sessionAffinityKey,
+          ...(target?.allowRateLimitedConnection ? { allowRateLimitedConnections: true } : {}),
           ...(target?.connectionId ? { forcedConnectionId: target.connectionId } : {}),
         }
       );
@@ -516,10 +541,12 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
         b: any,
         m: string,
         target?: {
+          allowRateLimitedConnection?: boolean;
           connectionId?: string | null;
           executionKey?: string | null;
           stepId?: string | null;
           allowedConnectionIds?: string[] | null;
+          failoverBeforeRetry?: boolean;
         }
       ) =>
         handleSingleModelChat(
@@ -538,6 +565,8 @@ export async function handleChat(request: any, clientRawRequest: any = null) {
             allowedConnectionIds: target?.allowedConnectionIds ?? null,
             comboStepId: target?.stepId || null,
             comboExecutionKey: target?.executionKey || target?.stepId || null,
+            skipUpstreamRetry: target?.failoverBeforeRetry ?? false,
+            allowRateLimitedConnection: target?.allowRateLimitedConnection === true,
             preselectedCredentials: comboPreselectedCredentials.get(
               getComboCredentialCacheKey(m, target)
             ),
@@ -668,6 +697,8 @@ async function handleSingleModelChat(
     allowedConnectionIds?: string[] | null;
     comboStepId?: string | null;
     comboExecutionKey?: string | null;
+    skipUpstreamRetry?: boolean;
+    allowRateLimitedConnection?: boolean;
     preselectedCredentials?: any;
     cachedSettings?: any;
   } = {},
@@ -700,6 +731,7 @@ async function handleSingleModelChat(
           connectionId?: string | null;
           executionKey?: string | null;
           stepId?: string | null;
+          failoverBeforeRetry?: boolean;
         }
       ) =>
         handleSingleModelChat(
@@ -717,6 +749,7 @@ async function handleSingleModelChat(
             allowedConnectionIds: null,
             comboStepId: null,
             comboExecutionKey: null,
+            skipUpstreamRetry: target?.failoverBeforeRetry ?? false,
           },
           redirectCombo.strategy ?? "priority",
           false
@@ -826,6 +859,9 @@ async function handleSingleModelChat(
               {
                 sessionKey: runtimeOptions.sessionAffinityKey ?? runtimeOptions.sessionId ?? null,
                 excludeConnectionIds: Array.from(excludedConnectionIds),
+                ...(runtimeOptions.allowRateLimitedConnection
+                  ? { allowRateLimitedConnections: true }
+                  : {}),
                 ...(forceLiveComboTest
                   ? {
                       allowSuppressedConnections: true,
@@ -973,6 +1009,7 @@ async function handleSingleModelChat(
         modelApiFormat: apiFormat,
         providerProfile,
         cachedSettings: runtimeOptions.cachedSettings,
+        skipUpstreamRetry: runtimeOptions.skipUpstreamRetry ?? false,
       });
       if (telemetry) telemetry.endPhase();
 
@@ -1012,8 +1049,57 @@ async function handleSingleModelChat(
       }
 
       if (result.errorType === "stream_timeout" || result.errorType === "stream_early_eof") {
-        // Stream readiness timeout is an upstream stall, not an account/quota failure.
-        // Do NOT mark the account as unavailable or trip the circuit breaker.
+        // Stream readiness timeout is an upstream stall after an HTTP response was received,
+        // not an account/quota failure. Do NOT mark the account unavailable here.
+        return result.response;
+      }
+
+      const isAntigravityPreResponseTimeout =
+        provider === "antigravity" &&
+        result.status === HTTP_STATUS.GATEWAY_TIMEOUT &&
+        (result.errorType === "upstream_timeout" ||
+          result.errorCode === ANTIGRAVITY_PRE_RESPONSE_TIMEOUT_CODE);
+
+      if (isAntigravityPreResponseTimeout) {
+        const { shouldFallback, cooldownMs } = await markAccountUnavailable(
+          credentials.connectionId,
+          result.status,
+          result.error || ANTIGRAVITY_PRE_RESPONSE_TIMEOUT_CODE,
+          provider,
+          model,
+          providerProfile
+        );
+
+        if (shouldFallback && !hasForcedConnection) {
+          log.warn(
+            "AUTH",
+            `Antigravity connection ${accountId}... timed out before response headers, trying fallback connection`
+          );
+          if (Number.isFinite(cooldownMs) && cooldownMs > 0) {
+            lastCooldownMs = cooldownMs;
+            requestRetryLastCooldownMs = cooldownMs;
+          }
+          if (runtimeOptions.sessionAffinityKey) {
+            try {
+              const affinity = getSessionAccountAffinity(
+                runtimeOptions.sessionAffinityKey,
+                provider
+              );
+              if (affinity?.connectionId === credentials.connectionId) {
+                deleteSessionAccountAffinity(runtimeOptions.sessionAffinityKey, provider);
+              }
+            } catch {
+              // best-effort: selection also excludes this connection for the current retry.
+            }
+          }
+          excludedConnectionIds.add(credentials.connectionId);
+          lastError = result.error;
+          lastStatus = result.status;
+          requestRetryLastError = result.error;
+          requestRetryLastStatus = result.status;
+          continue;
+        }
+
         return result.response;
       }
 
@@ -1152,14 +1238,25 @@ async function handleSingleModelChat(
       }
 
       // 8. Fallback to next account
-      const { shouldFallback, cooldownMs } = await markAccountUnavailable(
-        credentials.connectionId,
-        result.status,
-        result.error,
-        provider,
-        model,
-        providerProfile
-      );
+      // A3 guard: if 401 and connection has extra keys, skip connection-level disable
+      // (key-level failure already recorded in chatCore.ts via T07)
+      // Check extra keys directly from credentials for reliability across restarts
+      const extraKeys =
+        (credentials.providerSpecificData?.extraApiKeys as string[] | undefined) ?? [];
+      const hasExtraKeys = extraKeys.length > 0 || connectionHasExtraKeys(credentials.connectionId);
+      const is401 = result.status === 401;
+      const skipConnectionDisable = is401 && hasExtraKeys;
+
+      const { shouldFallback, cooldownMs } = skipConnectionDisable
+        ? { shouldFallback: false, cooldownMs: 0 }
+        : await markAccountUnavailable(
+            credentials.connectionId,
+            result.status,
+            result.error,
+            provider,
+            model,
+            providerProfile
+          );
 
       if (shouldFallback) {
         if (Number.isFinite(cooldownMs) && cooldownMs > 0) {
@@ -1175,7 +1272,11 @@ async function handleSingleModelChat(
         continue;
       }
 
-      if (!forceLiveComboTest && PROVIDER_BREAKER_FAILURE_STATUSES.has(Number(result.status))) {
+      if (
+        !forceLiveComboTest &&
+        !isCombo &&
+        PROVIDER_BREAKER_FAILURE_STATUSES.has(Number(result.status))
+      ) {
         breaker._onFailure();
       }
 

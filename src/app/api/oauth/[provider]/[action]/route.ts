@@ -6,6 +6,7 @@ import {
   exchangeTokens,
   requestDeviceCode,
   pollForToken,
+  resolveBrowserOAuthRedirectUri,
 } from "@/lib/oauth/providers";
 import {
   createProviderConnection,
@@ -26,6 +27,7 @@ import {
 } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 import { isAuthRequired, isAuthenticated } from "@/shared/utils/apiAuth";
+import { sanitizeErrorMessage } from "@omniroute/open-sse/utils/error";
 
 // Use globalThis to persist callback server state across Next.js HMR reloads
 if (!globalThis.__codexCallbackState) {
@@ -79,7 +81,9 @@ export async function GET(
     const { searchParams } = new URL(request.url);
 
     if (action === "authorize") {
-      const redirectUri = searchParams.get("redirect_uri") || "http://localhost:8080/callback";
+      const requestedRedirectUri =
+        searchParams.get("redirect_uri") || "http://localhost:8080/callback";
+      const redirectUri = resolveBrowserOAuthRedirectUri(provider, requestedRedirectUri);
       const authData = generateAuthData(provider, redirectUri);
       if (provider === "qoder" && !authData.authUrl) {
         return NextResponse.json({
@@ -668,7 +672,10 @@ export async function POST(
           },
         });
       } catch (importErr: any) {
-        return NextResponse.json({ success: false, error: importErr.message }, { status: 500 });
+        return NextResponse.json(
+          { success: false, error: sanitizeErrorMessage(importErr.message) || "Import failed" },
+          { status: 500 }
+        );
       }
     }
 
@@ -738,7 +745,10 @@ export async function POST(
           },
         });
       } catch (importErr: any) {
-        return NextResponse.json({ success: false, error: importErr.message }, { status: 500 });
+        return NextResponse.json(
+          { success: false, error: sanitizeErrorMessage(importErr.message) || "Import failed" },
+          { status: 500 }
+        );
       }
     }
 

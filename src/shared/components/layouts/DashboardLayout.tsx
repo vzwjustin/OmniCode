@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Sidebar from "../Sidebar";
 import Header from "../Header";
-import Breadcrumbs from "../Breadcrumbs";
 import NotificationToast from "../NotificationToast";
+import Breadcrumbs from "../Breadcrumbs";
 import MaintenanceBanner from "../MaintenanceBanner";
+import CommandPalette from "../CommandPalette";
+import NavigationProgress from "../NavigationProgress";
 import { useIsElectron } from "@/shared/hooks/useElectron";
-import AutoRoutingBanner from "../AutoRoutingBanner";
 
 const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 const isE2EMode = process.env.NEXT_PUBLIC_OMNIROUTE_E2E_MODE === "1";
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const isElectron = useIsElectron();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -37,6 +39,17 @@ export default function DashboardLayout({ children }) {
     };
   }, [isMacElectron]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleToggleCollapse = () => {
     const next = !collapsed;
     setCollapsed(next);
@@ -45,6 +58,9 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="flex h-dvh min-h-0 w-full overflow-hidden bg-bg">
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -76,9 +92,11 @@ export default function DashboardLayout({ children }) {
         id="main-content"
         className="relative flex min-h-0 flex-1 min-w-0 flex-col transition-colors duration-300"
       >
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header
+          onMenuClick={() => setSidebarOpen(true)}
+          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+        />
         {!isE2EMode && <MaintenanceBanner />}
-        <AutoRoutingBanner />
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-4 sm:p-6 lg:p-10">
           <div className="max-w-7xl mx-auto w-full">
             <Breadcrumbs />
@@ -89,6 +107,8 @@ export default function DashboardLayout({ children }) {
 
       {/* Global notification toast system */}
       <NotificationToast />
+
+      <CommandPalette isOpen={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
     </div>
   );
 }

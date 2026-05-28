@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { RequestLoggerV2, ProxyLogger, SegmentedControl } from "@/shared/components";
 import ConsoleLogViewer from "@/shared/components/ConsoleLogViewer";
+import EmailPrivacyToggle from "@/shared/components/EmailPrivacyToggle";
 import ActiveRequestsPanel from "@/shared/components/ActiveRequestsPanel";
 import AuditLogTab from "./AuditLogTab";
 import { useTranslations } from "next-intl";
@@ -86,64 +87,67 @@ export default function LogsPage() {
           onChange={setActiveTab}
         />
 
-        <div className="relative" ref={dropdownRef}>
-          <button
-            id="export-logs-btn"
-            onClick={() => setShowExport(!showExport)}
-            disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
-              bg-[var(--card-bg,#1e1e2e)] border border-[var(--border,#333)]
-              text-[var(--text-secondary,#aaa)] hover:text-[var(--text-primary,#fff)]
-              hover:border-[var(--accent,#7c3aed)] transition-all duration-200
-              disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path
-                d="M8 2v8m0 0l-3-3m3 3l3-3M3 12h10"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            {exporting ? t("exporting") : t("export")}
-          </button>
+        <div className="flex items-center gap-2">
+          <EmailPrivacyToggle size="md" />
 
-          {showExport && (
-            <div
-              className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-lg
+          <div className="relative" ref={dropdownRef}>
+            <button
+              id="export-logs-btn"
+              onClick={() => setShowExport(!showExport)}
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
                 bg-[var(--card-bg,#1e1e2e)] border border-[var(--border,#333)]
-                shadow-xl overflow-hidden animate-in fade-in"
+                text-[var(--text-secondary,#aaa)] hover:text-[var(--text-primary,#fff)]
+                hover:border-[var(--accent,#7c3aed)] transition-all duration-200
+                disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <div className="px-3 py-2 text-xs text-[var(--text-muted,#666)] border-b border-[var(--border,#333)] font-medium">
-                {t("timeRange")}
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path
+                  d="M8 2v8m0 0l-3-3m3 3l3-3M3 12h10"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {exporting ? t("exporting") : t("export")}
+            </button>
+
+            {showExport && (
+              <div
+                className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-lg
+                  bg-[var(--card-bg,#1e1e2e)] border border-[var(--border,#333)]
+                  shadow-xl overflow-hidden animate-in fade-in"
+              >
+                <div className="px-3 py-2 text-xs text-[var(--text-muted,#666)] border-b border-[var(--border,#333)] font-medium">
+                  {t("timeRange")}
+                </div>
+                {TIME_RANGES.map((range) => (
+                  <button
+                    key={range.hours}
+                    id={`export-${range.hours}h-btn`}
+                    onClick={() => handleExport(range.hours)}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--hover-bg,#2a2a3e)]
+                      text-[var(--text-secondary,#aaa)] hover:text-[var(--text-primary,#fff)]
+                      transition-colors flex items-center justify-between"
+                  >
+                    <span>{t("lastNHours", { hours: range.label })}</span>
+                    <span className="text-xs text-[var(--text-muted,#666)]">
+                      {range.hours === 24 ? t("defaultRange") : ""}
+                    </span>
+                  </button>
+                ))}
               </div>
-              {TIME_RANGES.map((range) => (
-                <button
-                  key={range.hours}
-                  id={`export-${range.hours}h-btn`}
-                  onClick={() => handleExport(range.hours)}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--hover-bg,#2a2a3e)]
-                    text-[var(--text-secondary,#aaa)] hover:text-[var(--text-primary,#fff)]
-                    transition-colors flex items-center justify-between"
-                >
-                  <span>{t("lastNHours", { hours: range.label })}</span>
-                  <span className="text-xs text-[var(--text-muted,#666)]">
-                    {range.hours === 24 ? t("defaultRange") : ""}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Content */}
       {activeTab === "request-logs" && (
         <div className="flex flex-col gap-6">
           <ActiveRequestsPanel />

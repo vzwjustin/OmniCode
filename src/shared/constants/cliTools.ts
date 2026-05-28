@@ -329,6 +329,19 @@ export const CLI_TOOLS = {
 }`,
     },
   },
+
+  // Rich, first-class support for the real advanced Hermes Agent (Nous Research)
+  // Separate from the original simple "Hermes" guide above.
+  "hermes-agent": {
+    id: "hermes-agent",
+    name: "Hermes Agent",
+    icon: "terminal",
+    color: "#8B5CF6",
+    description: "Hermes Agent (by Nousresearch) — advanced multi-role terminal AI",
+    docsUrl: "/docs?section=cli-tools&tool=hermes-agent",
+    configType: "custom",
+    defaultCommand: "hermes",
+  },
   amp: {
     id: "amp",
     name: "Amp CLI",
@@ -415,7 +428,7 @@ amp --model "{{model}}"
       },
       {
         type: "error",
-        text: "Qwen OAuth free tier was discontinued on 2026-04-15. Use OmniCoder with alicode/openrouter/anthropic/gemini providers instead.",
+        text: "Qwen OAuth free tier was discontinued on 2026-04-15. Use OmniRoute with bailian-coding-plan/alibaba/alibaba-cn/openrouter/anthropic/gemini providers instead.",
       },
     ],
     modelAliases: [
@@ -525,6 +538,22 @@ amp --model "{{model}}"
     configType: "custom-builder",
   },
 };
+
+// ─── Registry helpers ────────────────────────────────────────────────────────
+
+export type CliToolEntry = (typeof CLI_TOOLS)[keyof typeof CLI_TOOLS];
+
+/** Returns an ordered list of all registered CLI tools. */
+export function listCliTools(): CliToolEntry[] {
+  return Object.values(CLI_TOOLS) as CliToolEntry[];
+}
+
+/** Returns a single tool by id, or undefined if not found. */
+export function getCliTool(id: string): CliToolEntry | undefined {
+  return (CLI_TOOLS as Record<string, CliToolEntry>)[id];
+}
+
+// ─── Provider model mapping helper ───────────────────────────────────────────
 
 // Get all provider models for mapping dropdown
 export const getProviderModelsForMapping = (providers) => {

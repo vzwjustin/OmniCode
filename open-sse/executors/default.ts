@@ -1,7 +1,12 @@
-import { BaseExecutor } from "./base.ts";
+import { BaseExecutor, setUserAgentHeader } from "./base.ts";
 import { PROVIDERS, OAUTH_ENDPOINTS } from "../config/constants.ts";
 import { getAccessToken } from "../services/tokenRefresh.ts";
-import { getRotatingApiKey } from "../services/apiKeyRotator.ts";
+import {
+  getRotatingApiKey,
+  getValidApiKey,
+  resolveKeyForRequest,
+} from "../services/apiKeyRotator.ts";
+import type { KeyHealth } from "../services/apiKeyRotator.ts";
 import {
   buildClaudeCodeCompatibleHeaders,
   CLAUDE_CODE_COMPATIBLE_DEFAULT_CHAT_PATH,
@@ -19,7 +24,6 @@ import {
 import { sanitizeQwenThinkingToolChoice } from "../services/qwenThinking.ts";
 import { buildDataRobotChatUrl } from "../config/datarobot.ts";
 import { buildAzureAiChatUrl } from "../config/azureAi.ts";
-import { buildBedrockChatUrl } from "../config/bedrock.ts";
 import { buildWatsonxChatUrl } from "../config/watsonx.ts";
 import { buildOciChatUrl } from "../config/oci.ts";
 import { buildSapChatUrl, getSapResourceGroup } from "../config/sap.ts";
@@ -157,10 +161,6 @@ export class DefaultExecutor extends BaseExecutor {
         const baseUrl = credentials?.providerSpecificData?.baseUrl || this.config.baseUrl;
         return normalizeAzureAiChatUrl(baseUrl, apiType);
       }
-      case "bedrock": {
-        const baseUrl = credentials?.providerSpecificData?.baseUrl || this.config.baseUrl;
-        return buildBedrockChatUrl(baseUrl);
-      }
       case "watsonx": {
         const baseUrl = credentials?.providerSpecificData?.baseUrl || this.config.baseUrl;
         return normalizeWatsonxChatUrl(baseUrl);
@@ -234,7 +234,7 @@ export class DefaultExecutor extends BaseExecutor {
     }
   }
 
-  buildHeaders(credentials, stream = true) {
+  buildHeaders(credentials, stream = true, clientHeaders?: Record<string, string> | null) {
     const headers = { "Content-Type": "application/json", ...this.config.headers };
 
     // Allow per-provider User-Agent override via environment variable.
@@ -253,10 +253,22 @@ export class DefaultExecutor extends BaseExecutor {
     // T07: resolve extra keys round-robin locally since DefaultExecutor overrides BaseExecutor buildHeaders
     const extraKeys =
       (credentials.providerSpecificData?.extraApiKeys as string[] | undefined) ?? [];
-    const effectiveKey =
-      extraKeys.length > 0 && credentials.connectionId && credentials.apiKey
-        ? getRotatingApiKey(credentials.connectionId, credentials.apiKey, extraKeys)
-        : credentials.apiKey;
+    const selectedKeyId = (credentials.providerSpecificData as Record<string, unknown> | undefined)
+      ?.selectedKeyId as string | undefined;
+    let effectiveKey = credentials.apiKey;
+    if (extraKeys.length > 0 && credentials.connectionId && credentials.apiKey) {
+      const resolved = resolveKeyForRequest(
+        credentials.connectionId,
+        credentials.apiKey,
+        extraKeys,
+        selectedKeyId ?? null
+      );
+      effectiveKey = resolved?.key ?? credentials.apiKey;
+      if (resolved && credentials.providerSpecificData) {
+        (credentials.providerSpecificData as Record<string, unknown>).selectedKeyId =
+          resolved.keyId;
+      }
+    }
 
     switch (this.provider) {
       case "gemini":
@@ -388,6 +400,30 @@ export class DefaultExecutor extends BaseExecutor {
       }
     }
 
+    // Forward client request metadata headers (from OpenCode or similar clients)
+    // Allowlist-based: only specific x-opencode-* headers and User-Agent are forwarded
+    if (clientHeaders) {
+      const clientUA = clientHeaders["User-Agent"] || clientHeaders["user-agent"];
+      if (clientUA) {
+        setUserAgentHeader(headers, clientUA);
+      }
+
+      const opencodeHeaderKeys = [
+        "x-opencode-session",
+        "x-opencode-request",
+        "x-opencode-project",
+        "x-opencode-client",
+      ];
+      for (const headerName of opencodeHeaderKeys) {
+        const value = Object.entries(clientHeaders).find(
+          ([key]) => key.toLowerCase() === headerName.toLowerCase()
+        )?.[1];
+        if (value) {
+          headers[headerName] = value;
+        }
+      }
+    }
+
     return headers;
   }
 
@@ -457,6 +493,19 @@ export class DefaultExecutor extends BaseExecutor {
         "QwenExecutor"
       );
     }
+
+    // Apply modelIdPrefix from RegistryEntry (e.g. "accounts/fireworks/models/")
+    // so registry can store short model IDs while the upstream API receives the full path.
+    if (typeof withDefaults === "object" && withDefaults !== null) {
+      const entry = getRegistryEntry(this.provider);
+      if (entry?.modelIdPrefix) {
+        const body = withDefaults as Record<string, unknown>;
+        if (typeof body.model === "string" && !body.model.startsWith(entry.modelIdPrefix)) {
+          body.model = `${entry.modelIdPrefix}${body.model}`;
+        }
+      }
+    }
+
     return withDefaults;
   }
 

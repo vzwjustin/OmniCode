@@ -15,8 +15,9 @@ export const RERANK_PROVIDERS = {
     authType: "apikey",
     authHeader: "bearer",
     models: [
+      { id: "rerank-v4.0-pro", name: "Rerank v4.0 Pro" },
+      { id: "rerank-v4.0-fast", name: "Rerank v4.0 Fast" },
       { id: "rerank-v3.5", name: "Rerank v3.5" },
-      { id: "rerank-english-v3.0", name: "Rerank English v3.0" },
       { id: "rerank-multilingual-v3.0", name: "Rerank Multilingual v3.0" },
     ],
   },
@@ -43,7 +44,10 @@ export const RERANK_PROVIDERS = {
     baseUrl: "https://api.fireworks.ai/inference/v1/rerank",
     authType: "apikey",
     authHeader: "bearer",
-    models: [{ id: "accounts/fireworks/models/nomic-rerank-v1", name: "Nomic Rerank v1" }],
+    models: [
+      { id: "accounts/fireworks/models/nomic-rerank-v1", name: "Nomic Rerank v1" },
+      { id: "accounts/fireworks/models/qwen3-reranker-8b", name: "Qwen3 Reranker 8B" },
+    ],
   },
 
   "voyage-ai": {
@@ -54,10 +58,6 @@ export const RERANK_PROVIDERS = {
     models: [
       { id: "rerank-2.5", name: "Rerank 2.5" },
       { id: "rerank-2.5-lite", name: "Rerank 2.5 Lite" },
-      { id: "rerank-2", name: "Rerank 2" },
-      { id: "rerank-2-lite", name: "Rerank 2 Lite" },
-      { id: "rerank-1", name: "Rerank 1" },
-      { id: "rerank-lite-1", name: "Rerank Lite 1" },
     ],
   },
 

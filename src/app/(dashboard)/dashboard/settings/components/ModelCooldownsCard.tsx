@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Card } from "@/shared/components";
 import { useNotificationStore } from "@/store/notificationStore";
 
@@ -20,6 +21,7 @@ function formatRemaining(ms: number): string {
 }
 
 export default function ModelCooldownsCard() {
+  const t = useTranslations("settings");
   const notify = useNotificationStore();
   const [items, setItems] = useState<CooldownItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function ModelCooldownsCard() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-      notify.success("All cooldowns reactivated.");
+      notify.success("All models in cooldown have been reactivated.");
       await load();
     } catch (error) {
       notify.error(error instanceof Error ? error.message : "Failed to clear cooldowns");
@@ -95,10 +97,10 @@ export default function ModelCooldownsCard() {
     <Card className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-text-main">Models in cooldown</h2>
+          <h2 className="text-lg font-bold text-text-main">{t("modelCooldownsTitle")}</h2>
           <p className="mt-1 text-sm text-text-muted">
-            Models temporarily isolated due to failure. When the cooldown expires, they
-            automatically come back.
+            Models temporarily isolated after a failure. When the cooldown expires they come back
+            automatically.
           </p>
         </div>
         <div className="flex gap-2">
@@ -120,7 +122,7 @@ export default function ModelCooldownsCard() {
         {loading ? (
           <p className="text-sm text-text-muted">Loading...</p>
         ) : !hasItems ? (
-          <p className="text-sm text-text-muted">No models in cooldown right now.</p>
+          <p className="text-sm text-text-muted">{t("modelCooldownsEmpty")}</p>
         ) : (
           sorted.map((item) => {
             const rowKey = `${item.provider}::${item.model}`;

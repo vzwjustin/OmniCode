@@ -1,6 +1,6 @@
 ---
-title: "OmniCode MCP Server Documentation"
-version: 3.8.0
+title: "OmniRoute MCP Server Documentation"
+version: 3.8.2
 lastUpdated: 2026-05-13
 ---
 
@@ -40,6 +40,26 @@ The MCP server exposes three transports, all backed by the same `createMcpServer
 | `streamable-http` | `POST/GET/DELETE /api/mcp/stream`           | Multi-session HTTP clients (`mcp-session-id` header) |
 
 The active HTTP transport (`sse` or `streamable-http`) is selected by the `mcpTransport` setting. Switching transports closes existing sessions on the other transport.
+
+### Remote access (manage-scope bypass)
+
+`/api/mcp/*` is in the LOCAL_ONLY tier (`src/server/authz/routeGuard.ts`) — by default only loopback hosts (`localhost`, `127.0.0.1`, `::1`) can reach it. Since v3.8.2, non-loopback clients may connect if they present an `Authorization: Bearer <api-key>` whose key carries the `manage` scope. This is the only way to reach the remote MCP server through a tunnel, reverse proxy, or public hostname.
+
+```bash
+# Grant manage scope: open the dashboard API Manager and toggle
+# "Management Access" on the key, or POST scopes:["manage"] when creating.
+
+# Then connect from a remote MCP client:
+curl -i \
+  -H "Host: your-public-host.example" \
+  -H "Authorization: Bearer sk-…" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"my-client","version":"0"}}}' \
+  https://your-public-host.example/api/mcp/stream
+```
+
+A non-manage key (or no Bearer) returns `403 LOCAL_ONLY`. The sibling prefix `/api/cli-tools/runtime/*` is intentionally NOT bypassable — see [Route Guard Tiers — Manage-scope carve-out](../security/ROUTE_GUARD_TIERS.md#manage-scope-carve-out).
 
 ## IDE Configuration
 
@@ -104,6 +124,24 @@ Cursor, Cline, and compatible MCP client setup.
 `analytics.mcpDescriptionCompression`. Those values are metadata-size estimates for MCP listable
 descriptions (`tools`, `prompts`, `resources`, and `resourceTemplates`); they are not provider usage
 receipts and are marked with `source: "mcp_metadata_estimate"`.
+
+### MCP Accessibility Tree Filter (v3.8.0)
+
+Separate from the 5 compression tools above, OmniRoute includes a post-execution filter that
+compresses the **tool results** of MCP browser/accessibility tools before they are returned to the
+agent. This filter is not itself a tool — it runs transparently on any tool result that contains
+verbose accessibility-tree or browser-snapshot text (≥2000 chars).
+
+Key behaviors:
+
+- Collapses ≥30 consecutive repeated sibling lines into head + tail summary
+- Preserves `[ref=eXX]` anchors required by Playwright/computer-use
+- Hard-truncates oversized text (>50,000 chars) with a navigation hint
+- Expected savings: **60–80%** on browser snapshot payloads
+
+Configuration: `compression.mcpAccessibility` in global settings (migration 056).
+Implementation: `open-sse/services/compression/engines/mcpAccessibility/`.
+Full docs: [Compression Engines — MCP Accessibility Tree Filter](../compression/COMPRESSION_ENGINES.md#mcp-accessibility-tree-filter).
 
 See [Compression Engines](../compression/COMPRESSION_ENGINES.md) and [RTK Compression](../compression/RTK_COMPRESSION.md) for
 the runtime compression model behind these tools.

@@ -18,6 +18,8 @@ import { AI_PROVIDERS } from "@/shared/constants/providers";
 import { getProviderDisplayName } from "@/lib/display/names";
 import { useTranslations } from "next-intl";
 import TelemetryCard from "./TelemetryCard";
+import ProviderHealthAutopilotCard from "./ProviderHealthAutopilotCard";
+import ProviderHealthMatrixCard from "./ProviderHealthMatrixCard";
 
 function formatUptime(seconds) {
   const d = Math.floor(seconds / 86400);
@@ -145,7 +147,7 @@ export default function HealthPage() {
 
   if (!data && !error) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           <p className="text-text-muted mt-4">{t("loadingHealth")}</p>
@@ -156,7 +158,7 @@ export default function HealthPage() {
 
   if (error && !data) {
     return (
-      <div className="p-6">
+      <div>
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
           <span className="material-symbols-outlined text-red-500 text-[32px] mb-2">error</span>
           <p className="text-red-400">{t("failedToLoad", { error })}</p>
@@ -185,31 +187,24 @@ export default function HealthPage() {
   const lockoutEntries = Object.entries(lockouts || {});
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-main">{t("title")}</h1>
-          <p className="text-sm text-text-muted mt-1">{t("description")}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {lastRefresh && (
-            <span className="text-xs text-text-muted">
-              {t("updatedAt", { time: lastRefresh.toLocaleTimeString() })}
-            </span>
-          )}
-          <button
-            onClick={() => {
-              fetchHealth();
-              fetchExtras();
-              fetchDbHealth();
-            }}
-            className="p-2 rounded-lg bg-surface hover:bg-surface/80 text-text-muted hover:text-text-main transition-colors"
-            title={tc("refresh")}
-          >
-            <span className="material-symbols-outlined text-[18px]">refresh</span>
-          </button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-end gap-3">
+        {lastRefresh && (
+          <span className="text-xs text-text-muted">
+            {t("updatedAt", { time: lastRefresh.toLocaleTimeString() })}
+          </span>
+        )}
+        <button
+          onClick={() => {
+            fetchHealth();
+            fetchExtras();
+            fetchDbHealth();
+          }}
+          className="p-2 rounded-lg bg-surface hover:bg-surface/80 text-text-muted hover:text-text-main transition-colors"
+          title={tc("refresh")}
+        >
+          <span className="material-symbols-outlined text-[18px]">refresh</span>
+        </button>
       </div>
 
       {/* Status Banner */}
@@ -236,6 +231,10 @@ export default function HealthPage() {
 
       <TelemetryCard />
 
+      <ProviderHealthAutopilotCard />
+
+      <ProviderHealthMatrixCard />
+
       <Card className="p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -250,7 +249,7 @@ export default function HealthPage() {
                 <span className="material-symbols-outlined text-[18px]">database</span>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-text-main">Database Health</h2>
+                <h2 className="text-lg font-semibold text-text-main">{t("databaseHealth")}</h2>
                 <p className="text-sm text-text-muted">
                   Diagnose and repair stale quota/domain rows and broken combo references.
                 </p>
@@ -281,7 +280,7 @@ export default function HealthPage() {
               </div>
             </div>
           </div>
-          <div className="flex flex-col items-stretch gap-2 min-w-[180px]">
+          <div className="flex flex-col items-stretch gap-2 min-w-45">
             <button
               onClick={handleRepairDb}
               disabled={repairingDb}
@@ -412,13 +411,13 @@ export default function HealthPage() {
           </div>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="rounded-xl border border-border/40 bg-surface/30 p-3">
-              <div className="text-xs text-text-muted">Sticky-bound sessions</div>
+              <div className="text-xs text-text-muted">{t("stickyBoundSessions")}</div>
               <div className="text-2xl font-semibold text-text-main mt-1">
                 {sessions?.stickyBoundCount ?? 0}
               </div>
             </div>
             <div className="rounded-xl border border-border/40 bg-surface/30 p-3">
-              <div className="text-xs text-text-muted">Sessions by API key</div>
+              <div className="text-xs text-text-muted">{t("sessionsByApiKey")}</div>
               <div className="text-2xl font-semibold text-text-main mt-1">
                 {Object.keys(sessions?.byApiKey || {}).length}
               </div>
@@ -448,7 +447,7 @@ export default function HealthPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-text-muted">No active sessions tracked yet.</p>
+            <p className="text-sm text-text-muted">{t("noActiveSessionsTracked")}</p>
           )}
         </Card>
 
@@ -527,14 +526,14 @@ export default function HealthPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-text-muted">No session quota monitors active.</p>
+            <p className="text-sm text-text-muted">{t("noSessionQuotaMonitorsActive")}</p>
           )}
         </Card>
       </div>
 
       {/* Graceful Degradation Status */}
       {degradation && degradation.features && degradation.features.length > 0 && (
-        <Card className="p-5" role="region" aria-label="Graceful Degradation Status">
+        <Card className="p-5" role="region" aria-label={t("gracefulDegradationStatus")}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-text-main flex items-center gap-2">
               <span className="material-symbols-outlined text-[20px] text-primary">healing</span>
@@ -579,7 +578,7 @@ export default function HealthPage() {
                   className={`rounded-lg p-3 border \${bg} flex flex-col gap-2`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold capitalize flex items-center gap-2 text-[var(--text-primary,#fff)]">
+                    <span className="text-sm font-semibold capitalize flex items-center gap-2 text-(--text-primary,#fff)">
                       <span className={`w-2 h-2 rounded-full \${dot}`}></span>
                       {feat.feature}
                     </span>
@@ -587,7 +586,7 @@ export default function HealthPage() {
                       {feat.level}
                     </span>
                   </div>
-                  <div className="text-xs text-[var(--text-secondary,#aaa)]">{feat.capability}</div>
+                  <div className="text-xs text-(--text-secondary,#aaa)">{feat.capability}</div>
                   {feat.reason && (
                     <div
                       className="text-[10px] text-red-300 mt-1 bg-red-900/20 p-1.5 rounded"
@@ -596,8 +595,8 @@ export default function HealthPage() {
                       {feat.reason.length > 80 ? feat.reason.substring(0, 80) + "..." : feat.reason}
                     </div>
                   )}
-                  <div className="text-[10px] text-[var(--text-muted,#666)] text-right mt-1">
-                    Since <RelativeTime value={feat.since} />
+                  <div className="text-[10px] text-(--text-muted,#666) text-right mt-1">
+                    Since {new Date(feat.since).toLocaleTimeString()}
                   </div>
                 </div>
               );
