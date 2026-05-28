@@ -2,7 +2,8 @@
  * Regression test for the api_keys hash-sweep that runs on every boot.
  *
  * This test exists to catch the 2026-05-14 incident:
- *   - Migration 056_api_keys_hash_only.sql was silently skipped on every
+ *   - Migration 073_api_keys_hash_only.sql (originally 056, renumbered
+ *     during the 2026-05-28 upstream sync) was silently skipped on every
  *     existing deployment because version slot 056 had previously been
  *     applied with a different name (usage_history_observability_columns).
  *   - The version-only "already applied" check then short-circuited the

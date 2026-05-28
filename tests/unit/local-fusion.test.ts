@@ -137,7 +137,7 @@ test("isFusionModelId recognizes the standard aliases and inline forms", () => {
   assert.equal(isFusionModelId("local-fusion-code"), true);
   assert.equal(isFusionModelId("local-fusion-code:m1+m2@judge"), true);
   assert.equal(isFusionModelId("local-fusion@judge"), true);
-  assert.equal(isFusionModelId("anthropic/claude-opus-4.1"), false);
+  assert.equal(isFusionModelId("anthropic/claude-opus-4.7"), false);
   assert.equal(isFusionModelId("auto"), false);
   assert.equal(isFusionModelId(""), false);
   assert.equal(isFusionModelId(undefined), false);
@@ -158,15 +158,15 @@ test("parseFusionModelName extracts mode and inline overrides", () => {
   assert.equal(b?.mode, "code");
 
   const c = parseFusionModelName(
-    "local-fusion-deep:openai/gpt-4.1+anthropic/claude-sonnet-4.5@anthropic/claude-opus-4.1"
+    "local-fusion-deep:openai/gpt-4.1+anthropic/claude-sonnet-4.5@anthropic/claude-opus-4.7"
   );
   assert.equal(c?.mode, "deep");
   assert.deepEqual(c?.analysisModels, ["openai/gpt-4.1", "anthropic/claude-sonnet-4.5"]);
-  assert.equal(c?.judgeModel, "anthropic/claude-opus-4.1");
+  assert.equal(c?.judgeModel, "anthropic/claude-opus-4.7");
 
-  const d = parseFusionModelName("local-fusion@anthropic/claude-opus-4.1");
+  const d = parseFusionModelName("local-fusion@anthropic/claude-opus-4.7");
   assert.equal(d?.mode, null);
-  assert.equal(d?.judgeModel, "anthropic/claude-opus-4.1");
+  assert.equal(d?.judgeModel, "anthropic/claude-opus-4.7");
 
   const bad = parseFusionModelName("not-a-fusion-model");
   assert.equal(bad, null);
@@ -178,7 +178,7 @@ test("local-fusion fans out to N models and synthesizes one fused answer", async
 
   setFusionConfig({
     analysisModels: ["anthropic/claude-sonnet-4.5", "openai/gpt-4.1"],
-    judgeModel: "anthropic/claude-opus-4.1",
+    judgeModel: "anthropic/claude-opus-4.7",
     criticModel: null,
     mode: "balanced",
     enableCritique: false,
@@ -192,7 +192,7 @@ test("local-fusion fans out to N models and synthesizes one fused answer", async
     byModel: {
       "claude-sonnet-4.5": "sonnet draft about async io",
       "gpt-4.1": "gpt-4.1 draft about async io",
-      "claude-opus-4.1": "FUSED-FINAL-ANSWER",
+      "claude-opus-4.7": "FUSED-FINAL-ANSWER",
     },
     defaultReply: "fallback",
   });
@@ -217,7 +217,7 @@ test("local-fusion fans out to N models and synthesizes one fused answer", async
       "anthropic/claude-sonnet-4.5",
       "openai/gpt-4.1",
     ]);
-    assert.equal(json.x_local_fusion.judge_model, "anthropic/claude-opus-4.1");
+    assert.equal(json.x_local_fusion.judge_model, "anthropic/claude-opus-4.7");
     assert.equal(json.x_local_fusion.judge_failed, false);
     assert.equal(json.x_local_fusion.cached, false);
 
@@ -235,7 +235,7 @@ test("local-fusion falls back to best candidate when judge fails", async () => {
 
   setFusionConfig({
     analysisModels: ["anthropic/claude-sonnet-4.5", "openai/gpt-4.1"],
-    judgeModel: "anthropic/claude-opus-4.1",
+    judgeModel: "anthropic/claude-opus-4.7",
     criticModel: null,
     enableCritique: false,
     enableCache: false,
@@ -340,7 +340,7 @@ test("inline fusion model name overrides saved config", async () => {
     byModel: {
       "claude-sonnet-4.5": "sonnet via inline",
       "gpt-4.1": "gpt via inline",
-      "claude-opus-4.1": "INLINE-JUDGE-RESULT",
+      "claude-opus-4.7": "INLINE-JUDGE-RESULT",
     },
   });
 
@@ -349,7 +349,7 @@ test("inline fusion model name overrides saved config", async () => {
       buildRequest({
         body: {
           model:
-            "local-fusion-code:anthropic/claude-sonnet-4.5+openai/gpt-4.1@anthropic/claude-opus-4.1",
+            "local-fusion-code:anthropic/claude-sonnet-4.5+openai/gpt-4.1@anthropic/claude-opus-4.7",
           messages: [{ role: "user", content: "inline" }],
           stream: false,
         },
@@ -359,7 +359,7 @@ test("inline fusion model name overrides saved config", async () => {
     const json = (await response.json()) as any;
     assert.equal(json.choices?.[0]?.message?.content, "INLINE-JUDGE-RESULT");
     assert.equal(json.x_local_fusion.mode, "code");
-    assert.equal(json.x_local_fusion.judge_model, "anthropic/claude-opus-4.1");
+    assert.equal(json.x_local_fusion.judge_model, "anthropic/claude-opus-4.7");
     assert.deepEqual(
       new Set(json.x_local_fusion.analysis_models),
       new Set(["anthropic/claude-sonnet-4.5", "openai/gpt-4.1"])
@@ -374,7 +374,7 @@ test("local-fusion stream=true emits a single fused SSE chunk", async () => {
   await seedConnection("anthropic", { apiKey: "sk-ant-test" });
   setFusionConfig({
     analysisModels: ["openai/gpt-4.1"],
-    judgeModel: "anthropic/claude-opus-4.1",
+    judgeModel: "anthropic/claude-opus-4.7",
     enableCritique: false,
     enableCache: false,
   });
@@ -382,7 +382,7 @@ test("local-fusion stream=true emits a single fused SSE chunk", async () => {
   const restore = installFetchMock({
     byModel: {
       "gpt-4.1": "leg",
-      "claude-opus-4.1": "STREAMED-FUSED",
+      "claude-opus-4.7": "STREAMED-FUSED",
     },
   });
 
