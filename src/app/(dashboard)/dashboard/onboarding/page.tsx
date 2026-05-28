@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDisplayBaseUrl } from "@/shared/hooks";
+import { CopyButton } from "@/shared/components";
 import { TierTour } from "./steps/TierTour";
 
 const STEP_IDS = ["welcome", "tiers", "security", "provider", "test", "done"];

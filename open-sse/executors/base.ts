@@ -857,7 +857,7 @@ export class BaseExecutor {
               edits: [{ type: "clear_thinking_20251015", keep: "all" }],
             };
           } else if (
-            !thinkingActive &&
+            !hasActiveClaudeThinking(tb) &&
             tb.context_management &&
             typeof tb.context_management === "object"
           ) {

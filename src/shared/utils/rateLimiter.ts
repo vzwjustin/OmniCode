@@ -33,7 +33,7 @@ export function getRedisClient() {
 
 export interface RateLimitRule {
   limit: number;
-  window: number; // seconds
+  window: number; // in seconds
 }
 
 export interface RateLimitResult {
@@ -41,32 +41,21 @@ export interface RateLimitResult {
   failedWindow?: number;
 }
 
-interface CounterEntry {
-  count: number;
-  expiresAtMs: number;
-}
-
-const COUNTERS = new Map<string, CounterEntry>();
-const CLEANUP_INTERVAL_MS = 60_000;
-let _lastSweepMs = 0;
-let _explicitTestMode = false;
-
 /**
- * Test hook — clears all in-memory counters. The boolean is retained for
- * backward compatibility with callers that previously toggled a separate
- * test store; behaviour is identical regardless of the flag now.
+ * Atomic Lua script for multi-rule rate limiting using fixed window.
+ * Returns {1, 0} if allowed, or {0, failedWindow} if rejected.
  */
-export function setRateLimiterTestMode(enabled: boolean): void {
-  _explicitTestMode = enabled;
-  COUNTERS.clear();
-  _lastSweepMs = 0;
-}
+const RATE_LIMIT_SCRIPT = `
+local key_prefix = KEYS[1]
+local current_time = tonumber(ARGV[1])
 
-/** Internal helper for tests that need to wipe state without flipping the flag. */
-export function __resetRateLimiterStateForTests(): void {
-  COUNTERS.clear();
-  _lastSweepMs = 0;
-}
+local rules = {}
+for i = 2, #ARGV, 2 do
+  table.insert(rules, {
+    limit = tonumber(ARGV[i]),
+    window = tonumber(ARGV[i+1])
+  })
+end
 
 -- First pass: check if any limit is exceeded
 for i, rule in ipairs(rules) do
@@ -132,9 +121,6 @@ export async function checkRateLimit(
   rules: RateLimitRule[]
 ): Promise<RateLimitResult> {
   if (!rules || rules.length === 0) return { allowed: true };
-  // The flag is referenced so it remains a public surface for the test suite,
-  // but behaviour is identical in both modes for this pure in-memory impl.
-  void _explicitTestMode;
 
   // ── In-memory mock for unit tests ──
   const isTestMode =
@@ -154,32 +140,24 @@ export async function checkRateLimit(
 
   const args: (string | number)[] = [Math.floor(Date.now() / 1000)];
 
-  // First pass: verify every rule has room before mutating anything.
   for (const rule of rules) {
-    const currentWindow = Math.floor(nowSec / rule.window);
-    const windowKey = `rl:api_key:${keyId}:${rule.window}:${currentWindow}`;
-    const entry = COUNTERS.get(windowKey);
-    const count = entry && entry.expiresAtMs > nowMs ? entry.count : 0;
-    if (count >= rule.limit) {
-      return { allowed: false, failedWindow: rule.window };
-    }
+    args.push(rule.limit, rule.window);
   }
 
-  // Second pass: increment all counters. TTL is twice the window size so the
-  // entry safely outlives the active window (matches the original Lua impl).
-  for (const rule of rules) {
-    const currentWindow = Math.floor(nowSec / rule.window);
-    const windowKey = `rl:api_key:${keyId}:${rule.window}:${currentWindow}`;
-    const existing = COUNTERS.get(windowKey);
-    if (existing && existing.expiresAtMs > nowMs) {
-      existing.count += 1;
-    } else {
-      COUNTERS.set(windowKey, {
-        count: 1,
-        expiresAtMs: nowMs + rule.window * 2 * 1000,
-      });
-    }
-  }
+  try {
+    const result = (await redis.eval(RATE_LIMIT_SCRIPT, 1, `rl:api_key:${keyId}`, ...args)) as [
+      number,
+      number,
+    ];
 
-  return { allowed: true };
+    if (result[0] === 0) {
+      return { allowed: false, failedWindow: result[1] };
+    }
+
+    return { allowed: true };
+  } catch (error) {
+    // Fail-open strategy if Redis goes down to prevent complete API outage
+    console.error("[RATE_LIMITER] Redis eval failed, bypassing rate limit:", error);
+    return { allowed: true };
+  }
 }

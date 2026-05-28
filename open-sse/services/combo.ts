@@ -2393,8 +2393,7 @@ function resolveWeightedTargets(
   const orderedSteps = orderTargetsForWeightedFallback(
     topLevelSteps,
     selectedStep.executionKey,
-    hasCompositeTierRuntimeOrder(combo),
-    log
+    hasCompositeTierRuntimeOrder(combo)
   );
   const expandedTargets = orderedSteps.flatMap((step) => {
     if (!step) return [];
@@ -2732,7 +2731,7 @@ export async function handleComboChat({
 
   let orderedTargets =
     strategy === "weighted"
-      ? resolveWeightedTargets(combo, allCombos, log)?.orderedTargets || []
+      ? resolveWeightedTargets(combo, allCombos)?.orderedTargets || []
       : resolveComboTargets(combo, allCombos);
 
   orderedTargets = await applyRequestTagRouting(orderedTargets, body, log);

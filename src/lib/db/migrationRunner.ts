@@ -488,7 +488,7 @@ function applyApiKeyLifecycleMigration(db: SqliteAdapter): void {
  * boot-time sweep that runs unconditionally regardless of which version
  * slot the migration runner thinks is applied.
  */
-function applyApiKeysHashOnlyMigration(db: Database.Database): void {
+function applyApiKeysHashOnlyMigration(db: SqliteAdapter): void {
   // Ensure the column exists; older databases may not have hit
   // ensureApiKeysColumns() yet (e.g., when migrations run before
   // any apiKeys.ts code path has touched the schema).
@@ -527,7 +527,7 @@ function applyApiKeysHashOnlyMigration(db: Database.Database): void {
  *
  * Returns the number of rows whose key_hash was newly back-filled.
  */
-export function runApiKeysHashSweep(db: Database.Database): number {
+export function runApiKeysHashSweep(db: SqliteAdapter): number {
   if (!hasTable(db, "api_keys")) return 0;
   if (!hasColumn(db, "api_keys", "key_hash")) {
     // Migration 056 (or this sweep) hasn't run yet — ensure the column
@@ -1122,6 +1122,115 @@ export function runMigrations(db: SqliteAdapter, options?: { isNewDb?: boolean }
   }
 
   return count;
+}
+
+/**
+ * Proactively re-encrypt any rows whose encrypted columns still use the
+ * v3.7.7 dynamic-salt key, instead of relying on lazy migration through
+ * decryptWithMigration(). Bounded, idempotent, and safe to call even on a
+ * fresh database.
+ *
+ * Returns the number of rows rewritten across all tables.
+ */
+export function runLegacyEncryptionSweep(db: SqliteAdapter): number {
+  if (!isEncryptionEnabled()) return 0;
+
+  let total = 0;
+  total += sweepProviderConnections(db);
+  total += sweepCommandCodeAuthSessions(db);
+
+  if (total > 0) {
+    console.log(
+      `[Migration] Legacy-encryption sweep migrated ${total} row(s) to the canonical static-salt key.`
+    );
+  }
+  return total;
+}
+
+function sweepProviderConnections(db: SqliteAdapter): number {
+  if (!hasTable(db, "provider_connections")) return 0;
+
+  const rows = db
+    .prepare("SELECT id, api_key, access_token, refresh_token, id_token FROM provider_connections")
+    .all() as Array<{
+    id: string;
+    api_key: string | null;
+    access_token: string | null;
+    refresh_token: string | null;
+    id_token: string | null;
+  }>;
+
+  const update = db.prepare(
+    "UPDATE provider_connections SET api_key = @apiKey, access_token = @accessToken, " +
+      "refresh_token = @refreshToken, id_token = @idToken, updated_at = @updatedAt WHERE id = @id"
+  );
+
+  let migrated = 0;
+  for (const row of rows) {
+    const next = {
+      apiKey: row.api_key,
+      accessToken: row.access_token,
+      refreshToken: row.refresh_token,
+      idToken: row.id_token,
+    };
+    let changed = false;
+
+    for (const field of ["apiKey", "accessToken", "refreshToken", "idToken"] as const) {
+      const current = next[field];
+      if (typeof current !== "string") continue;
+      const { updated, value } = migrateLegacyEncryptedString(current);
+      if (updated) {
+        next[field] = (value ?? null) as string | null;
+        changed = true;
+      }
+    }
+
+    if (!changed) continue;
+
+    update.run({
+      id: row.id,
+      apiKey: next.apiKey ?? null,
+      accessToken: next.accessToken ?? null,
+      refreshToken: next.refreshToken ?? null,
+      idToken: next.idToken ?? null,
+      updatedAt: new Date().toISOString(),
+    });
+    migrated++;
+  }
+
+  return migrated;
+}
+
+function sweepCommandCodeAuthSessions(db: SqliteAdapter): number {
+  if (!hasTable(db, "command_code_auth_sessions")) return 0;
+
+  const rows = db
+    .prepare(
+      "SELECT id, encrypted_api_key FROM command_code_auth_sessions WHERE encrypted_api_key IS NOT NULL"
+    )
+    .all() as Array<{ id: string; encrypted_api_key: string | null }>;
+
+  const update = db.prepare(
+    "UPDATE command_code_auth_sessions SET encrypted_api_key = @encryptedApiKey, " +
+      "updated_at = @updatedAt WHERE id = @id"
+  );
+
+  let migrated = 0;
+  for (const row of rows) {
+    const current = row.encrypted_api_key;
+    if (typeof current !== "string") continue;
+    const { updated, value } = migrateLegacyEncryptedString(current);
+    if (!updated) continue;
+
+    update.run({
+      id: row.id,
+      encryptedApiKey: value ?? null,
+      updatedAt: new Date().toISOString(),
+    });
+    migrated++;
+  }
+
+  return migrated;
 }
 
 function insertDefaultDatabaseSettings(db: SqliteAdapter) {
